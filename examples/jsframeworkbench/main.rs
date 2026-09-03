@@ -1,11 +1,8 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use rand::rng;
 use rand::rngs::ThreadRng;
 use rand::seq::IndexedRandom;
 
-use retgui::elements::{Button, Container, Element, Text, Window};
+use retgui::elements::{Button, Container, Element, Elements, State as StateHandle, Text, Window};
 use retgui::events::ClickEvent;
 use retgui::palette::css::WHITE;
 use retgui::style::{AlignItems, Display, FlexDirection, FlexWrap, JustifyContent, Overflow, Unit};
@@ -83,96 +80,122 @@ impl State {
         }
     }
 
-    pub fn run(&mut self) {
-        self.remove_all_rows();
+    fn prepare_run(&mut self, lots: bool) -> (Container, Vec<Data>) {
         self.store.clear();
         self.rows.clear();
-        self.store.run();
-        self.append_rows();
-        self.select(None);
+        if lots {
+            self.store.run_lots();
+        } else {
+            self.store.run();
+        }
+        self.selected_row = None;
+        (self.element, std::mem::take(&mut self.store.data))
     }
 
-    pub fn run_lots(&mut self) {
-        self.remove_all_rows();
-        self.store.clear();
-        self.rows.clear();
-        self.store.run_lots();
-        self.append_rows();
-        self.select(None);
+    fn prepare_append(&mut self) -> (Container, Vec<Data>) {
+        let old_len = self.rows.len();
+        self.store.add();
+        self.selected_row = None;
+        (self.element, self.store.data.split_off(old_len))
     }
 
-    pub fn remove_all_rows(&mut self) {
-        self.element.remove_all_children();
+    fn finish_rows(&mut self, data: Vec<Data>, rows: Vec<Row>) {
+        self.store.data.extend(data);
+        self.rows.extend(rows);
     }
 
-    pub fn swap_rows(&mut self) {
+    fn prepare_swap(&mut self) -> Option<(Container, Container, Container)> {
         if self.store.data.len() >= 999 {
             self.store.swap_rows();
             self.rows.swap(1, 998);
-            let child_1 = self.element.get_children()[1].clone();
-            let child_2 = self.element.get_children()[998].clone();
-            self.element
-                .swap_child(child_1, child_2)
-                .expect("Failed to swap children");
+            Some((self.element, self.rows[1].element, self.rows[998].element))
+        } else {
+            None
         }
     }
 
-    pub fn append_rows(&mut self) {
-        // Collect all new rows that need to be appended
-        let new_rows: Vec<Row> = self
-            .store
-            .data
-            .iter()
-            .skip(self.rows.len())
-            .map(Self::create_row)
-            .collect();
-
-        self.rows.extend(new_rows.iter().cloned());
-
-        for row in new_rows {
-            self.element.clone().push(row.element);
-        }
+    fn prepare_clear(&mut self) -> Container {
+        self.store.clear();
+        self.rows.clear();
+        self.selected_row = None;
+        self.element
     }
 
-    pub fn select(&mut self, row: Option<usize>) {
-        self.selected_row = row;
-    }
-
-    fn create_row(data: &Data) -> Row {
-        let label = Text::new(&data.label);
-        let element = Container::new()
+    fn create_row(elements: &mut Elements, data: &Data) -> Row {
+        let label = Text::new(elements, &data.label);
+        let id = Text::new(elements, &data.id.to_string())
+            .edit(elements)
+            .width(Unit::Px(60.0))
+            .margin(Unit::Px(0.0), Unit::Px(12.0), Unit::Px(0.0), Unit::Px(0.0))
+            .finish();
+        let element = Container::new(elements)
+            .edit(elements)
             .display(Display::Flex)
             .flex_direction(FlexDirection::Row)
             .width(Unit::Auto)
             .padding(Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0), Unit::Px(4.0))
             .border_color_all(Color::from_rgb8(230, 230, 230))
-            .push(Text::new(&data.id.to_string()).width(Unit::Px(60.0)).margin(
-                Unit::Px(0.0),
-                Unit::Px(12.0),
-                Unit::Px(0.0),
-                Unit::Px(0.0),
-            ))
-            .push(label.clone());
+            .push(id)
+            .push(label)
+            .finish();
         Row { element, label }
     }
 
-    pub fn add(&mut self) {
-        self.store.add();
-        self.append_rows();
-    }
-
-    pub fn clear(&mut self) {
-        self.store.clear();
-        self.rows.clear();
-        self.remove_all_rows();
-        self.select(None);
-    }
-
-    pub fn update(&mut self) {
+    fn prepare_update(&mut self) -> Vec<(Text, String)> {
         self.store.update();
-        for (index, data) in self.store.data.iter().enumerate().step_by(10) {
-            self.rows[index].label.clone().text(&data.label);
-        }
+        self.selected_row = None;
+        self.store
+            .data
+            .iter()
+            .enumerate()
+            .step_by(10)
+            .map(|(index, data)| (self.rows[index].label, data.label.clone()))
+            .collect()
+    }
+}
+
+fn attach_rows(elements: &mut Elements, state: StateHandle<State>, element: Container, data: Vec<Data>, replace: bool) {
+    if replace {
+        element.edit(elements).delete_all_children().finish();
+    }
+
+    let rows: Vec<Row> = data.iter().map(|data| State::create_row(elements, data)).collect();
+    let mut editor = element.edit(elements);
+    for row in &rows {
+        editor = editor.push(row.element);
+    }
+    editor.finish();
+
+    state.update(elements, |state| state.finish_rows(data, rows));
+}
+
+fn rebuild_rows(elements: &mut Elements, state: StateHandle<State>, lots: bool) {
+    let (element, data) = state.update(elements, |state| state.prepare_run(lots));
+    attach_rows(elements, state, element, data, true);
+}
+
+fn append_rows(elements: &mut Elements, state: StateHandle<State>) {
+    let (element, data) = state.update(elements, State::prepare_append);
+    attach_rows(elements, state, element, data, false);
+}
+
+fn clear_rows(elements: &mut Elements, state: StateHandle<State>) {
+    let element = state.update(elements, State::prepare_clear);
+    element.edit(elements).delete_all_children().finish();
+}
+
+fn swap_rows(elements: &mut Elements, state: StateHandle<State>) {
+    if let Some((element, child_1, child_2)) = state.update(elements, State::prepare_swap) {
+        element
+            .swap_child(elements, child_1.as_dyn_element(), child_2.as_dyn_element())
+            .expect("failed to swap rows");
+    }
+}
+
+fn update_rows(elements: &mut Elements, state: StateHandle<State>) {
+    let updates = state.update(elements, State::prepare_update);
+    for (label, text) in updates {
+        label.edit(elements).text(&text).finish();
     }
 }
 
@@ -268,41 +291,53 @@ impl Store {
 fn main() {
     //util::setup_logging();
 
-    let data_list = build_data_list();
-    let state = Rc::new(RefCell::new(State::new(data_list.clone())));
+    let mut elements = Elements::new();
+    let data_list = build_data_list(&mut elements);
+    let state = elements.insert_state(State::new(data_list));
 
-    let body = build_body(state);
-    Window::new("JsFrameworkBench")
+    let body = build_body(&mut elements, state);
+    Window::new(&mut elements, "JsFrameworkBench")
+        .edit(&mut elements)
         .width(Unit::Percentage(100.0))
         .height(Unit::Percentage(100.0))
-        .push(body);
+        .push(body)
+        .finish();
 
     use retgui::RetGuiOptions;
-    retgui::retgui_main(RetGuiOptions::basic("jsframeworkbench"));
+    retgui::retgui_main(elements, RetGuiOptions::basic("jsframeworkbench"));
 }
 
-fn build_body(state: Rc<RefCell<State>>) -> Container {
-    let buttons = build_buttons(state.clone());
+fn build_body(elements: &mut Elements, state: StateHandle<State>) -> Container {
+    let buttons = build_buttons(elements, state);
 
-    let body = Container::new()
+    let body = Container::new(elements)
+        .edit(elements)
         .overflow(Overflow::Visible, Overflow::Scroll)
         .width(Unit::Percentage(100.0))
         .height(Unit::Percentage(100.0))
         .flex_direction(FlexDirection::Column)
         .align_items(AlignItems::Start)
-        .padding_all(Unit::Px(15.0));
+        .padding_all(Unit::Px(15.0))
+        .finish();
 
-    let text = Text::new(r#"RetGui-"keyed""#).font_size(32.0).color(Color::BLACK);
+    let text = Text::new(elements, r#"RetGui-"keyed""#)
+        .edit(elements)
+        .font_size(32.0)
+        .color(Color::BLACK)
+        .finish();
 
-    let text_container = Container::new()
+    let text_container = Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
         .width(Unit::Percentage(50.0))
         .justify_content(JustifyContent::Center)
         .align_items(AlignItems::Center)
-        .push(text);
+        .push(text)
+        .finish();
 
-    let header = Container::new()
+    let header = Container::new(elements)
+        .edit(elements)
         .background_color(rgb(238, 238, 238))
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
@@ -310,62 +345,75 @@ fn build_body(state: Rc<RefCell<State>>) -> Container {
         .padding(Unit::Px(10.0), Unit::Px(60.0), Unit::Px(10.0), Unit::Px(60.0))
         .push(text_container)
         .width(Unit::Percentage(100.0))
-        .push(buttons);
+        .push(buttons)
+        .finish();
 
-    body.push(header).push(state.borrow().element.clone())
+    let data_list = state.read(elements).element;
+    body.edit(elements).push(header).push(data_list).finish()
 }
 
-fn build_data_list() -> Container {
-    Container::new()
+fn build_data_list(elements: &mut Elements) -> Container {
+    Container::new(elements)
+        .edit(elements)
         .flex_direction(FlexDirection::Column)
         .width(Unit::Percentage(100.0))
+        .finish()
 }
 
-fn build_buttons(state: Rc<RefCell<State>>) -> Container {
-    let buttons = Container::new()
+fn build_buttons(elements: &mut Elements, state: StateHandle<State>) -> Container {
+    let buttons = Container::new(elements)
+        .edit(elements)
         .flex_direction(FlexDirection::Column)
         .justify_content(JustifyContent::FlexEnd)
         .align_items(AlignItems::Start)
         .gap(Unit::Px(12.0), Unit::Px(12.0))
         .wrap(FlexWrap::Wrap)
-        .max_height(Unit::Px(150.0));
+        .max_height(Unit::Px(150.0))
+        .finish();
 
-    let state1 = state.clone();
-    let btn_create_1k = build_button("Create 1,000 rows", move |_| {
-        state1.borrow_mut().run();
+    let btn_create_1k = build_button(elements, "Create 1,000 rows", move |_event, elements| {
+        rebuild_rows(elements, state, false);
     });
 
-    let state2 = state.clone();
-    let btn_create_10k = build_button("Create 10,000 rows", move |_| {
-        state2.borrow_mut().run_lots();
+    let btn_create_10k = build_button(elements, "Create 10,000 rows", move |_event, elements| {
+        rebuild_rows(elements, state, true);
     });
 
-    let state3 = state.clone();
-    let btn_append_1k = build_button("Append 1,000 rows", move |_| state3.borrow_mut().add());
-
-    let state4 = state.clone();
-    let btn_update_10th_row = build_button("Update every 10th row", move |_| state4.borrow_mut().update());
-
-    let state5 = state.clone();
-    let btn_clear = build_button("Clear", move |_| state5.borrow_mut().clear());
-
-    let state6 = state.clone();
-    let btn_swap = build_button("Swap Rows", move |_| state6.borrow_mut().swap_rows());
+    let btn_append_1k = build_button(elements, "Append 1,000 rows", move |_event, elements| {
+        append_rows(elements, state);
+    });
+    let btn_update_10th_row = build_button(elements, "Update every 10th row", move |_event, elements| {
+        update_rows(elements, state);
+    });
+    let btn_clear = build_button(elements, "Clear", move |_event, elements| {
+        clear_rows(elements, state);
+    });
+    let btn_swap = build_button(elements, "Swap Rows", move |_event, elements| {
+        swap_rows(elements, state);
+    });
 
     buttons
+        .edit(elements)
         .push(btn_create_1k)
         .push(btn_create_10k)
         .push(btn_append_1k)
         .push(btn_update_10th_row)
         .push(btn_clear)
         .push(btn_swap)
+        .finish()
 }
 
-fn build_button<F>(label: &str, callback: F) -> Button
+fn build_button<F>(elements: &mut Elements, label: &str, callback: F) -> Button
 where
-    F: Fn(&mut ClickEvent) + 'static,
+    F: Fn(&mut ClickEvent, &mut Elements) + 'static,
 {
-    Button::new()
+    let label = Text::new(elements, label)
+        .edit(elements)
+        .selectable(false)
+        .color(Color::WHITE)
+        .finish();
+    Button::new(elements)
+        .edit(elements)
         .background_color(Color::from_rgb8(211, 211, 211))
         .border_color_all(Color::from_rgb8(111, 111, 111))
         .flex_direction(FlexDirection::Row)
@@ -377,6 +425,7 @@ where
         .background_color(Color::from_rgb8(51, 122, 183))
         .color(WHITE)
         .border_radius_all((4.0, 4.0))
-        .push(Text::new(label).selectable(false).color(Color::WHITE))
+        .push(label)
         .on_click(callback)
+        .finish()
 }

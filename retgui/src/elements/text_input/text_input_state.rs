@@ -1,6 +1,8 @@
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::ops::Range;
+use std::rc::Rc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
 
@@ -11,7 +13,7 @@ use parley::{Affinity, ContentWidths, Cursor, Selection};
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Point, Rectangle};
 
-use retgui_renderer::text_renderer_data::TextRender;
+use retgui_renderer::text_renderer_data::{TextData, TextRender, TextSnapshot};
 
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 use winit::window::ImeSurroundingText;
@@ -21,10 +23,9 @@ use web_time::{Duration, Instant};
 
 use winit::dpi;
 
-use crate::app::{GUMMY_TREE, queue_event, request_apply_layout};
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::parley_box_to_rect;
-use crate::elements::{DynElement, ElementInternals, TextInputInner};
+use crate::elements::{ElementNode, Elements, TextInputNode};
 use crate::events::{EventKind, KeyboardEvent, TextInputChangedEvent};
 use crate::layout::layout_context::TextHashKey;
 use crate::style::{Style, TextStyleProperty};
@@ -35,7 +36,7 @@ use crate::text::{RangedStyles, text_render_data};
 pub struct TextInputState {
     pub(crate) multiline: bool,
     pub(crate) gummy_id: Option<NodeId>,
-    origin: Point,
+    origin: Cell<Point>,
 
     pub is_active: bool,
     pub(crate) ime_state: ImeState,
@@ -51,6 +52,7 @@ pub struct TextInputState {
     prepared_layout: Option<PreparedLayout>,
 
     pub(crate) text_render: Option<TextRender>,
+    pub(crate) text_snapshot: Option<Rc<dyn TextData>>,
     scale_factor: f64,
 
     last_click_time: Option<Instant>,
@@ -71,7 +73,7 @@ impl Clone for TextInputState {
         Self {
             multiline: false,
             gummy_id: self.gummy_id,
-            origin: self.origin,
+            origin: self.origin.clone(),
             is_active: self.is_active,
             ime_state: self.ime_state,
             editor: self.editor.clone(),
@@ -81,6 +83,7 @@ impl Clone for TextInputState {
             content_widths: self.content_widths,
             prepared_layout: None,
             text_render: self.text_render.clone(),
+            text_snapshot: self.text_snapshot.clone(),
             scale_factor: self.scale_factor,
             last_click_time: self.last_click_time,
             click_count: self.click_count,
@@ -97,7 +100,7 @@ impl Clone for TextInputState {
 
 impl Default for TextInputState {
     fn default() -> Self {
-        let default_style = TextInputInner::get_default_style();
+        let default_style = TextInputNode::get_default_style();
         let mut editor = PlainEditor::new(default_style.get_font_size(), None);
         editor.set_scale(1.0);
         let style_set = editor.edit_styles();
@@ -105,7 +108,7 @@ impl Default for TextInputState {
         Self {
             multiline: false,
             gummy_id: None,
-            origin: Default::default(),
+            origin: Cell::new(Point::default()),
             ime_state: ImeState::default(),
             is_active: false,
             editor,
@@ -115,6 +118,7 @@ impl Default for TextInputState {
             content_widths: None,
             prepared_layout: None,
             text_render: None,
+            text_snapshot: None,
             scale_factor: 1.0,
             last_click_time: None,
             click_count: 0,
@@ -163,9 +167,6 @@ impl TextInputState {
             let cursor_pos = self.cursor_pos();
             self.driver(text_context)
                 .extend_selection_to_point(cursor_pos.x as f32, cursor_pos.y as f32);
-            if let Some(gummy_id) = self.gummy_id {
-                request_apply_layout(gummy_id);
-            }
         }
     }
 
@@ -185,12 +186,12 @@ impl TextInputState {
     /// Sets the text input's content origin in window-logical coordinates.
     ///
     /// The point should be relative to the top left of the window.
-    pub fn set_origin(&mut self, origin: &Point) {
-        self.origin = *origin;
+    pub fn set_origin(&self, origin: &Point) {
+        self.origin.set(*origin);
     }
 
     fn set_pointer_position(&mut self, pointer: Point, scroll_y: f64) {
-        self.cursor_pos = pointer_to_editor_position(pointer, self.origin, scroll_y, self.scale_factor);
+        self.cursor_pos = pointer_to_editor_position(pointer, self.origin.get(), scroll_y, self.scale_factor);
     }
 
     /// Measures an alternate layout constraint without changing the interactive
@@ -239,14 +240,9 @@ impl TextInputState {
         self.presented_layout_key = None;
         self.current_render_key = None;
         self.text_render = None;
+        self.text_snapshot = None;
         self.content_widths = None;
         self.prepared_layout = None;
-
-        if let Some(id) = self.gummy_id {
-            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-                gummy_tree.mark_dirty(id);
-            })
-        }
     }
 
     pub fn finalize_layout(
@@ -301,7 +297,7 @@ impl TextInputState {
     }
 
     #[allow(dead_code)]
-    pub fn get_cursor_link(&self, cursor_pos: Point, element: &TextInputInner) -> Option<String> {
+    pub fn get_cursor_link(&self, cursor_pos: Point, element: &TextInputNode) -> Option<String> {
         if let Some(ranged_styles) = &element.ranged_styles {
             let layout = self.editor.try_layout().unwrap();
             for (range, style) in ranged_styles.styles.iter() {
@@ -454,16 +450,17 @@ impl TextInputState {
         self.pointer_down
     }
 
-    pub(super) fn generate_text_changed_event(&self, element_data: &ElementData) {
-        let target = element_data.me.upgrade().unwrap();
-        queue_event(EventKind::TextInputChanged(TextInputChangedEvent::new(
-            DynElement::new(target),
+    pub(super) fn generate_text_changed_event(&self, elements: &mut Elements, element_data: &ElementData) {
+        let target = element_data.me;
+        elements.queue_event(EventKind::TextInputChanged(TextInputChangedEvent::new(
+            target,
             self.editor.raw_text().to_string(),
         )));
     }
 
     pub fn key_press(
         &mut self,
+        elements: &mut Elements,
         text_context: &mut TextContext,
         keyboard_event: &KeyboardEvent,
         element_data: &mut ElementData,
@@ -494,7 +491,7 @@ impl TextInputState {
             Key::Character(c) if action_mod && c.to_lowercase() == "y" => {
                 driver.redo();
                 self.clear_cache();
-                self.generate_text_changed_event(element_data);
+                self.generate_text_changed_event(elements, element_data);
             }
             Key::Character(c) if action_mod && c.to_lowercase() == "z" => {
                 if shift {
@@ -503,7 +500,7 @@ impl TextInputState {
                     driver.undo();
                 }
                 self.clear_cache();
-                self.generate_text_changed_event(element_data);
+                self.generate_text_changed_event(elements, element_data);
             }
             Key::Character(c) if action_mod && matches!(c.as_str(), "c" | "x" | "v") => {
                 match c.to_lowercase().as_str() {
@@ -511,12 +508,12 @@ impl TextInputState {
                     "x" => {
                         cut(&mut driver);
                         self.clear_cache();
-                        self.generate_text_changed_event(element_data);
+                        self.generate_text_changed_event(elements, element_data);
                     }
                     "v" => {
                         paste(&mut driver);
                         self.clear_cache();
-                        self.generate_text_changed_event(element_data);
+                        self.generate_text_changed_event(elements, element_data);
                     }
                     _ => (),
                 }
@@ -655,7 +652,7 @@ impl TextInputState {
                     driver.delete(true);
                 }
                 self.clear_cache();
-                self.generate_text_changed_event(element_data);
+                self.generate_text_changed_event(elements, element_data);
             }
             Key::Named(NamedKey::Backspace) => {
                 if IS_MAC && action_mod {
@@ -673,17 +670,17 @@ impl TextInputState {
                 }
 
                 self.clear_cache();
-                self.generate_text_changed_event(element_data);
+                self.generate_text_changed_event(elements, element_data);
             }
             Key::Named(NamedKey::Enter) => {
                 driver.insert_or_replace_selection("\n", true);
                 self.clear_cache();
-                self.generate_text_changed_event(element_data);
+                self.generate_text_changed_event(elements, element_data);
             }
             Key::Character(character) => {
                 driver.insert_or_replace_selection(character, true);
                 self.clear_cache();
-                self.generate_text_changed_event(element_data);
+                self.generate_text_changed_event(elements, element_data);
             }
             _ => (),
         }
@@ -817,8 +814,8 @@ impl TextInputState {
         let scale_factor = self.scale_factor as f32;
 
         Rectangle::new(
-            self.origin.x as f32 + cursor.x / scale_factor,
-            self.origin.y as f32 + cursor.y / scale_factor - scroll_y,
+            self.origin.get().x as f32 + cursor.x / scale_factor,
+            self.origin.get().y as f32 + cursor.y / scale_factor - scroll_y,
             (cursor.width / scale_factor).max(f32::EPSILON),
             (cursor.height / scale_factor).max(f32::EPSILON),
         )
@@ -900,6 +897,10 @@ impl TextInputState {
 
         let color = style.get_cursor_brush().unwrap_or(style.get_text_brush());
         text_renderer.cursor = self.editor.cursor_geometry(1.0).map(|r| (parley_box_to_rect(r), color));
+        self.text_snapshot = self
+            .text_render
+            .clone()
+            .map(|render| Rc::new(TextSnapshot::new(render, true)) as Rc<dyn TextData>);
     }
 }
 

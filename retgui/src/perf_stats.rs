@@ -1,5 +1,4 @@
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
 
@@ -9,13 +8,13 @@ use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Rectangle, Size};
 
 use retgui_renderer::renderer::Renderer;
-use retgui_renderer::text_renderer_data::TextData;
+use retgui_renderer::text_renderer_data::{TextData, TextSnapshot};
 
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 
 use crate::Color;
-use crate::elements::{ElementData as _, ElementInternals, Text};
+use crate::elements::{ElementNode, ElementNodeData as _, Elements, Text, TextNode};
 use crate::text::text_context::TextContext;
 
 const FPS_SAMPLE_INTERVAL: Duration = Duration::from_millis(250);
@@ -43,7 +42,6 @@ pub(crate) struct RenderStats {
 pub(crate) struct PerfStats {
     enabled: bool,
     text: Text,
-    text_data: Weak<RefCell<dyn TextData>>,
     frames_since_sample: u32,
     sample_start: Instant,
     frame_total: Duration,
@@ -106,20 +104,17 @@ impl RenderStats {
 }
 
 impl PerfStats {
-    pub(crate) fn new() -> Self {
-        let text = Text::new("").selectable(false);
+    pub(crate) fn new(elements: &mut Elements) -> Self {
+        let text = Text::new(elements, "").selectable(elements, false);
         {
-            let mut text_inner = text.inner.borrow_mut();
+            let text_inner = elements.get_as_mut::<TextNode>(text.inner);
             text_inner.set_font_size(16.0);
             text_inner.set_text_brush(Brush::Color(Color::WHITE));
         }
-        let text_data_rc: Rc<RefCell<dyn TextData>> = text.inner.clone();
-        let text_data = Rc::downgrade(&text_data_rc);
 
         let mut stats = Self {
             enabled: false,
             text,
-            text_data,
             frames_since_sample: 0,
             sample_start: Instant::now(),
             frame_total: Duration::from_secs(0),
@@ -127,7 +122,7 @@ impl PerfStats {
             render: RenderStats::default(),
             scale_factor: 1.0,
         };
-        stats.reset();
+        stats.reset(elements);
         stats
     }
 
@@ -135,9 +130,9 @@ impl PerfStats {
         self.enabled
     }
 
-    pub(crate) fn toggle(&mut self, renderer: &mut dyn Renderer) {
+    pub(crate) fn toggle(&mut self, elements: &mut Elements, renderer: &mut dyn Renderer) {
         self.enabled = !self.enabled;
-        self.reset();
+        self.reset(elements);
         renderer.set_vsync(!self.enabled);
     }
 
@@ -147,13 +142,19 @@ impl PerfStats {
         self.render = render;
     }
 
-    pub(crate) fn draw(&mut self, renderer: &mut dyn Renderer, text_context: &mut TextContext, scale_factor: f64) {
+    pub(crate) fn draw(
+        &mut self,
+        elements: &mut Elements,
+        renderer: &mut dyn Renderer,
+        text_context: &mut TextContext,
+        scale_factor: f64,
+    ) {
         if !self.enabled {
             return;
         }
 
-        self.update_debug_text();
-        let text_size = self.layout_text(text_context, scale_factor);
+        self.update_debug_text(elements);
+        let (text_size, snapshot) = self.layout_text(elements, text_context, scale_factor);
 
         renderer.start_overlay();
         let panel = Rectangle::new(
@@ -178,21 +179,21 @@ impl PerfStats {
             text_size.width,
             text_size.height,
         );
-        renderer.draw_text(self.text_data.clone(), text_rect.scale(scale_factor), None, false);
+        renderer.draw_text(snapshot, text_rect.scale(scale_factor), None, false);
         renderer.end_overlay();
     }
 
-    fn reset(&mut self) {
+    fn reset(&mut self, elements: &mut Elements) {
         self.frames_since_sample = 0;
         self.sample_start = Instant::now();
         self.frame_total = Duration::from_secs(0);
         self.layout = LayoutStats::default();
         self.render = RenderStats::default();
         let debug_text = self.debug_text(0.0);
-        self.text.inner.borrow_mut().set_text(&debug_text);
+        elements.get_as_mut::<TextNode>(self.text.inner).set_text(&debug_text);
     }
 
-    fn update_debug_text(&mut self) {
+    fn update_debug_text(&mut self, elements: &mut Elements) {
         self.frames_since_sample += 1;
         let elapsed = self.sample_start.elapsed();
         if elapsed < FPS_SAMPLE_INTERVAL {
@@ -203,7 +204,7 @@ impl PerfStats {
         self.frames_since_sample = 0;
         self.sample_start = Instant::now();
         let debug_text = self.debug_text(fps);
-        self.text.inner.borrow_mut().set_text(&debug_text);
+        elements.get_as_mut::<TextNode>(self.text.inner).set_text(&debug_text);
     }
 
     fn debug_text(&self, fps: f64) -> String {
@@ -240,29 +241,45 @@ impl PerfStats {
         }
     }
 
-    fn layout_text(&mut self, text_context: &mut TextContext, scale_factor: f64) -> Size<f32> {
-        let mut text_inner = self.text.inner.borrow_mut();
-        if (self.scale_factor - scale_factor).abs() > f64::EPSILON {
-            text_inner.set_scale_factor(scale_factor);
-            self.scale_factor = scale_factor;
-        }
-
-        let size = text_inner.measure(
-            gummy::Size {
-                width: None,
-                height: None,
-            },
-            gummy::Size {
-                width: AvailableSpace::MaxContent,
-                height: AvailableSpace::MaxContent,
-            },
-            text_context,
-        );
-        let text_brush = text_inner.element_data().style.get_text_brush();
-        text_inner
-            .state
-            .try_update_text_render(text_context, Brush::Color(Color::TRANSPARENT), text_brush, true);
-
-        Size::new(size.width, size.height)
+    fn layout_text(
+        &mut self,
+        elements: &mut Elements,
+        text_context: &mut TextContext,
+        scale_factor: f64,
+    ) -> (Size<f32>, Rc<dyn TextData>) {
+        let text = self.text.inner;
+        let scale_changed = (self.scale_factor - scale_factor).abs() > f64::EPSILON;
+        self.scale_factor = scale_factor;
+        elements.dispatch_mut(text, |element, elements| {
+            let text_inner = (element as &mut dyn std::any::Any).downcast_mut::<TextNode>().unwrap();
+            if scale_changed {
+                text_inner.set_scale_factor(elements, scale_factor);
+            }
+            let size = text_inner.measure(
+                gummy::Size {
+                    width: None,
+                    height: None,
+                },
+                gummy::Size {
+                    width: AvailableSpace::MaxContent,
+                    height: AvailableSpace::MaxContent,
+                },
+                text_context,
+            );
+            let text_brush = text_inner.element_data().style.get_text_brush();
+            text_inner
+                .state
+                .try_update_text_render(text_context, Brush::Color(Color::TRANSPARENT), text_brush, true);
+            let snapshot: Rc<dyn TextData> = Rc::new(TextSnapshot::from_shared(
+                text_inner
+                    .state
+                    .text_render
+                    .clone()
+                    .expect("performance text render not found"),
+                text_inner.state.override_brush.clone(),
+                true,
+            ));
+            (Size::new(size.width, size.height), snapshot)
+        })
     }
 }

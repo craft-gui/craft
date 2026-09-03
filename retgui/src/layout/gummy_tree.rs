@@ -1,18 +1,16 @@
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
-use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use gummy::{Layout, NodeId, Size, Style};
 
 use retgui_resource_manager::ResourceManager;
 
-use crate::elements::ElementInternals;
+use crate::elements::{DynElement, Elements};
 use crate::layout::layout_context::{LayoutContext, measure_content};
 use crate::text::text_context::TextContext;
 
-type LayoutOwnerRegistration = (u64, Weak<RefCell<dyn ElementInternals>>);
-pub(crate) type PendingLayoutOwner = (u64, Rc<RefCell<dyn ElementInternals>>, u32);
+type LayoutOwnerRegistration = (u64, DynElement);
+pub(crate) type PendingLayoutOwner = (u64, DynElement, u32);
 
 pub struct GummyTree {
     inner: gummy::GummyTree<LayoutContext>,
@@ -99,6 +97,7 @@ impl GummyTree {
         &mut self,
         node_id: NodeId,
         available_space: Size<gummy::AvailableSpace>,
+        elements: &mut Elements,
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
     ) {
@@ -111,6 +110,7 @@ impl GummyTree {
                         known_dimensions,
                         available_space,
                         node_context,
+                        elements,
                         text_context,
                         resource_manager.clone(),
                         style,
@@ -211,7 +211,7 @@ impl GummyTree {
         self.seen_layouts.insert(node, layout);
     }
 
-    pub(crate) fn register_owner(&mut self, node: NodeId, owner_id: u64, owner: Weak<RefCell<dyn ElementInternals>>) {
+    pub(crate) fn register_owner(&mut self, node: NodeId, owner_id: u64, owner: DynElement) {
         self.layout_owners.insert(node, (owner_id, owner));
     }
 
@@ -236,9 +236,8 @@ impl GummyTree {
             if needs_apply
                 && let Some((owner_id, owner)) = tree.layout_owners.get(&node)
                 && seen_owners.insert(*owner_id)
-                && let Some(owner) = owner.upgrade()
             {
-                owners.push((*owner_id, owner, node_order));
+                owners.push((*owner_id, *owner, node_order));
             }
 
             for child in tree.inner.children(node).unwrap_or_default() {
@@ -263,9 +262,8 @@ impl GummyTree {
             for node in pending {
                 if let Some((owner_id, owner)) = self.layout_owners.get(&node)
                     && seen_owners.insert(*owner_id)
-                    && let Some(owner) = owner.upgrade()
                 {
-                    owners.push((*owner_id, owner, self.layout_orders.get(&node).copied().unwrap_or(0)));
+                    owners.push((*owner_id, *owner, self.layout_orders.get(&node).copied().unwrap_or(0)));
                 }
             }
         }

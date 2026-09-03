@@ -1,4 +1,4 @@
-use retgui::elements::{Container, Element, TextInput, Window};
+use retgui::elements::{Container, Element, Elements, TextInput, Window};
 use retgui::rgb;
 use retgui::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit};
 
@@ -12,8 +12,16 @@ Morbi tincidunt porta scelerisque. Etiam sodales, leo eget molestie imperdiet, l
 
 Nunc tellus magna, varius eu ornare et, sodales hendrerit quam. Praesent nec magna finibus, elementum orci nec, facilisis nisi. Duis ligula mi, dapibus eget nibh a, posuere viverra ante. Aliquam efficitur mauris id quam faucibus, eget posuere turpis imperdiet. Nam vulputate sed urna vitae tincidunt. Nulla ligula urna, iaculis id urna sit amet, porta iaculis ligula. Maecenas volutpat odio at pretium commodo. Nullam faucibus efficitur neque, vitae elementum sem sollicitudin eu. Nullam rutrum nulla eu erat dignissim varius. ";
 
-pub fn text() -> Container {
-    Container::new()
+pub fn text(elements: &mut Elements) -> Container {
+    let input = TextInput::new(elements, LOREM_IPSUM)
+        .edit(elements)
+        .overflow_y(Overflow::Scroll)
+        .width(Unit::Px(600.0))
+        .height(Unit::Px(600.0))
+        .display(Display::Block)
+        .finish();
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .justify_content(JustifyContent::Center)
@@ -23,18 +31,18 @@ pub fn text() -> Container {
         .row_gap(Unit::Px(20.0))
         .font_size(72.0)
         .color(rgb(50, 50, 50))
-        .push(
-            TextInput::new(LOREM_IPSUM)
-                .overflow_y(Overflow::Scroll)
-                .width(Unit::Px(600.0))
-                .height(Unit::Px(600.0))
-                .display(Display::Block),
-        )
+        .push(input)
+        .finish()
 }
 
 pub fn main() {
-    Window::new("Text").push(text());
+    let mut elements = Elements::new();
+    let content = text(&mut elements);
+    Window::new(&mut elements, "Text")
+        .edit(&mut elements)
+        .push(content)
+        .finish();
     use retgui::RetGuiOptions;
     util::setup_logging();
-    retgui::retgui_main(RetGuiOptions::basic("text"));
+    retgui::retgui_main(elements, RetGuiOptions::basic("text"));
 }

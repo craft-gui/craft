@@ -1,10 +1,8 @@
-use std::cell::RefCell;
-use std::collections::{HashMap, VecDeque};
-use std::rc::{Rc, Weak};
+use std::collections::HashMap;
 
 use crate::events::PointerId;
 
-use crate::elements::{DynElement, ElementInternals};
+use crate::elements::{DynElement, Elements};
 use crate::events::event_dispatch::dispatch_event;
 use crate::events::{EventKind, PointerCaptureEvent};
 use crate::text::text_context::TextContext;
@@ -13,18 +11,16 @@ use crate::text::text_context::TextContext;
 #[derive(Default, Clone)]
 pub struct PointerCapture {
     /// Tracks elements that are *currently* pointer captured.
-    pub(crate) pointer_captures: HashMap<PointerId, Weak<RefCell<dyn ElementInternals>>>,
+    pub(crate) pointer_captures: HashMap<PointerId, DynElement>,
     /// Tracks elements that *should* be pointer captured.
-    pub(crate) pending_pointer_captures: HashMap<PointerId, Weak<RefCell<dyn ElementInternals>>>,
+    pub(crate) pending_pointer_captures: HashMap<PointerId, DynElement>,
 }
 
 impl PointerCapture {
     /// Remove an element from pointer capture.
-    pub fn remove_element(&mut self, element: &Rc<RefCell<dyn ElementInternals>>) {
-        let element_weak = element.borrow().element_data().me.clone();
-        self.pointer_captures.retain(|_, v| !Weak::ptr_eq(v, &element_weak));
-        self.pending_pointer_captures
-            .retain(|_, v| !Weak::ptr_eq(v, &element_weak));
+    pub fn remove_element(&mut self, element: DynElement) {
+        self.pointer_captures.retain(|_, value| *value != element);
+        self.pending_pointer_captures.retain(|_, value| *value != element);
     }
 
     /// Returns the currently pointer captured element or None.
@@ -32,11 +28,11 @@ impl PointerCapture {
         &self,
         message: &EventKind,
         pointer_id: &PointerId,
-    ) -> Option<Rc<RefCell<dyn ElementInternals>>> {
+    ) -> Option<DynElement> {
         // 9.4 Implicit pointer capture
         // https://w3c.github.io/pointerevents/#implicit-pointer-capture
         //
-        let pointer_capture_element_id: Option<Weak<RefCell<dyn ElementInternals>>> = {
+        let pointer_capture_element_id: Option<DynElement> = {
             if matches!(message, EventKind::GotPointerCapture(_)) {
                 // Check pending (step 2):
                 // https://w3c.github.io/pointerevents/#process-pending-pointer-capture
@@ -46,12 +42,13 @@ impl PointerCapture {
             }
         };
 
-        pointer_capture_element_id.map(|element| element.upgrade().expect("Pointer captured element should exist."))
+        pointer_capture_element_id
     }
 
     /// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
     pub(super) fn process_pending_pointer_capture(
         &mut self,
+        elements: &mut Elements,
         text_context: &mut TextContext,
         pointer_id: &PointerId,
     ) -> bool {
@@ -68,20 +65,11 @@ impl PointerCapture {
         // 1. If the pointer capture target override for this pointer is set and is not equal to the pending pointer capture target override,
         // then fire a pointer event named lostpointercapture at the pointer capture target override node.
         if let Some(pointer_capture_val) = pointer_capture_val.clone()
-            && Some(pointer_capture_val.as_ptr()) != pending_pointer_capture_val.clone().map(|w| w.as_ptr())
+            && Some(pointer_capture_val) != pending_pointer_capture_val
         {
-            if let Some(target) = pointer_capture_val.upgrade() {
-                let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
-                let mut current_target = Some(Rc::clone(&target));
-                while let Some(node) = current_target {
-                    targets.push_back(Rc::clone(&node));
-                    current_target = node.borrow().parent().map(|parent| parent.inner);
-                }
-
-                let mut event =
-                    EventKind::LostPointerCapture(PointerCaptureEvent::new(DynElement::new(target), *pointer_id));
-                dispatch_event(&mut event, &targets, text_context);
-            }
+            let targets = crate::events::helpers::freeze_target_list(pointer_capture_val, elements);
+            let mut event = EventKind::LostPointerCapture(PointerCaptureEvent::new(pointer_capture_val, *pointer_id));
+            dispatch_event(&mut event, &targets, text_context, elements);
 
             did_pointer_capture_change = true;
         }
@@ -89,20 +77,12 @@ impl PointerCapture {
         // 2. If the pending pointer capture target override for this pointer is set and is not equal to the pointer capture target override,
         // then fire a pointer event named gotpointercapture at the pending pointer capture target override.
         if let Some(pending_pointer_capture_val) = pending_pointer_capture_val.clone()
-            && Some(pending_pointer_capture_val.as_ptr()) != pointer_capture_val.map(|w| w.as_ptr())
+            && Some(pending_pointer_capture_val) != pointer_capture_val
         {
-            if let Some(target) = pending_pointer_capture_val.upgrade() {
-                let mut targets: VecDeque<Rc<RefCell<dyn ElementInternals>>> = VecDeque::new();
-                let mut current_target = Some(Rc::clone(&target));
-                while let Some(node) = current_target {
-                    targets.push_back(Rc::clone(&node));
-                    current_target = node.borrow().parent().map(|parent| parent.inner);
-                }
-
-                let mut event =
-                    EventKind::GotPointerCapture(PointerCaptureEvent::new(DynElement::new(target), *pointer_id));
-                dispatch_event(&mut event, &targets, text_context);
-            }
+            let targets = crate::events::helpers::freeze_target_list(pending_pointer_capture_val, elements);
+            let mut event =
+                EventKind::GotPointerCapture(PointerCaptureEvent::new(pending_pointer_capture_val, *pointer_id));
+            dispatch_event(&mut event, &targets, text_context, elements);
 
             did_pointer_capture_change = true;
         }
@@ -121,6 +101,7 @@ impl PointerCapture {
 
     pub(super) fn maybe_handle_implicit_pointer_capture_release(
         &mut self,
+        elements: &mut Elements,
         message: &EventKind,
         text_context: &mut TextContext,
         pointer_id: &PointerId,
@@ -136,9 +117,9 @@ impl PointerCapture {
             // for the pointerId of the pointerup or pointercancel event that was just dispatched
             let _ = self.pending_pointer_captures.remove(pointer_id);
 
-            did_pointer_capture_change = self.process_pending_pointer_capture(text_context, pointer_id);
+            did_pointer_capture_change = self.process_pending_pointer_capture(elements, text_context, pointer_id);
         } else if message.is_system_pointer_event() {
-            did_pointer_capture_change = self.process_pending_pointer_capture(text_context, pointer_id);
+            did_pointer_capture_change = self.process_pending_pointer_capture(elements, text_context, pointer_id);
         }
 
         did_pointer_capture_change

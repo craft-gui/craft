@@ -7,7 +7,7 @@ use retgui_resource_manager::ResourceId;
 
 use retgui_primitives::brush::Brush;
 
-use crate::elements::{CodeEditor, Container, DynElement, Element, Image, Text, TextInput};
+use crate::elements::{CodeEditor, Container, DynElement, Element, Elements, Image, Text, TextInput};
 use crate::style::{Display, FlexDirection, FontStyle, FontWeight, TextStyleProperty, Unit};
 use crate::text::RangedStyles;
 use crate::{Color, pct, px, rgb};
@@ -26,7 +26,8 @@ impl StyledText {
     }
 }
 
-struct MarkdownRenderer<'a> {
+struct MarkdownRenderer<'a, 'elements> {
+    elements: &'elements mut Elements,
     element_stack: Vec<DynElement>,
     list_ids: Vec<Option<u64>>,
     styled_text: StyledText,
@@ -37,10 +38,14 @@ struct MarkdownRenderer<'a> {
     code_block_kind: Option<pulldown_cmark::CodeBlockKind<'a>>,
 }
 
-impl<'a> MarkdownRenderer<'a> {
-    pub fn new() -> Self {
+impl<'a, 'elements> MarkdownRenderer<'a, 'elements> {
+    pub fn new(elements: &'elements mut Elements) -> Self {
+        let root = Container::new(elements)
+            .display(elements, Display::Block)
+            .as_dyn_element();
         MarkdownRenderer {
-            element_stack: vec![Container::new().display(Display::Block).as_dyn_element()],
+            elements,
+            element_stack: vec![root],
             list_ids: Vec::new(),
             styled_text: StyledText {
                 text: String::new(),
@@ -55,7 +60,8 @@ impl<'a> MarkdownRenderer<'a> {
     }
 
     pub fn push(&mut self, component_specification: DynElement) {
-        self.current_element().push(component_specification);
+        let parent = self.current_element();
+        crate::elements::internal_helpers::push_child_to_element(self.elements, parent, component_specification);
     }
 
     pub fn push_list_id(&mut self, id: Option<u64>) {
@@ -96,15 +102,15 @@ impl<'a> MarkdownRenderer<'a> {
         }
 
         let mut text = if let Some(text_input) = text_input {
-            text_input.text(self.styled_text.text.as_str())
+            text_input.text(self.elements, self.styled_text.text.as_str())
         } else {
-            TextInput::new(&self.styled_text.text)
-                .display(Display::Block)
-                .border_width_all(px(0))
-                .disabled(true)
+            TextInput::new(self.elements, &self.styled_text.text)
+                .display(self.elements, Display::Block)
+                .border_width_all(self.elements, px(0))
+                .disabled(self.elements, true)
         };
 
-        text = text.ranged_styles(self.styled_text.style.clone());
+        text = text.ranged_styles(self.elements, self.styled_text.style.clone());
         self.push(text.as_dyn_element());
         self.styled_text = StyledText::new();
     }
@@ -159,9 +165,9 @@ impl<'a> MarkdownRenderer<'a> {
     }
 }
 
-pub fn render_markdown(markdown: &str) -> DynElement {
+pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
     let parser = pulldown_cmark::Parser::new(markdown);
-    let mut renderer = MarkdownRenderer::new();
+    let mut renderer = MarkdownRenderer::new(elements);
 
     for event in parser {
         match event {
@@ -181,22 +187,23 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                     let children_count = renderer.list_ids.len();
                     renderer.push_list_id(item);
                     let padding = if children_count == 0 { 0 } else { 20 };
-                    renderer.push_container(
-                        Container::new()
-                            .display(Display::Flex)
-                            .flex_direction(FlexDirection::Column)
-                            .margin(px(0), px(0), px(0), px(padding))
-                            .as_dyn_element(),
-                    )
+                    let list = Container::new(renderer.elements)
+                        .display(renderer.elements, Display::Flex)
+                        .flex_direction(renderer.elements, FlexDirection::Column)
+                        .margin(renderer.elements, px(0), px(0), px(0), px(padding));
+                    renderer.push_container(list.as_dyn_element())
                 }
                 Tag::Item => {
                     if let Some(id) = renderer.list_id() {
-                        let offset = renderer.current_element().borrow().element_data().children.len() as u64;
+                        let current = renderer.current_element();
+                        let offset = renderer.elements.get(current).element_data().children.len() as u64;
                         renderer.push_text(&format!("{}. ", id + offset));
                     } else {
                         renderer.push_text("• ");
                     }
-                    let item_container = Container::new().display(Display::Block).border_width_all(px(0));
+                    let item_container = Container::new(renderer.elements)
+                        .display(renderer.elements, Display::Block)
+                        .border_width_all(renderer.elements, px(0));
                     renderer.push_container(item_container.as_dyn_element());
                 }
                 Tag::Emphasis => {
@@ -217,11 +224,11 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                     } else {
                         ResourceId::File(PathBuf::from_str(&dest_url).expect("Invalid file path for image"))
                     };
-                    renderer.push(
-                        Container::new()
-                            .push(Image::new(resource).width(Unit::Auto).height(Unit::Auto))
-                            .as_dyn_element(),
-                    )
+                    let image = Image::new(renderer.elements, resource)
+                        .width(renderer.elements, Unit::Auto)
+                        .height(renderer.elements, Unit::Auto);
+                    let image_container = Container::new(renderer.elements).push(renderer.elements, image);
+                    renderer.push(image_container.as_dyn_element())
                 }
                 _ => {}
             },
@@ -255,10 +262,10 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                             HeadingLevel::H5 => 15,
                             HeadingLevel::H6 => 10,
                         };
-                        let text_input = TextInput::new("")
-                            .margin(px(margin), px(0), px(margin), px(0))
-                            .border_width_all(px(0))
-                            .disabled(true);
+                        let text_input = TextInput::new(renderer.elements, "")
+                            .margin(renderer.elements, px(margin), px(0), px(margin), px(0))
+                            .border_width_all(renderer.elements, px(0))
+                            .disabled(renderer.elements, true);
                         renderer.push_rich_text(Some(text_input));
                         renderer.font_size = None;
                     }
@@ -271,8 +278,12 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                                 pulldown_cmark::CodeBlockKind::Fenced(lang) => lang.to_string(),
                                 pulldown_cmark::CodeBlockKind::Indented => "plaintext".to_string(),
                             };
-                            let code_editor =
-                                CodeEditor::new(&renderer.styled_text.text, &language, "base16-ocean.dark");
+                            let code_editor = CodeEditor::new(
+                                renderer.elements,
+                                &renderer.styled_text.text,
+                                &language,
+                                "base16-ocean.dark",
+                            );
                             renderer.push(code_editor.as_dyn_element());
                             renderer.styled_text = StyledText::new();
                         }
@@ -300,7 +311,7 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                     }
                     TagEnd::Image => {
                         let text = &renderer.styled_text.text;
-                        let text = Text::new(text);
+                        let text = Text::new(renderer.elements, text);
                         renderer.push(text.as_dyn_element());
                         renderer.styled_text = StyledText::new();
                     }
@@ -348,12 +359,12 @@ pub fn render_markdown(markdown: &str) -> DynElement {
                 renderer.push_text("\n");
             }
             Event::Rule => {
-                let rule = Container::new()
-                    .display(Display::Block)
-                    .width(pct(100))
-                    .height(px(1))
-                    .background_color(rgb(0xD3, 0xD3, 0xD3))
-                    .margin(px(20), px(0), px(20), px(0))
+                let rule = Container::new(renderer.elements)
+                    .display(renderer.elements, Display::Block)
+                    .width(renderer.elements, pct(100))
+                    .height(renderer.elements, px(1))
+                    .background_color(renderer.elements, rgb(0xD3, 0xD3, 0xD3))
+                    .margin(renderer.elements, px(20), px(0), px(20), px(0))
                     .as_dyn_element();
                 renderer.push(rule);
             }

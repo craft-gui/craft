@@ -1,6 +1,5 @@
 use std::any::Any;
-use std::cell::RefCell;
-use std::rc::Weak;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use retgui_primitives::Color;
@@ -189,7 +188,18 @@ pub trait Renderer: Any {
     #[inline(always)]
     fn draw_text(
         &mut self,
-        data: Weak<RefCell<dyn TextData>>,
+        data: Rc<dyn TextData>,
+        rect: Rectangle,
+        text_scroll: Option<TextScroll>,
+        show_cursor: bool,
+    ) {
+        self.draw_text_ref(&data, rect, text_scroll, show_cursor);
+    }
+    
+    #[inline(always)]
+    fn draw_text_ref(
+        &mut self,
+        data: &Rc<dyn TextData>,
         rect: Rectangle,
         text_scroll: Option<TextScroll>,
         show_cursor: bool,
@@ -203,7 +213,7 @@ pub trait Renderer: Any {
             .commands
             .push(RenderCommand::DrawText(DrawTextCmd {
                 rect,
-                data,
+                data: data.clone(),
                 text_scroll,
                 show_cursor,
                 transform,

@@ -6,20 +6,22 @@ pub use retgui_primitives::brush::Brush;
 pub use retgui_primitives::{Color, ColorStop, Extend, Gradient, GradientKind, HueDirection, LinearGradientData, RadialGradientData, SweepGradientData, geometry, palette};
 
 pub use retgui_renderer::RendererType;
+pub use retgui_renderer::renderer::Renderer;
 
-pub use retgui_resource_manager::ResourceId;
+pub use retgui_resource_manager::{ResourceId, ResourceManager};
 
 pub use retgui_runtime::{self, RetGuiRuntime};
 
 pub use winit;
 
 pub use crate::app::{App, WindowEventResult};
+pub use crate::elements::Elements;
 pub use crate::options::RetGuiOptions;
 pub use crate::utils::retgui_error::RetGuiError;
 pub use crate::utils::style_helpers::{auto, pct, px, rgb, rgba};
 
 #[cfg(target_os = "android")]
-use std::cell::RefCell;
+use std::sync::OnceLock;
 
 use retgui_logging::info;
 
@@ -44,9 +46,7 @@ mod utils;
 mod window_manager;
 
 #[cfg(target_os = "android")]
-thread_local! {
-    static ANDROID_APP: RefCell<Option<AndroidApp>> = const { RefCell::new(None) };
-}
+static ANDROID_APP: OnceLock<AndroidApp> = OnceLock::new();
 
 /// Starts the RetGui application.
 ///
@@ -56,16 +56,17 @@ thread_local! {
 /// # Example
 ///
 /// ```no_run
-/// use retgui::{retgui_main, RetGuiOptions};
+/// use retgui::{Elements, RetGuiOptions, retgui_main};
 /// use retgui::elements::Window;
 ///
 /// fn main() {
-///     Window::new("RetGui");
-///     retgui_main(RetGuiOptions::default());
+///     let mut elements = Elements::new();
+///     Window::new(&mut elements, "RetGui");
+///     retgui_main(elements, RetGuiOptions::default());
 /// }
 /// ```
-pub fn retgui_main(options: RetGuiOptions) {
-    retgui_main_with_driver::<WinitDriver>(options);
+pub fn retgui_main(elements: Elements, options: RetGuiOptions) {
+    retgui_main_with_driver::<WinitDriver>(elements, options);
 }
 
 /// Starts the RetGui application using a custom [`Driver`].
@@ -79,7 +80,7 @@ pub fn retgui_main(options: RetGuiOptions) {
 ///
 /// ```no_run
 /// use retgui::drivers::Driver;
-/// use retgui::{App, RetGuiOptions, retgui_main_with_driver};
+/// use retgui::{App, Elements, RetGuiOptions, retgui_main_with_driver};
 ///
 /// struct PlatformDriver {
 ///     app: App,
@@ -100,20 +101,20 @@ pub fn retgui_main(options: RetGuiOptions) {
 ///     }
 /// }
 ///
-/// retgui_main_with_driver::<PlatformDriver>(RetGuiOptions::default());
+/// retgui_main_with_driver::<PlatformDriver>(Elements::new(), RetGuiOptions::default());
 /// ```
-pub fn retgui_main_with_driver<D>(options: RetGuiOptions)
+pub fn retgui_main_with_driver<D>(elements: Elements, options: RetGuiOptions)
 where
     D: Driver,
 {
-    info!("RetGui started");
-    D::new(App::new(options)).run();
+    info!("RetGui started: {}", options.app_name);
+    D::new(App::new(elements)).run();
 }
 
 /// Sets the [`AndroidApp`] for retgui to use.
 #[cfg(target_os = "android")]
 pub fn retgui_set_android_app(app: AndroidApp) {
-    ANDROID_APP.with_borrow_mut(|android_app| {
-        *android_app = Some(app);
-    })
+    ANDROID_APP
+        .set(app)
+        .expect("retgui_set_android_app may only be called once");
 }

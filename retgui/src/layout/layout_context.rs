@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Weak;
 use std::sync::Arc;
 
 use gummy::{AvailableSpace, Size};
@@ -9,17 +7,17 @@ use retgui_resource_manager::{ResourceId, ResourceManager};
 
 use tinyvg_rs::TinyVg;
 
-use crate::elements::{TextInner, TextInputInner};
+use crate::elements::{DynElement, Elements, TextInputNode, TextNode};
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
 pub(crate) struct GummyTextContext {
-    pub(crate) element: Weak<RefCell<TextInner>>,
+    pub(crate) element: DynElement,
 }
 
 #[derive(Clone)]
 pub(crate) struct GummyTextInputContext {
-    pub(crate) element: Weak<RefCell<TextInputInner>>,
+    pub(crate) element: DynElement,
 }
 
 #[derive(Eq, Hash, PartialEq, Copy, Clone, Debug)]
@@ -147,6 +145,7 @@ pub(crate) fn measure_content(
     known_dimensions: Size<Option<f32>>,
     available_space: Size<gummy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
+    elements: &mut Elements,
     text_context: &mut TextContext,
     resource_manager: Arc<ResourceManager>,
     style: &gummy::Style,
@@ -161,24 +160,13 @@ pub(crate) fn measure_content(
 
     match node_context {
         None => Size::ZERO,
-        Some(LayoutContext::Text(gummy_text_context)) => {
-            let element = &gummy_text_context.element;
-            if let Some(element) = element.upgrade()
-                && let Ok(mut element) = element.try_borrow_mut()
-            {
-                return element.measure(known_dimensions, available_space, text_context);
-            }
-            Size::ZERO
-        }
-        Some(LayoutContext::TextInput(gummy_text_input_context)) => {
-            let element = &gummy_text_input_context.element;
-            if let Some(element) = element.upgrade()
-                && let Ok(mut element) = element.try_borrow_mut()
-            {
-                return element.state.measure(known_dimensions, available_space, text_context);
-            }
-            Size::ZERO
-        }
+        Some(LayoutContext::Text(gummy_text_context)) => elements
+            .get_as_mut::<TextNode>(gummy_text_context.element)
+            .measure(known_dimensions, available_space, text_context),
+        Some(LayoutContext::TextInput(gummy_text_input_context)) => elements
+            .get_as_mut::<TextInputNode>(gummy_text_input_context.element)
+            .state
+            .measure(known_dimensions, available_space, text_context),
         Some(LayoutContext::Image(image_context)) => {
             image_context.measure(known_dimensions, available_space, resource_manager, style)
         }

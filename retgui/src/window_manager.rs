@@ -1,18 +1,17 @@
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
 use std::time::Duration;
 
 use retgui_renderer::blank_renderer::BlankRenderer;
+use rustc_hash::FxHashSet;
 
 use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
 
-use crate::app::{App, GUMMY_TREE};
-use crate::elements::{ElementData, ElementInternals, Window};
+use crate::app::App;
+use crate::elements::{DynElement, Elements, Window, WindowNode};
 
 pub(crate) struct WindowManager {
     windows: Vec<Window>,
-    animating_elements: Vec<Weak<RefCell<dyn ElementInternals>>>,
+    animating_elements: Vec<DynElement>,
 }
 
 impl WindowManager {
@@ -28,19 +27,21 @@ impl WindowManager {
     }
 
     /// Schedules an element for animation updates. If the window
-    pub fn schedule_element_animations(&mut self, element: Weak<RefCell<dyn ElementInternals>>) {
-        self.animating_elements.push(element);
+    pub fn schedule_element_animations(&mut self, element: DynElement) {
+        if !self.animating_elements.contains(&element) {
+            self.animating_elements.push(element);
+        }
     }
 
     /// Cancel an element for animation updates.
-    pub fn cancel_element_animations(&mut self, element: &Weak<RefCell<dyn ElementInternals>>) {
+    pub fn cancel_element_animations(&mut self, element: &DynElement) {
         self.animating_elements
-            .retain(|registered_element| !Weak::ptr_eq(registered_element, element));
+            .retain(|registered_element| registered_element != element);
     }
 
-    pub(crate) fn get_window_by_id(&self, window_id: WindowId) -> Option<Window> {
+    pub(crate) fn get_window_by_id(&self, elements: &Elements, window_id: WindowId) -> Option<Window> {
         for window in &self.windows {
-            if let Some(winit_window) = window.winit_window()
+            if let Some(winit_window) = window.winit_window(elements)
                 && winit_window.id() == window_id
             {
                 return Some(window.clone());
@@ -50,66 +51,78 @@ impl WindowManager {
     }
 
     /// Dirties all gummy nodes and redraws each window.
-    pub(crate) fn dirty_and_redraw_all_windows(&mut self, retgui_app: &mut App) {
-        if !retgui_app.active {
+    pub(crate) fn dirty_and_redraw_all_windows(&mut self, elements: &mut Elements, active: bool) {
+        if !active {
             return;
         }
 
         // Create windows that were created during the program run.
         for window_element in &self.windows {
-            let id = window_element
-                .inner
-                .borrow_mut()
+            let id = elements
+                .get(window_element.inner)
                 .element_data()
                 .layout
                 .gummy_node_id
                 .unwrap();
-            GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-                gummy_tree.mark_node_and_leaves_dirty(id);
-            });
-            window_element.request_redraw();
+            elements.gummy_tree.mark_node_and_leaves_dirty(id);
+            window_element.request_redraw(elements);
         }
     }
 
-    pub(crate) fn on_resume(&mut self, retgui_app: &mut App, event_loop: Option<&dyn ActiveEventLoop>) {
+    pub(crate) fn on_resume(
+        &mut self,
+        retgui_app: &mut App,
+        elements: &mut Elements,
+        event_loop: Option<&dyn ActiveEventLoop>,
+    ) {
         for window_element in &self.windows {
-            window_element.create(retgui_app, event_loop);
-            window_element.reset_animation_clock();
+            window_element.create(retgui_app, elements, event_loop);
+            window_element.reset_animation_clock(elements);
         }
 
         for animating in &self.animating_elements {
-            if let Some(animating) = animating.upgrade() {
-                animating.borrow().request_window_redraw();
+            if elements.contains(*animating) {
+                elements.get(*animating).request_window_redraw();
             }
         }
     }
 
-    pub(crate) fn on_about_to_wait(&mut self, retgui_app: &mut App, event_loop: Option<&dyn ActiveEventLoop>) {
+    pub(crate) fn on_about_to_wait(
+        &mut self,
+        retgui_app: &mut App,
+        elements: &mut Elements,
+        event_loop: Option<&dyn ActiveEventLoop>,
+    ) {
         if !retgui_app.active {
             return;
         }
 
         // Create windows that were created during the program run.
         for window_element in &self.windows {
-            if window_element.winit_window().is_none() {
-                window_element.create(retgui_app, event_loop);
+            if window_element.winit_window(elements).is_none() {
+                window_element.create(retgui_app, elements, event_loop);
+            }
+
+            if window_element.redraw_requested(elements) {
+                window_element.request_redraw(elements);
             }
         }
     }
 
-    pub(crate) fn any_perf_stats_enabled(&self) -> bool {
+    pub(crate) fn any_perf_stats_enabled(&self, elements: &Elements) -> bool {
         self.windows
             .iter()
-            .any(|window| window.inner.borrow().perf_stats_enabled())
+            .any(|window| elements.get_as::<WindowNode>(window.inner).perf_stats_enabled())
     }
 
-    pub fn close_window(&mut self, window: &Window) {
+    pub fn close_window(&mut self, elements: &mut Elements, window: &Window) {
         self.windows.retain(|w| {
-            let is_target = Rc::ptr_eq(&w.inner, &window.inner);
+            let is_target = w.inner == window.inner;
 
             if is_target {
-                w.set_winit_window(None);
-                w.inner.borrow_mut().renderer = Rc::new(RefCell::new(BlankRenderer::default()));
+                elements.get_as_mut::<WindowNode>(w.inner).renderer = Box::new(BlankRenderer::default());
+                release_window_accessibility(elements, w.inner);
+                w.set_winit_window(elements, None);
             }
 
             !is_target
@@ -124,36 +137,51 @@ impl WindowManager {
         self.len() == 0
     }
 
-    pub(crate) fn clear(&mut self) {
-        self.windows.clear();
-    }
-
     /// Advances animations belonging to the window being redrawn and returns
     /// whether that window still has active animations.
-    pub(crate) fn animation_tick(&mut self, window: &Window, delta: Duration) -> bool {
-        let window = Rc::downgrade(&window.inner);
+    pub(crate) fn animation_tick(&mut self, elements: &mut Elements, window: &Window, delta: Duration) -> bool {
         let mut has_active_animations = false;
-        self.animating_elements.retain(|animating| {
-            let Some(animating) = animating.upgrade() else {
-                return false;
-            };
-
-            let mut animating = animating.borrow_mut();
-            let belongs_to_window = animating
-                .element_data()
-                .window
-                .as_ref()
-                .is_some_and(|owner| Weak::ptr_eq(owner, &window));
-            if belongs_to_window {
-                animating.animation_tick(delta);
-                has_active_animations |= animating
-                    .element_data()
-                    .animations
-                    .iter()
-                    .any(|animation| !animation.is_finished());
+        let mut retained = Vec::with_capacity(self.animating_elements.len());
+        for animating in std::mem::take(&mut self.animating_elements) {
+            if !elements.contains(animating) {
+                continue;
             }
-            true
-        });
+            elements.dispatch_mut(animating, |animating, _| {
+                if animating.element_data().window == Some(window.inner) {
+                    animating.animation_tick(delta);
+                    has_active_animations |= animating
+                        .element_data()
+                        .animations
+                        .iter()
+                        .any(|animation| !animation.is_finished());
+                }
+            });
+            retained.push(animating);
+        }
+        self.animating_elements = retained;
         has_active_animations
+    }
+}
+
+fn release_window_accessibility(elements: &mut Elements, window: DynElement) {
+    let (access_tree, root) = {
+        let data = elements.get(window).element_data();
+        (data.access_tree.clone(), data.access_root)
+    };
+
+    if let Some(root) = root {
+        access_tree.remove_node(root);
+    }
+
+    let mut pending = vec![window];
+    let mut visited = FxHashSet::default();
+    while let Some(element) = pending.pop() {
+        if !visited.insert(element) || !elements.contains(element) {
+            continue;
+        }
+        let data = elements.get_mut(element).element_data_mut();
+        pending.extend(data.children.iter().copied());
+        data.access_key = None;
+        data.access_root = None;
     }
 }

@@ -3,4 +3,4 @@ mod gummy_tree;
 pub mod layout;
 pub mod layout_context;
 
-pub(crate) use gummy_tree::GummyTree;
+pub use gummy_tree::GummyTree;

@@ -1,7 +1,5 @@
 //! Displays an image.
 
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use retgui_resource_manager::{ResourceId, ResourceManager};
@@ -10,29 +8,28 @@ use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::resource_type::ResourceType;
 
-use crate::app::{GUMMY_TREE, PENDING_RESOURCES};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, DynElement, Element, ElementInternals};
+use crate::elements::{DynElement, Element, ElementNode, Elements};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::text::text_context::TextContext;
 
 /// Displays an image.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Image {
-    pub(crate) inner: Rc<RefCell<ImageInner>>,
+    pub(crate) inner: DynElement,
 }
 
 #[derive(Clone)]
-pub(crate) struct ImageInner {
+pub(crate) struct ImageNode {
     is_image_dirty: bool,
     resource_id: ResourceId,
     element_data: ElementData,
 }
 
-impl crate::elements::ElementData for ImageInner {
+impl crate::elements::ElementNodeData for ImageNode {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -42,27 +39,15 @@ impl crate::elements::ElementData for ImageInner {
     }
 }
 
-impl Element for Image {}
-
-impl Drop for ImageInner {
-    fn drop(&mut self) {
-        ElementInternals::drop(self)
+impl Element for Image {
+    fn as_dyn_element(&self) -> DynElement {
+        self.inner
     }
 }
 
-impl AsElement for Image {
-    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
-        callback(&*self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
-        callback(&mut *self.inner.borrow_mut())
-    }
-}
-
-impl ElementInternals for ImageInner {
-    fn deep_clone(&self) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
+impl ElementNode for ImageNode {
+    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
 
     fn apply_layout(
@@ -76,7 +61,8 @@ impl ElementInternals for ImageInner {
     }
 
     fn draw(
-        &mut self,
+        &self,
+        _elements: &Elements,
         _renderer: &mut dyn Renderer,
         _resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -102,58 +88,63 @@ impl ElementInternals for ImageInner {
 }
 
 impl Image {
-    pub fn new(resource_id: ResourceId) -> Self {
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<ImageInner>>| {
-            RefCell::new(ImageInner {
+    pub fn new(elements: &mut Elements, resource_id: ResourceId) -> Self {
+        let inner = elements.insert_with(|me, access_tree| {
+            Box::new(ImageNode {
                 is_image_dirty: false,
                 resource_id: resource_id.clone(),
-                element_data: ElementData::new(me.clone(), false),
+                element_data: ElementData::new(me, false, access_tree),
             })
         });
         let layout_context = Some(LayoutContext::Image(ImageContext::new(resource_id.clone())));
-        inner.borrow_mut().element_data.create_layout_node(layout_context);
+        elements.create_layout_node(inner, layout_context);
 
-        PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id, ResourceType::Image));
-        });
+        elements.pending_resources.push_back((resource_id, ResourceType::Image));
 
         Self { inner }
     }
 
-    pub fn dummy() -> Self {
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<ImageInner>>| {
-            RefCell::new(ImageInner {
+    pub fn dummy(elements: &mut Elements) -> Self {
+        let inner = elements.insert_with(|me, access_tree| {
+            Box::new(ImageNode {
                 is_image_dirty: false,
                 resource_id: ResourceId::DUMMY,
-                element_data: ElementData::new(me.clone(), false),
+                element_data: ElementData::new(me, false, access_tree),
             })
         });
         let layout_context = Some(LayoutContext::Image(ImageContext::new(ResourceId::DUMMY)));
-        inner.borrow_mut().element_data.create_layout_node(layout_context);
+        elements.create_layout_node(inner, layout_context);
 
         Self { inner }
     }
 
-    pub fn resource_id(self, resource_id: ResourceId) -> Self {
-        self.inner.borrow_mut().set_image(resource_id);
+    pub fn resource_id(self, elements: &mut Elements, resource_id: ResourceId) -> Self {
+        elements.try_dispatch_mut(self.inner, |image, elements| {
+            (image as &mut dyn std::any::Any)
+                .downcast_mut::<ImageNode>()
+                .unwrap()
+                .set_image(elements, resource_id)
+        });
         self
     }
 
-    pub fn get_resource_id(&self) -> ResourceId {
-        self.inner.borrow().get_resource_id().clone()
+    pub fn get_resource_id(&self, elements: &Elements) -> ResourceId {
+        elements
+            .try_get_as::<ImageNode>(self.inner)
+            .map_or(ResourceId::DUMMY, |image| image.get_resource_id().clone())
     }
 }
 
-impl ImageInner {
-    pub fn set_image(&mut self, resource_id: ResourceId) {
+impl ImageNode {
+    pub fn set_image(&mut self, elements: &mut Elements, resource_id: ResourceId) {
         self.is_image_dirty = true;
         self.resource_id = resource_id.clone();
 
-        PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((self.resource_id.clone(), ResourceType::Image));
-        });
+        elements
+            .pending_resources
+            .push_back((self.resource_id.clone(), ResourceType::Image));
 
-        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+        elements.with_gummy_tree(|gummy_tree, _| {
             let context = LayoutContext::Image(ImageContext::new(resource_id));
             let node = self
                 .element_data

@@ -1,7 +1,4 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use retgui::elements::{Container, Element, Text, Window};
+use retgui::elements::{Container, Element, Elements, State, Text, Window};
 use retgui::events::Event;
 use retgui::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
 use retgui::{Color, rgb};
@@ -12,12 +9,9 @@ pub struct Counter {
 }
 
 impl Counter {
-    fn change(&mut self, delta: i64) {
+    fn change(&mut self, delta: i64) -> bool {
         self.count += delta;
-
-        if self.count >= 10 {
-            counter();
-        }
+        self.count >= 10
     }
 
     fn count(&self) -> i64 {
@@ -29,11 +23,18 @@ fn create_button(
     label: &str,
     base_color: Color,
     delta: i64,
-    state: Rc<RefCell<Counter>>,
+    elements: &mut Elements,
+    state: State<Counter>,
     count_text: Text,
 ) -> Container {
-    let label = Text::new(label).font_size(24.0).color(Color::WHITE).selectable(false);
-    Container::new()
+    let label = Text::new(elements, label)
+        .edit(elements)
+        .font_size(24.0)
+        .color(Color::WHITE)
+        .selectable(false)
+        .finish();
+    Container::new(elements)
+        .edit(elements)
         .border_width(Unit::Px(1.0), Unit::Px(2.0), Unit::Px(3.0), Unit::Px(4.0))
         .border_color_all(rgb(0, 0, 0))
         .border_radius_all((10.0, 10.0))
@@ -42,39 +43,37 @@ fn create_button(
         .justify_content(JustifyContent::Center)
         .align_items(AlignItems::Center)
         .background_color(base_color)
-        .on_click(move |event| {
-            state.borrow_mut().change(delta);
-            count_text.clone().text(&format!("Count: {}", state.borrow().count()));
+        .on_click(move |event, elements| {
+            let (create_window, count) = state.update(elements, |state| {
+                let create_window = state.change(delta);
+                (create_window, state.count())
+            });
+            count_text.text(elements, &format!("Count: {count}"));
+            if create_window {
+                counter(elements);
+            }
             event.stop_propagation();
         })
         .push(label)
+        .finish()
 }
 
-pub fn counter() -> Window {
-    let count = Rc::new(RefCell::new(Counter::default()));
-
-    let count_text = Text::new(&format!("Count: {}", count.borrow().count()));
-
-    let button = Container::new()
+pub fn counter(elements: &mut Elements) -> Window {
+    let count = elements.insert_state(Counter::default());
+    let count_text = Text::new(elements, "Count: 0");
+    let subtract = create_button("-", rgb(244, 67, 54), -1, elements, count, count_text);
+    let add = create_button("+", rgb(76, 175, 80), 1, elements, count, count_text);
+    let button = Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
         .column_gap(Unit::Px(20.0))
-        .push(create_button(
-            "-",
-            rgb(244, 67, 54),
-            -1,
-            count.clone(),
-            count_text.clone(),
-        ))
-        .push(create_button(
-            "+",
-            rgb(76, 175, 80),
-            1,
-            count.clone(),
-            count_text.clone(),
-        ));
+        .push(subtract)
+        .push(add)
+        .finish();
 
-    Window::new("MultiWindow")
+    Window::new(elements, "MultiWindow")
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .justify_content(JustifyContent::Center)
@@ -86,12 +85,13 @@ pub fn counter() -> Window {
         .font_size(72.0)
         .color(rgb(50, 50, 50))
         .push(button)
+        .finish()
 }
 
 fn main() {
-    let _counter1 = counter();
-
+    let mut elements = Elements::new();
+    let _counter1 = counter(&mut elements);
     use retgui::RetGuiOptions;
     util::setup_logging();
-    retgui::retgui_main(RetGuiOptions::basic("Counter"));
+    retgui::retgui_main(elements, RetGuiOptions::basic("Counter"));
 }

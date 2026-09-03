@@ -1,4 +1,4 @@
-use retgui::elements::{Container, Element};
+use retgui::elements::{Container, Element, Elements};
 use retgui::style::Unit;
 use retgui::{Color, pct};
 
@@ -19,8 +19,9 @@ pub(crate) const WRAPPER_PADDING_RIGHT: Unit = Unit::Px(20.0);
 
 //pub(crate) const MOBILE_MEDIA_QUERY_WIDTH: u32 = 850;
 
-pub(crate) fn wrapper() -> Container {
-    Container::new()
+pub(crate) fn wrapper(elements: &mut Elements) -> Container {
+    Container::new(elements)
+        .edit(elements)
         .margin(Unit::Px(0.0), WRAPPER_MARGIN_RIGHT, Unit::Px(0.0), WRAPPER_MARGIN_LEFT)
         .padding(
             Unit::Px(0.0),
@@ -30,4 +31,5 @@ pub(crate) fn wrapper() -> Container {
         )
         .width(pct(100))
         .max_width(WRAPPER_MAX_WIDTH)
+        .finish()
 }

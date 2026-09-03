@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::rc::Rc;
 
 pub use syntect;
@@ -17,25 +16,10 @@ use retgui_primitives::brush::Brush;
 const DEFAULT_SYNTAX_PACK: &[u8] = include_bytes!("../../../../syntect_dumper/pack.dump");
 const DEFAULT_THEME_PACK: &[u8] = include_bytes!("../../../../syntect_dumper/theme_pack.dump");
 
-thread_local! {
-    static SYNTAX_THEME_CACHE: RefCell<Option<(SyntaxSet, Rc<ThemeSet>)>> = const { RefCell::new(None) };
-}
-
 fn get_syntax_and_theme() -> (SyntaxSet, Rc<ThemeSet>) {
-    SYNTAX_THEME_CACHE.with(|cache| {
-        let mut cache = cache.borrow_mut();
-        if let Some((ref ss, ref ts)) = *cache {
-            return (ss.clone(), Rc::clone(ts));
-        }
-
-        let syntax_set: SyntaxSet = from_reader(DEFAULT_SYNTAX_PACK).expect("Failed to load syntax pack");
-
-        let theme_set: ThemeSet = from_reader(DEFAULT_THEME_PACK).expect("Failed to load theme pack");
-        let theme_set = Rc::new(theme_set);
-
-        *cache = Some((syntax_set.clone(), Rc::clone(&theme_set)));
-        (syntax_set, theme_set)
-    })
+    let syntax_set: SyntaxSet = from_reader(DEFAULT_SYNTAX_PACK).expect("Failed to load syntax pack");
+    let theme_set: ThemeSet = from_reader(DEFAULT_THEME_PACK).expect("Failed to load theme pack");
+    (syntax_set, Rc::new(theme_set))
 }
 
 fn syntect_color_to_color(color: syntect::highlighting::Color) -> Color {

@@ -1,8 +1,8 @@
-use retgui::elements::{Container, Element, Window};
+use std::rc::Rc;
+
+use retgui::elements::{Container, Element, Elements, State, Window};
 use retgui::pct;
 use retgui::style::{Display, FlexDirection};
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
 
 use crate::WebsiteGlobalState;
 use crate::docs::docs;
@@ -11,74 +11,79 @@ use crate::index::index_page;
 use crate::navbar::navbar;
 use crate::theme::BODY_BACKGROUND_COLOR;
 
-#[derive(Clone)]
+pub type NavigateFn = Rc<dyn Fn(&str, &mut Elements) + 'static>;
+
 pub struct Router {
-    pub root: Window,
-    global_state: Rc<RefCell<WebsiteGlobalState>>,
-    index: Container,
-    docs: Container,
-    examples: Container,
+    state: State<RouterState>,
 }
 
-pub type NavigateFn = Rc<dyn Fn(&str) + 'static>;
+struct RouterState {
+    root: Option<Window>,
+    global_state: State<WebsiteGlobalState>,
+    index: Option<Container>,
+    docs: Option<Container>,
+    examples: Option<Container>,
+}
 
 impl Router {
-    pub fn new(global_state: Rc<RefCell<WebsiteGlobalState>>) -> Rc<RefCell<Self>> {
-        let state = global_state.clone();
-        Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
-            let me = me.clone();
+    pub fn new(elements: &mut Elements, global_state: State<WebsiteGlobalState>) -> Self {
+        let state = elements.insert_state(RouterState {
+            root: None,
+            global_state,
+            index: None,
+            docs: None,
+            examples: None,
+        });
+        let navigate: NavigateFn = Rc::new(move |route, elements| {
+            navigate_to(state, elements, route);
+        });
 
-            let navigate_logic: NavigateFn = Rc::new(move |route| {
-                state.borrow_mut().set_route(route);
-                if let Some(router) = me.upgrade() {
-                    router.borrow().navigate();
-                }
-            });
+        let navigation = navbar(elements, navigate.clone());
+        let root = Window::new(elements, "RetGui GUI")
+            .edit(elements)
+            .display(Display::Flex)
+            .flex_direction(FlexDirection::Column)
+            .width(pct(100))
+            .height(pct(100))
+            .background_color(BODY_BACKGROUND_COLOR)
+            .push(navigation)
+            .finish();
+        let index = index_page(elements, navigate.clone());
+        let docs = docs(elements, navigate.clone());
+        let examples = examples(elements, global_state, navigate);
 
-            let window = Window::new("RetGui Gui")
-                .display(Display::Flex)
-                .flex_direction(FlexDirection::Column)
-                .width(pct(100))
-                .height(pct(100))
-                .push(navbar(navigate_logic.clone()))
-                .background_color(BODY_BACKGROUND_COLOR);
-
-            RefCell::new(Self {
-                root: window.clone(),
-                index: index_page(navigate_logic.clone()),
-                docs: docs(navigate_logic.clone()),
-                examples: examples(global_state.clone(), navigate_logic.clone()),
-                global_state: global_state.clone(),
-            })
-        })
+        let router = state.write(elements);
+        router.root = Some(root);
+        router.index = Some(index);
+        router.docs = Some(docs);
+        router.examples = Some(examples);
+        Self { state }
     }
 
-    fn set_content(&self, container: Container) {
-        if let Some(current_content) = self.root.get_children().get(1) {
-            self.root
-                .remove_child(current_content.clone())
-                .expect("Failed to remove child");
-        }
-        self.root.clone().push(container);
+    pub fn navigate(&self, elements: &mut Elements) {
+        let global_state = self.state.read(elements).global_state;
+        let route = global_state.read(elements).get_route();
+        navigate_to(self.state, elements, &route);
     }
+}
 
-    pub fn navigate(&self) {
-        let global_state = self.global_state.borrow();
-        let full_route = global_state.route.as_str();
-
-        let base_route = full_route.split('/').find(|s| !s.is_empty()).unwrap_or("");
-
-        let page = match base_route {
-            "" => self.index.clone(),
-            "docs" => self.docs.clone(),
-            "examples" => self.examples.clone(),
-            _ => self.index.clone(),
+fn navigate_to(state: State<RouterState>, elements: &mut Elements, route: &str) {
+    let (global_state, root, page) = {
+        let router = state.read(elements);
+        let base = route.split('/').find(|part| !part.is_empty()).unwrap_or("");
+        let page = match base {
+            "docs" => router.docs.expect("docs page was not initialized"),
+            "examples" => router.examples.expect("examples page was not initialized"),
+            _ => router.index.expect("index page was not initialized"),
         };
+        let root = router.root.expect("router root was not initialized");
+        (router.global_state, root, page)
+    };
 
-        self.set_content(page);
+    global_state.write(elements).set_route(route);
+    if let Some(current) = root.get_children(elements).get(1).copied() {
+        root.remove_child(elements, current)
+            .expect("failed to remove routed page");
     }
-
-    /*pub fn window(&self) -> Arc<retgui::WinitWindow> {
-        self.root.inner.borrow().winit_window().expect("No widow")
-    }*/
+    root.edit(elements).push(page).finish();
 }

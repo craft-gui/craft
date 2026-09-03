@@ -1,58 +1,58 @@
-use crate::app::GUMMY_TREE;
-use crate::elements::{DynElement, ElementInternals};
+use crate::elements::{DynElement, ElementNode, Elements};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
 
 use crate::elements::element_data::ElementData;
 use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::sync::Arc;
 
 /// A helper to push children.
-pub fn push_child_to_element(parent: &mut dyn ElementInternals, child: Rc<RefCell<dyn ElementInternals>>) {
-    let (me, me_window, scale_factor) = {
-        let element_data = parent.element_data();
+pub fn push_child_to_element(elements: &mut Elements, parent_handle: DynElement, child: DynElement) {
+    if !elements.contains(parent_handle) || !elements.contains(child) {
+        return;
+    }
+    let (me, me_window, redraw_signal, scale_factor, parent_id, access) = {
+        let parent = elements.get(parent_handle);
+        let data = parent.element_data();
         (
-            element_data.me.clone(),
-            element_data.window.clone(),
-            element_data.applied_scale_factor,
+            data.me,
+            data.window,
+            data.redraw_signal.clone(),
+            data.applied_scale_factor,
+            parent.child_layout_parent(),
+            data.access_key
+                .zip(data.access_root)
+                .map(|nodes| (data.access_tree.clone(), nodes)),
         )
     };
-    child.borrow_mut().element_data_mut().parent = Some(me);
-    child.borrow_mut().element_data_mut().window = me_window;
-    child.borrow_mut().propagate_window_down();
-    child.borrow_mut().set_scale_factor(scale_factor);
-    parent.element_data_mut().children.push(DynElement::new(child.clone()));
+    elements.dispatch_mut(child, |child, elements| {
+        child.element_data_mut().parent = Some(me);
+        child.element_data_mut().window = me_window;
+        child.element_data_mut().redraw_signal = redraw_signal;
+        child.propagate_window_down(elements);
+        child.set_scale_factor(elements, scale_factor);
+    });
+    elements.get_mut(parent_handle).element_data_mut().children.push(child);
 
-    // Add the children's gummy node.
-    GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-        let parent_id = parent.element_data().layout.gummy_node_id.unwrap();
-        let child_id = child.borrow().element_data().layout.gummy_node_id;
-        if let Some(child_id) = child_id {
-            gummy_tree.add_child(parent_id, child_id);
+    elements.with_gummy_tree(|gummy_tree, elements| {
+        let child_element = elements.get_mut(child);
+        if let Some(child_id) = child_element.element_data().layout.gummy_node_id {
+            gummy_tree.add_child(parent_id.unwrap(), child_id);
         }
-        child.borrow_mut().on_post_add_layout_tree(gummy_tree);
+        child_element.on_post_add_layout_tree(gummy_tree);
     });
 
-    {
-        let data = parent.element_data();
-        if let Some((parent_node, root)) = data.access_key.zip(data.access_root) {
-            crate::accessibility::reparent_subtree(
-                &mut *child.borrow_mut(),
-                &data.access_tree,
-                parent_node,
-                root,
-                data.access_scale_factor,
-            );
-        }
+    if let Some((tree, (parent_node, root))) = access {
+        elements.dispatch_mut(child, |child, elements| {
+            crate::accessibility::reparent_subtree(elements, child, &tree, parent_node, root, scale_factor)
+        });
     }
-    parent.request_window_redraw();
+    elements.get(parent_handle).request_window_redraw();
 }
 
 pub fn apply_generic_container_layout(
-    element: &mut dyn ElementInternals,
+    element: &mut dyn ElementNode,
     gummy_tree: &mut GummyTree,
     z_index: &mut u32,
     scale_factor: f64,
@@ -61,7 +61,7 @@ pub fn apply_generic_container_layout(
     let layout = gummy_tree.get_layout(node);
     let has_new_layout = gummy_tree.has_new_layout(node);
 
-    element.element_data_mut().layout.has_new_layout = has_new_layout;
+    element.element_data_mut().layout.has_new_layout.set(has_new_layout);
     if has_new_layout {
         element.resolve_box(layout, z_index);
         element.apply_borders(scale_factor);
@@ -90,7 +90,7 @@ pub fn apply_generic_container_layout_non_dom(
     let layout = gummy_tree.get_layout(node);
     let has_new_layout = gummy_tree.has_new_layout(node);
 
-    element.layout.has_new_layout = has_new_layout;
+    element.layout.has_new_layout.set(has_new_layout);
     if has_new_layout {
         element.layout.resolve_box(layout, z_index);
         element.apply_borders(scale_factor);
@@ -110,7 +110,7 @@ pub fn apply_generic_container_layout_non_dom(
 }
 
 pub fn apply_generic_leaf_layout(
-    element: &mut dyn ElementInternals,
+    element: &mut dyn ElementNode,
     gummy_tree: &mut GummyTree,
     z_index: &mut u32,
     scale_factor: f64,
@@ -119,7 +119,7 @@ pub fn apply_generic_leaf_layout(
     let layout = gummy_tree.get_layout(node);
     let has_new_layout = gummy_tree.has_new_layout(node);
 
-    element.element_data_mut().layout.has_new_layout = has_new_layout;
+    element.element_data_mut().layout.has_new_layout.set(has_new_layout);
     if has_new_layout {
         element.resolve_box(layout, z_index);
         element.apply_borders(scale_factor);
@@ -131,7 +131,8 @@ pub fn apply_generic_leaf_layout(
 }
 
 pub fn draw_generic_container(
-    element: &mut dyn ElementInternals,
+    element: &dyn ElementNode,
+    elements: &Elements,
     renderer: &mut dyn Renderer,
     resource_manager: Arc<ResourceManager>,
     text_context: &mut TextContext,
@@ -146,7 +147,7 @@ pub fn draw_generic_container(
     element.add_hit_testable(renderer, true, scale_factor);
     element.draw_borders(renderer, scale_factor);
     element.maybe_start_layer(renderer, scale_factor);
-    element.draw_children(renderer, resource_manager.clone(), scale_factor, text_context);
+    element.draw_children(elements, renderer, resource_manager.clone(), scale_factor, text_context);
     element.maybe_end_layer(renderer);
     element.draw_scrollbar(renderer, scale_factor);
 

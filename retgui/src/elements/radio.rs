@@ -1,9 +1,6 @@
 //! A selectable circle.
 
 use std::any::Any;
-use std::cell::RefCell;
-use std::ops::DerefMut;
-use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use issho::{AccessEvent, IsshoError, SelectionData, SelectionGroupItem};
@@ -17,62 +14,43 @@ use retgui_resource_manager::ResourceManager;
 
 use winit::keyboard::KeyCode;
 
-use crate::app::{GUMMY_TREE, queue_event};
 use crate::elements::element_data::ElementData;
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom, push_child_to_element};
+use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom};
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, DynElement, Element, ElementInternals, scrollable};
+use crate::elements::{DynElement, Element, ElementNode, Elements, State, scrollable};
 use crate::events::{Event, EventKind, RadioValueChangedEvent};
 use crate::layout::GummyTree;
 use crate::style::Unit;
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgb};
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Radio {
-    pub(crate) inner: Rc<RefCell<RadioInner>>,
+    pub(crate) inner: DynElement,
 }
 
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub(crate) struct RadioInner {
+pub(crate) struct RadioNode {
     element_data: ElementData,
     circle_layout: ElementData,
     circle: Circle,
     value: String,
     label: String,
     hide_radio: bool,
-    active_value: Rc<RefCell<String>>,
+    pub(super) active_value: State<String>,
 }
 
-impl Default for Radio {
-    fn default() -> Self {
-        Self::new("", "radio item", Rc::new(RefCell::new("".to_string())))
+impl Element for Radio {
+    fn as_dyn_element(&self) -> DynElement {
+        self.inner
     }
 }
 
-impl Element for Radio {}
-
-impl Drop for RadioInner {
-    fn drop(&mut self) {
-        ElementInternals::drop(self)
-    }
-}
-
-impl AsElement for Radio {
-    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
-        callback(&*self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
-        callback(&mut *self.inner.borrow_mut())
-    }
-}
-
-impl crate::elements::ElementData for RadioInner {
+impl crate::elements::ElementNodeData for RadioNode {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -82,17 +60,16 @@ impl crate::elements::ElementData for RadioInner {
     }
 }
 
-impl ElementInternals for RadioInner {
-    fn deep_clone(&self) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, |element, gummy_tree| {
-            let mut element = element.borrow_mut();
+impl ElementNode for RadioNode {
+    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
             let owner_id = element.element_data.internal_id;
-            let owner = element.element_data.me.clone();
+            let owner = element.element_data.me;
             let parent = element.element_data.layout.gummy_node_id();
             let circle_node = gummy_tree.clone_node(element.circle_layout.layout.gummy_node_id());
             element.circle_layout.layout.gummy_node_id = Some(circle_node);
             element.circle_layout.internal_id = create_unique_element_id();
-            element.circle_layout.me = owner.clone();
+            element.circle_layout.me = owner;
             gummy_tree.add_child(parent, circle_node);
             gummy_tree.register_owner(circle_node, owner_id, owner);
             Some(parent)
@@ -114,7 +91,8 @@ impl ElementInternals for RadioInner {
     }
 
     fn draw(
-        &mut self,
+        &self,
+        elements: &Elements,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -135,7 +113,7 @@ impl ElementInternals for RadioInner {
         renderer.set_transform(container_transform * Affine::translate((0.0, -scroll_y)));
 
         if !self.hide_radio {
-            if self.is_selected() {
+            if self.is_selected(elements) {
                 renderer.draw_circle_outline(
                     self.circle.scale(_scale_factor),
                     Brush::Color(rgb(0, 100, 255)),
@@ -156,81 +134,78 @@ impl ElementInternals for RadioInner {
 
         renderer.set_transform(container_transform);
 
-        self.draw_children(renderer, resource_manager, _scale_factor, _text_context);
+        self.draw_children(elements, renderer, resource_manager, _scale_factor, _text_context);
         self.maybe_end_layer(renderer);
         self.draw_scrollbar(renderer, _scale_factor);
 
         self.maybe_end_overlay(renderer);
     }
 
-    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
-        scrollable::handle_scroll_logic(self, event);
+    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
+        scrollable::handle_scroll_logic(elements, self, event);
         if let EventKind::PointerUp(_) = event {
-            self.focus();
-            self.set_value();
+            self.focus(elements);
+            self.set_value(elements);
         } else if self.is_focused()
             && let EventKind::KeyDown(keyboard_event) = event
             && keyboard_event.code == KeyCode::Space
             && !keyboard_event.repeat
         {
-            self.set_value();
+            self.set_value(elements);
             keyboard_event.stop_propagation();
             keyboard_event.prevent_default();
         }
     }
 
-    fn push(&mut self, child: DynElement) {
-        push_child_to_element(self, child.inner);
-    }
-
-    fn on_access_event(&mut self, event: AccessEvent) -> Result<(), IsshoError> {
-        if matches!(event, AccessEvent::Select | AccessEvent::AddToSelection) && !self.is_selected() {
-            self.set_value();
+    fn on_access_event(&mut self, elements: &mut Elements, event: AccessEvent) -> Result<(), IsshoError> {
+        if matches!(event, AccessEvent::Select | AccessEvent::AddToSelection) && !self.is_selected(elements) {
+            self.set_value(elements);
         }
         Ok(())
     }
 }
 
-impl RadioInner {
-    fn set_value(&mut self) {
-        self.set_value_from_group();
+impl RadioNode {
+    fn set_value(&mut self, elements: &mut Elements) {
+        self.set_value_from_group(elements);
 
-        let me = self.element_data.me.upgrade();
-        let parent = self.element_data.parent.as_ref().and_then(Weak::upgrade);
+        let me = self.element_data.me;
+        let parent = self.element_data.parent;
         if let Some(parent) = parent {
-            for sibling in parent.borrow().element_data().children.clone() {
-                if me.as_ref().is_some_and(|me| Rc::ptr_eq(me, &sibling.inner)) {
+            for sibling in elements.get(parent).element_data().children.clone() {
+                if me == sibling {
                     continue;
                 }
-                if let Some(radio) =
-                    (sibling.inner.borrow_mut().deref_mut() as &mut dyn Any).downcast_mut::<RadioInner>()
-                {
-                    radio.set_accessibility_selection();
+                if (elements.get(sibling) as &dyn Any).is::<RadioNode>() {
+                    let selected = elements.state(self.active_value).clone();
+                    elements
+                        .get_as_mut::<RadioNode>(sibling)
+                        .set_accessibility_selection(&selected);
                 }
             }
         }
     }
 
-    pub(super) fn set_value_from_group(&mut self) {
-        let selection_changed = !self.is_selected();
-        self.active_value.replace(self.value.clone());
-        self.set_accessibility_selection();
-        let target = self.element_data.me.upgrade().unwrap();
-        queue_event(EventKind::RadioValueChanged(RadioValueChangedEvent::new(
-            DynElement::new(target),
-            self.active_value.clone(),
+    pub(super) fn set_value_from_group(&mut self, elements: &mut Elements) {
+        let selection_changed = !self.is_selected(elements);
+        *elements.state_mut(self.active_value) = self.value.clone();
+        let selected = elements.state(self.active_value).clone();
+        self.set_accessibility_selection(&selected);
+        let target = self.element_data.me;
+        elements.queue_event(EventKind::RadioValueChanged(RadioValueChangedEvent::new(
+            target, selected,
         )));
         if selection_changed {
             self.request_window_redraw();
         }
     }
 
-    fn is_selected(&self) -> bool {
-        self.active_value.borrow().as_str() == self.value
+    fn is_selected(&self, elements: &Elements) -> bool {
+        elements.state(self.active_value).as_str() == self.value
     }
 
-    pub(super) fn set_accessibility_selection(&mut self) {
-        let is_selected = self.is_selected();
+    pub(super) fn set_accessibility_selection(&mut self, selected: &str) {
+        let is_selected = selected == self.value;
         self.element_data
             .set_accessibility_selection_data(Some(SelectionData::SelectionGroupItem(SelectionGroupItem {
                 is_selected,
@@ -239,12 +214,12 @@ impl RadioInner {
 }
 
 impl Radio {
-    pub fn new(value: &str, label: &str, active_value: Rc<RefCell<String>>) -> Self {
+    pub fn new(elements: &mut Elements, value: &str, label: &str, active_value: State<String>) -> Self {
         let radius = 7.0;
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<RadioInner>>| {
-            RefCell::new(RadioInner {
-                element_data: ElementData::new(me.clone(), true),
-                circle_layout: ElementData::new_pseudo(me.clone(), false),
+        let inner = elements.insert_with(|me, access_tree| {
+            Box::new(RadioNode {
+                element_data: ElementData::new(me, true, access_tree.clone()),
+                circle_layout: ElementData::new_pseudo(me, false, access_tree),
                 circle: Circle::new(0.0, 0.0, radius),
                 value: value.to_string(),
                 label: label.to_string(),
@@ -252,51 +227,55 @@ impl Radio {
                 active_value,
             })
         });
-        let mut inner_mut = inner.borrow_mut();
-        inner_mut.element_data.create_layout_node(None);
-
-        inner_mut.circle_layout.style.set_min_width(Unit::Px(radius * 2.0));
-        inner_mut.circle_layout.style.set_min_height(Unit::Px(radius * 2.0));
-        inner_mut
-            .circle_layout
-            .style
-            .set_margin(TrblRectangle::new(auto(), px(5), auto(), px(0)));
-        inner_mut.circle_layout.create_layout_node(None);
-        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-            let node_id = inner_mut.circle_layout.layout.gummy_node_id();
-            gummy_tree.add_child(inner_mut.element_data.layout.gummy_node_id(), node_id);
-            let owner: Rc<RefCell<dyn ElementInternals>> = inner.clone();
-            gummy_tree.register_owner(node_id, inner_mut.element_data.internal_id, Rc::downgrade(&owner));
-        });
+        let selected = elements.state(active_value).clone();
         {
+            let inner_mut = elements.get_as_mut::<RadioNode>(inner);
+            inner_mut.circle_layout.style.set_min_width(Unit::Px(radius * 2.0));
+            inner_mut.circle_layout.style.set_min_height(Unit::Px(radius * 2.0));
+            inner_mut
+                .circle_layout
+                .style
+                .set_margin(TrblRectangle::new(auto(), px(5), auto(), px(0)));
             inner_mut.element_data.set_accessibility_role(issho::Role::RadioButton);
             inner_mut.element_data.set_accessibility_name(label.to_string());
-            inner_mut.set_accessibility_selection();
+            inner_mut.set_accessibility_selection(&selected);
         }
+        elements.with_gummy_tree(|gummy_tree, elements| {
+            let inner_mut = elements.get_as_mut::<RadioNode>(inner);
+            inner_mut.element_data.create_layout_node(gummy_tree, None);
+            inner_mut.circle_layout.create_layout_node(gummy_tree, None);
+            let node_id = inner_mut.circle_layout.layout.gummy_node_id();
+            gummy_tree.add_child(inner_mut.element_data.layout.gummy_node_id(), node_id);
+            gummy_tree.register_owner(node_id, inner_mut.element_data.internal_id, inner);
+        });
 
-        drop(inner_mut);
         Self { inner }
     }
 
     /// Hide the default circle radio button.
-    pub fn set_hide_radio(&mut self, value: bool) {
+    pub fn set_hide_radio(&mut self, elements: &mut Elements, value: bool) {
         // TODO: Hide in gummy.
-        let mut inner = self.inner.borrow_mut();
-        inner.hide_radio = value;
-        inner.request_window_redraw();
+        if let Some(inner) = elements.try_get_as_mut::<RadioNode>(self.inner) {
+            inner.hide_radio = value;
+            inner.request_window_redraw();
+        }
     }
 
     /// Hide the default circle radio button.
-    pub fn hide_radio(mut self) -> Self {
-        self.set_hide_radio(true);
+    pub fn hide_radio(mut self, elements: &mut Elements) -> Self {
+        self.set_hide_radio(elements, true);
         self
     }
 
-    pub fn get_label(&self) -> String {
-        self.inner.borrow().label.clone()
+    pub fn get_label(&self, elements: &Elements) -> String {
+        elements
+            .try_get_as::<RadioNode>(self.inner)
+            .map_or_else(String::new, |radio| radio.label.clone())
     }
 
-    pub fn get_value(&self) -> String {
-        self.inner.borrow().value.clone()
+    pub fn get_value(&self, elements: &Elements) -> String {
+        elements
+            .try_get_as::<RadioNode>(self.inner)
+            .map_or_else(String::new, |radio| radio.value.clone())
     }
 }

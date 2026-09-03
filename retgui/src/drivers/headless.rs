@@ -3,9 +3,9 @@ use retgui_primitives::geometry::{Point, Size};
 use winit::dpi::{PhysicalPosition, PhysicalSize};
 use winit::event::{ButtonSource, ElementState, Ime, KeyEvent, MouseButton, PointerSource, WindowEvent};
 
-use crate::app::{App, WINDOW_MANAGER, WindowEventResult};
+use crate::app::{App, WindowEventResult};
 use crate::drivers::Driver;
-use crate::elements::{Element, Window};
+use crate::elements::{Element, Elements, Window};
 
 const MAX_SETTLE_PASSES: usize = 64;
 
@@ -77,15 +77,25 @@ pub struct HeadlessApp {
     windows: Vec<Window>,
 }
 
-pub fn run<F>(name: &str, test: F)
+pub fn run<T, F>(_name: &str, build: impl FnOnce(&mut Elements) -> T, test: F)
 where
-    F: FnOnce(&mut HeadlessApp),
+    F: FnOnce(&mut HeadlessApp, T),
 {
-    let app = App::new(crate::RetGuiOptions::basic(name));
-    HeadlessApp::run_with_app(app, test);
+    let mut elements = Elements::new();
+    let test_state = build(&mut elements);
+    let app = App::new(elements);
+    HeadlessApp::run_with_app(app, |app| test(app, test_state));
 }
 
 impl HeadlessApp {
+    pub fn elements(&self) -> &Elements {
+        &self.driver.app.elements
+    }
+
+    pub fn elements_mut(&mut self) -> &mut Elements {
+        &mut self.driver.app.elements
+    }
+
     pub(crate) fn new(app: App) -> Self {
         let mut driver = HeadlessDriver::new(app);
         driver.app.on_resume(None);
@@ -105,11 +115,7 @@ impl HeadlessApp {
     }
 
     pub fn open(&mut self, window: &Window, size: Size<f32>) {
-        if !self
-            .windows
-            .iter()
-            .any(|registered| std::rc::Rc::ptr_eq(&registered.inner, &window.inner))
-        {
+        if !self.windows.iter().any(|registered| registered.inner == window.inner) {
             self.windows.push(window.clone());
         }
 
@@ -126,12 +132,18 @@ impl HeadlessApp {
     }
 
     pub fn click<E: Element>(&mut self, element: &E) {
-        let bounds = element.with(|element| element.get_computed_box_transformed().padding_rectangle());
+        let bounds = self
+            .driver
+            .app
+            .elements
+            .get(element.as_dyn_element())
+            .get_computed_box_transformed()
+            .padding_rectangle();
         let point = Point::new(
             (bounds.x + bounds.width / 2.0) as f64,
             (bounds.y + bounds.height / 2.0) as f64,
         );
-        let window = Self::element_window(element);
+        let window = self.element_window(element);
 
         self.enqueue_pointer_move(&window, point);
         self.drive();
@@ -176,6 +188,11 @@ impl HeadlessApp {
         self.driver.tick();
     }
 
+    pub fn close(&mut self, window: &Window) {
+        self.driver.send_event(*window, WindowEvent::CloseRequested);
+        self.drive();
+    }
+
     pub fn drive(&mut self) {
         let mut idle_passes = 0;
         for _ in 0..MAX_SETTLE_PASSES {
@@ -183,7 +200,7 @@ impl HeadlessApp {
             let dirty_windows: Vec<Window> = self
                 .windows
                 .iter()
-                .filter(|window| window.redraw_requested())
+                .filter(|window| window.redraw_requested(&self.driver.app.elements))
                 .cloned()
                 .collect();
 
@@ -204,12 +221,12 @@ impl HeadlessApp {
         panic!("RetGui test application did not settle after {MAX_SETTLE_PASSES} passes");
     }
 
-    pub fn screenshot(&self, window: &Window) -> retgui_renderer::renderer::Screenshot {
-        window.screenshot()
+    pub fn screenshot(&mut self, window: &Window) -> retgui_renderer::renderer::Screenshot {
+        window.screenshot(&mut self.driver.app.elements)
     }
 
     fn enqueue_pointer_move(&self, window: &Window, point: Point) {
-        let scale_factor = window.effective_scale_factor();
+        let scale_factor = window.effective_scale_factor(&self.driver.app.elements);
         self.driver.send_event(
             window.clone(),
             WindowEvent::PointerMoved {
@@ -228,8 +245,10 @@ impl HeadlessApp {
                 device_id: None,
                 state,
                 position: PhysicalPosition::new(
-                    window.mouse_position().unwrap_or_default().x * window.effective_scale_factor(),
-                    window.mouse_position().unwrap_or_default().y * window.effective_scale_factor(),
+                    window.mouse_position(&self.driver.app.elements).unwrap_or_default().x
+                        * window.effective_scale_factor(&self.driver.app.elements),
+                    window.mouse_position(&self.driver.app.elements).unwrap_or_default().y
+                        * window.effective_scale_factor(&self.driver.app.elements),
                 ),
                 primary: true,
                 button: ButtonSource::Mouse(MouseButton::Left),
@@ -238,124 +257,15 @@ impl HeadlessApp {
         );
     }
 
-    fn element_window<E: Element>(element: &E) -> Window {
-        let window = element.with(|element| {
-            element
-                .element_data()
-                .window
-                .as_ref()
-                .and_then(std::rc::Weak::upgrade)
-                .expect("element must be attached to a window before interaction")
-        });
+    fn element_window<E: Element>(&self, element: &E) -> Window {
+        let window = self
+            .driver
+            .app
+            .elements
+            .get(element.as_dyn_element())
+            .element_data()
+            .window
+            .expect("element must be attached to a window before interaction");
         Window { inner: window }
-    }
-}
-
-impl Drop for HeadlessApp {
-    fn drop(&mut self) {
-        WINDOW_MANAGER.with_borrow_mut(|window_manager| window_manager.clear());
-    }
-}
-
-#[cfg(test)]
-mod harness_tests {
-    use std::cell::Cell;
-    use std::rc::Rc;
-
-    use crate::elements::{Container, Element, Window};
-    use crate::{RendererType, px};
-    use retgui_primitives::geometry::Size;
-
-    use super::run;
-
-    #[test]
-    fn headless_click_dispatches_to_the_target_window() {
-        run("headless click", |test| {
-            let clicked = Rc::new(Cell::new(false));
-            let clicked_copy = clicked.clone();
-            let button = Container::new()
-                .width(px(100))
-                .height(px(50))
-                .on_pointer_button_up(move |_| clicked_copy.set(true));
-            let window = Window::new_with_renderer("Headless", RendererType::Blank)
-                .width(px(200))
-                .height(px(100))
-                .push(button.clone());
-
-            test.open(&window, Size::new(200.0, 100.0));
-            test.click(&button);
-
-            assert!(clicked.get());
-        });
-    }
-
-    #[test]
-    fn headless_click_is_routed_to_the_associated_window() {
-        run("headless multi-window click", |test| {
-            let first_clicked = Rc::new(Cell::new(false));
-            let first_clicked_copy = first_clicked.clone();
-            let first_button = Container::new()
-                .width(px(100))
-                .height(px(50))
-                .on_pointer_button_up(move |_| first_clicked_copy.set(true));
-            let first_window = Window::new_with_renderer("First", RendererType::Blank)
-                .width(px(200))
-                .height(px(100))
-                .push(first_button);
-
-            let second_clicked = Rc::new(Cell::new(false));
-            let second_clicked_copy = second_clicked.clone();
-            let second_button = Container::new()
-                .width(px(100))
-                .height(px(50))
-                .on_pointer_button_up(move |_| second_clicked_copy.set(true));
-            let second_window = Window::new_with_renderer("Second", RendererType::Blank)
-                .width(px(200))
-                .height(px(100))
-                .push(second_button.clone());
-
-            test.open(&first_window, Size::new(200.0, 100.0));
-            test.open(&second_window, Size::new(200.0, 100.0));
-            test.click(&second_button);
-
-            assert!(!first_clicked.get());
-            assert!(second_clicked.get());
-        });
-    }
-
-    #[test]
-    fn drawing_clears_the_window_redraw_flag() {
-        run("headless redraw flag", |test| {
-            let window = Window::new_with_renderer("Redraw", RendererType::Blank)
-                .width(px(200))
-                .height(px(100));
-
-            test.open(&window, Size::new(200.0, 100.0));
-            assert!(!window.redraw_requested());
-
-            window.request_redraw();
-            assert!(window.redraw_requested());
-
-            test.drive();
-            assert!(!window.redraw_requested());
-        });
-    }
-
-    #[cfg(feature = "vello_cpu_renderer")]
-    #[test]
-    fn headless_cpu_renderer_produces_a_screenshot() {
-        run("headless screenshot", |test| {
-            let window = Window::new_with_renderer("Screenshot", RendererType::VelloCPU)
-                .width(px(80))
-                .height(px(40))
-                .push(Container::new().width(px(80)).height(px(40)));
-
-            test.open(&window, Size::new(80.0, 40.0));
-            let screenshot = test.screenshot(&window);
-
-            assert_eq!(screenshot.width, 80);
-            assert_eq!(screenshot.height, 40);
-            assert_eq!(screenshot.pixels.len(), 80 * 40 * 4);
-        });
     }
 }

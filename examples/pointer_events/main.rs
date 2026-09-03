@@ -1,18 +1,32 @@
-use std::rc::Rc;
-
-use retgui::elements::{AsElement, Container, Element, Text, Window};
+use retgui::elements::{Container, Element, Elements, Text, Window};
 use retgui::events::{Event, PointerEnterEvent, PointerLeaveEvent};
 use retgui::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Position, Unit};
 use retgui::{Color, pct};
 
-fn title(txt: &str) -> Text {
-    Text::new(txt)
-        .font_size(24.0)
-        .padding(Unit::Px(0.0), Unit::Px(0.0), Unit::Px(25.0), Unit::Px(0.0))
+#[derive(Clone, Copy)]
+struct EventLog {
+    view: Container,
+    entries: Container,
 }
 
-fn event_log() -> (Container, Rc<dyn Fn(String)>) {
-    let event_log = Container::new()
+impl EventLog {
+    fn push(self, elements: &mut Elements, message: impl AsRef<str>) {
+        let text = Text::new(elements, message.as_ref());
+        self.entries.push(elements, text);
+    }
+}
+
+fn title(elements: &mut Elements, txt: &str) -> Text {
+    Text::new(elements, txt)
+        .edit(elements)
+        .font_size(24.0)
+        .padding(Unit::Px(0.0), Unit::Px(0.0), Unit::Px(25.0), Unit::Px(0.0))
+        .finish()
+}
+
+fn event_log(elements: &mut Elements) -> EventLog {
+    let entries = Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .overflow(Overflow::Visible, Overflow::Scroll)
@@ -22,106 +36,106 @@ fn event_log() -> (Container, Rc<dyn Fn(String)>) {
         .max_height(Unit::Px(200.0))
         .border_width_all(Unit::Px(1.0))
         .margin(Unit::Px(25.0), Unit::Px(0.0), Unit::Px(0.0), Unit::Px(0.0))
-        .border_color_all(Color::from_rgb8(99, 99, 99));
+        .border_color_all(Color::from_rgb8(99, 99, 99))
+        .finish();
 
-    let event_log_copy = event_log.clone();
-    let push_text = Rc::new(move |string: String| {
-        event_log_copy.clone().push(Text::new(&string));
-    });
-
-    let event_log_copy = event_log.clone();
-    let clear_log = Text::new("Clear")
+    let clear_log = Text::new(elements, "Clear")
+        .edit(elements)
         .background_color(Color::from_rgb8(210, 210, 215))
         .border_width_all(Unit::Px(1.0))
         .border_radius_all((6.0, 6.0))
         .padding(Unit::Px(10.0), Unit::Px(25.0), Unit::Px(10.0), Unit::Px(25.0))
         .width(Unit::Px(90.0))
-        .on_click(move |_e| {
-            let to_remove = event_log_copy.get_children();
-            for child in to_remove {
-                event_log_copy.remove_child(child).expect("Failed to remove child!");
-            }
-        });
+        .on_click(move |_event, elements| {
+            entries.delete_all_children(elements);
+        })
+        .finish();
 
-    let container = Container::new()
+    let container = Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .row_gap(Unit::Px(20.0))
-        .push(event_log)
-        .push(clear_log);
+        .push(entries)
+        .push(clear_log)
+        .finish();
 
-    (container, push_text)
+    EventLog {
+        view: container,
+        entries,
+    }
 }
 
-fn pointer_capture_example() -> Container {
+fn pointer_capture_example(elements: &mut Elements) -> Container {
     let container_padding = 20.0;
 
-    let draggable_text_clone = Text::new("Draggable");
+    let draggable_text = Text::new(elements, "Draggable");
+    let event_log = event_log(elements);
 
-    let (event_log, push_text) = event_log();
-    let push_text_clone = push_text.clone();
-    let push_text_clone2 = push_text.clone();
-
-    let draggable_text = draggable_text_clone
-        .clone()
+    let draggable_text = draggable_text
+        .edit(elements)
         .display(Display::Flex)
         .width(Unit::Px(100.0))
         .color(Color::WHITE)
         .background_color(Color::from_rgba8(40, 40, 255, 100))
-        .on_pointer_button_down(|event| {
-            event.target().with_mut(|element| {
-                element.set_pointer_capture(event.pointer.pointer_id.unwrap());
-            });
+        .on_pointer_button_down(|event, elements| {
+            event
+                .target()
+                .set_pointer_capture(elements, event.pointer.pointer_id.unwrap());
         })
-        .on_pointer_moved(move |event| {
-            let mouse_y = event.current.logical_position().x as f32;
-            let half_size = draggable_text_clone.get_computed_box_transformed().size.width / 2.0;
-            if draggable_text_clone.has_pointer_capture(event.pointer.pointer_id.unwrap()) {
-                draggable_text_clone.clone().position(Position::Relative).inset(
-                    Unit::Px(0.0),
-                    Unit::Px(0.0),
-                    Unit::Px(0.0),
-                    Unit::Px(mouse_y - half_size - container_padding),
-                );
+        .on_pointer_moved(move |event, elements| {
+            let mouse_x = event.current.logical_position().x as f32;
+            let half_width = draggable_text.get_computed_box_transformed(elements).size.width / 2.0;
+            if draggable_text.has_pointer_capture(elements, event.pointer.pointer_id.unwrap()) {
+                draggable_text
+                    .edit(elements)
+                    .position(Position::Relative)
+                    .inset(
+                        Unit::Px(0.0),
+                        Unit::Px(0.0),
+                        Unit::Px(0.0),
+                        Unit::Px(mouse_x - half_width - container_padding),
+                    )
+                    .finish();
             }
             event.prevent_default();
         })
-        .on_lost_pointer_capture(move |_e| {
-            push_text_clone("Lost Pointer Capture".to_string());
+        .on_lost_pointer_capture(move |_event, elements| {
+            event_log.push(elements, "Lost Pointer Capture");
         })
-        .on_got_pointer_capture(move |_e| {
-            push_text_clone2("Got Pointer Capture".to_string());
-        });
+        .on_got_pointer_capture(move |_event, elements| {
+            event_log.push(elements, "Got Pointer Capture");
+        })
+        .finish();
 
-    Container::new()
+    let heading = title(elements, "Pointer Capture");
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .padding_all(Unit::Px(container_padding))
-        .push(title("Pointer Capture"))
+        .push(heading)
         .push(draggable_text)
-        .push(event_log)
+        .push(event_log.view)
+        .finish()
 }
 
-fn pointer_enter_leave_example() -> Container {
-    let (event_log, push_text) = event_log();
+fn pointer_enter_leave_example(elements: &mut Elements) -> Container {
+    let event_log = event_log(elements);
 
-    let pointer_enter_log = {
-        let push_text = push_text.clone();
-        move |node_name: &'static str| {
-            let push_text = push_text.clone();
-            move |_event: &mut PointerEnterEvent| {
-                push_text(format!("Pointer Enter: {node_name}"));
-            }
+    let pointer_enter_log = move |node_name: &'static str| {
+        move |_event: &mut PointerEnterEvent, elements: &mut Elements| {
+            event_log.push(elements, format!("Pointer Enter: {node_name}"));
         }
     };
     let pointer_leave_log = move |node_name: &'static str| {
-        let push_text_clone_2 = push_text.clone();
-        move |_event: &mut PointerLeaveEvent| {
-            push_text_clone_2(format!("Pointer Leave: {node_name}"));
+        move |_event: &mut PointerLeaveEvent, elements: &mut Elements| {
+            event_log.push(elements, format!("Pointer Leave: {node_name}"));
         }
     };
 
-    let parent = Container::new()
+    let parent = Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Row)
         .align_items(AlignItems::Center)
@@ -130,28 +144,37 @@ fn pointer_enter_leave_example() -> Container {
         .height(Unit::Px(250.0))
         .background_color(Color::from_rgba8(10, 10, 255, 150))
         .on_pointer_enter(pointer_enter_log("Parent"))
-        .on_pointer_leave(pointer_leave_log("Parent"));
+        .on_pointer_leave(pointer_leave_log("Parent"))
+        .finish();
 
-    let child_container = Container::new()
+    let child_container = Container::new(elements)
+        .edit(elements)
         .width(Unit::Px(125.0))
         .height(Unit::Px(125.0))
         .background_color(Color::from_rgba8(255, 10, 10, 150))
         .on_pointer_enter(pointer_enter_log("Child"))
-        .on_pointer_leave(pointer_leave_log("Child"));
+        .on_pointer_leave(pointer_leave_log("Child"))
+        .finish();
 
-    let parent = parent.push(child_container);
+    parent.push(elements, child_container);
+    let heading = title(elements, "Pointer Enter + Leave");
 
-    Container::new()
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .padding_all(Unit::Px(20.0))
-        .push(title("Pointer Enter + Leave"))
+        .push(heading)
         .push(parent)
-        .push(event_log)
+        .push(event_log.view)
+        .finish()
 }
 
-pub fn pointer_events() -> Container {
-    Container::new()
+pub fn pointer_events(elements: &mut Elements) -> Container {
+    let capture = pointer_capture_example(elements);
+    let enter_leave = pointer_enter_leave_example(elements);
+    Container::new(elements)
+        .edit(elements)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .overflow_y(Overflow::Scroll)
@@ -159,19 +182,24 @@ pub fn pointer_events() -> Container {
         .width(pct(100))
         .height(pct(100))
         .row_gap(Unit::Px(50.0))
-        .push(pointer_capture_example())
-        .push(pointer_enter_leave_example())
+        .push(capture)
+        .push(enter_leave)
+        .finish()
 }
 
 #[allow(unused)]
 #[cfg(not(target_os = "android"))]
 fn main() {
-    Window::new("Pointer Events")
+    let mut elements = Elements::new();
+    let content = pointer_events(&mut elements);
+    Window::new(&mut elements, "Pointer Events")
+        .edit(&mut elements)
         .width(pct(100))
         .height(pct(100))
-        .push(pointer_events());
+        .push(content)
+        .finish();
 
     use retgui::RetGuiOptions;
     //util::setup_logging();
-    retgui::retgui_main(RetGuiOptions::basic("Pointer Events"));
+    retgui::retgui_main(elements, RetGuiOptions::basic("Pointer Events"));
 }

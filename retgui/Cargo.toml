@@ -29,6 +29,7 @@ link = ["dep:open"]
 default = ["vello_hybrid_renderer", "clipboard"]
 
 [dependencies]
+slotmap.workspace = true
 retgui_logging = { path = "../logger", version = "0.1.0" }
 retgui_undo = { path = "../undo", version = "0.1.1" }
 retgui_calendar = { path = "../calendar", version = "0.1.0" }

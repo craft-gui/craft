@@ -1,41 +1,35 @@
-//! Stores a generic Element.
+//! A type-erased handle to an element stored in [`Elements`](crate::elements::Elements).
 
-use std::cell::{Ref, RefCell};
-use std::rc::Rc;
+use slotmap::DefaultKey;
 
-use crate::elements::{AsElement, Element, ElementInternals};
+use crate::elements::Element;
 
-#[derive(Clone)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct DynElement {
-    pub(crate) inner: Rc<RefCell<dyn ElementInternals>>,
+    key: DefaultKey,
+    store_id: u64,
 }
 
-impl PartialEq for DynElement {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.inner, &other.inner)
-    }
-}
-
-impl Eq for DynElement {}
-
-impl Element for DynElement {}
-
-impl AsElement for DynElement {
-    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
-        callback(&*self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
-        callback(&mut *self.inner.borrow_mut())
+impl Element for DynElement {
+    fn as_dyn_element(&self) -> DynElement {
+        *self
     }
 }
 
 impl DynElement {
-    pub(crate) const fn new(inner: Rc<RefCell<dyn ElementInternals>>) -> DynElement {
-        Self { inner }
+    pub(crate) const fn new(element: DynElement) -> Self {
+        element
     }
 
-    pub(crate) fn borrow(&self) -> Ref<'_, dyn ElementInternals> {
-        self.inner.borrow()
+    pub(crate) const fn from_key(key: DefaultKey, store_id: u64) -> Self {
+        Self { key, store_id }
+    }
+
+    pub(crate) const fn key(self) -> DefaultKey {
+        self.key
+    }
+
+    pub(crate) const fn store_id(self) -> u64 {
+        self.store_id
     }
 }

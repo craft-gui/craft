@@ -1,5 +1,4 @@
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
@@ -24,13 +23,13 @@ use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Point, Rectangle, Vec2};
 
 use retgui_renderer::renderer::Renderer;
-use retgui_renderer::text_renderer_data::TextData;
+use retgui_renderer::text_renderer_data::{TextData, TextSnapshot};
 
 use retgui_resource_manager::ResourceManager;
 
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, DynElement, Element, ElementInternals};
+use crate::elements::{DynElement, Element, ElementNode, Elements};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{GummyTextContext, LayoutContext, TextHashKey};
@@ -41,23 +40,24 @@ use crate::text::text_render_data::TextRender;
 
 const MAX_CACHE_SIZE: usize = 16;
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Text {
-    pub(crate) inner: Rc<RefCell<TextInner>>,
+    pub(crate) inner: DynElement,
 }
 
 // A stateful element that shows text.
 #[derive(Clone)]
-pub(crate) struct TextInner {
+pub(crate) struct TextNode {
     element_data: ElementData,
     selectable: bool,
     pub(crate) state: TextState,
-    me: Weak<RefCell<Self>>,
 }
 
 #[derive(Clone)]
 pub struct TextState {
-    pub(crate) text_render: Option<TextRender>,
+    pub(crate) text_render: Option<Rc<TextRender>>,
+    text_snapshot: Option<Rc<dyn TextData>>,
+    pub(crate) override_brush: Option<Brush>,
     pub(crate) last_click_time: Option<Instant>,
     pub(crate) click_count: u32,
     pub(crate) pointer_down: bool,
@@ -83,25 +83,13 @@ pub struct TextState {
     is_render_dirty: bool,
 }
 
-impl Element for Text {}
-
-impl Drop for TextInner {
-    fn drop(&mut self) {
-        ElementInternals::drop(self)
+impl Element for Text {
+    fn as_dyn_element(&self) -> DynElement {
+        self.inner
     }
 }
 
-impl AsElement for Text {
-    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
-        callback(&*self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
-        callback(&mut *self.inner.borrow_mut())
-    }
-}
-
-impl crate::elements::ElementData for TextInner {
+impl crate::elements::ElementNodeData for TextNode {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -111,9 +99,13 @@ impl crate::elements::ElementData for TextInner {
     }
 }
 
-impl TextData for TextInner {
+impl TextData for TextNode {
     fn get_text_renderer(&self) -> Option<&TextRender> {
-        self.state.text_render.as_ref()
+        self.state.text_render.as_deref()
+    }
+
+    fn override_brush(&self) -> Option<&Brush> {
+        self.state.override_brush.as_ref()
     }
 
     fn use_glyph_cache(&self) -> bool {
@@ -129,6 +121,8 @@ impl Default for TextState {
             text_align: Default::default(),
             selection: Selection::default(),
             text_render: None,
+            text_snapshot: None,
+            override_brush: None,
             layout: None,
             cache: Default::default(),
             current_layout_key: None,
@@ -148,15 +142,12 @@ impl Default for TextState {
     }
 }
 
-impl ElementInternals for TextInner {
-    fn deep_clone(&self) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, |element, gummy_tree| {
-            let me = Rc::downgrade(element);
-            let mut element = element.borrow_mut();
-            element.me = me;
+impl ElementNode for TextNode {
+    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
             let node = element.element_data.layout.gummy_node_id();
             let context = LayoutContext::Text(GummyTextContext {
-                element: element.me.clone(),
+                element: element.element_data.me,
             });
             gummy_tree.set_node_context(node, Some(context));
             Some(node)
@@ -174,7 +165,7 @@ impl ElementInternals for TextInner {
         let result = gummy_tree.get_layout(node);
         let has_new_layout = gummy_tree.has_new_layout(node);
 
-        self.element_data.layout.has_new_layout = has_new_layout;
+        self.element_data.layout.has_new_layout.set(has_new_layout);
         if has_new_layout {
             self.resolve_box(result, z_index);
             self.apply_borders(scale_factor);
@@ -208,7 +199,8 @@ impl ElementInternals for TextInner {
     }
 
     fn draw(
-        &mut self,
+        &self,
+        _elements: &Elements,
         _renderer: &mut dyn Renderer,
         _resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -226,12 +218,13 @@ impl ElementInternals for TextInner {
 
         self.draw_borders(_renderer, _scale_factor);
 
-        _renderer.draw_text(self.me.clone(), content_rectangle.scale(_scale_factor), None, false);
+        let snapshot = self.state.text_snapshot.as_ref().expect("text snapshot not found");
+        _renderer.draw_text_ref(snapshot, content_rectangle.scale(_scale_factor), None, false);
 
         self.maybe_end_overlay(_renderer);
     }
 
-    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
+    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
         if !self.selectable {
             return;
         }
@@ -271,7 +264,7 @@ impl ElementInternals for TextInner {
                         state.update_text_selection(self.element_data.style.get_selection_brush());
                     }
                     if click_count == 1 {
-                        self.set_pointer_capture(pb.pointer.pointer_id.unwrap());
+                        self.set_pointer_capture(elements, pb.pointer.pointer_id.unwrap());
                     }
                     if selection_changed {
                         self.request_window_redraw();
@@ -281,7 +274,7 @@ impl ElementInternals for TextInner {
                 EventKind::PointerUp(pb) if pb.button == Some(PointerButton::Left) => {
                     state.pointer_down = false;
                     state.cursor_reset();
-                    self.release_pointer_capture(pb.pointer.pointer_id.unwrap());
+                    self.release_pointer_capture(elements, pb.pointer.pointer_id.unwrap());
                     pb.prevent_default();
                 }
                 EventKind::PointerMoved(pointer_moved) => {
@@ -307,7 +300,7 @@ impl ElementInternals for TextInner {
         }
     }
 
-    fn set_scale_factor(&mut self, scale_factor: f64) {
+    fn set_scale_factor(&mut self, _elements: &mut Elements, scale_factor: f64) {
         self.element_data.applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         self.state.is_layout_dirty = true;
@@ -318,9 +311,8 @@ impl ElementInternals for TextInner {
 
     fn set_text_brush(&mut self, brush: Brush) {
         self.style_mut().set_text_brush(brush.clone());
-        if let Some(text_render) = &mut self.state.text_render {
-            text_render.override_brush = Some(brush);
-        }
+        self.state.override_brush = Some(brush);
+        self.state.refresh_text_snapshot();
         self.request_window_redraw();
     }
 
@@ -337,56 +329,66 @@ impl ElementInternals for TextInner {
 }
 
 impl Text {
-    pub fn new(text: &str) -> Self {
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TextInner>>| {
-            RefCell::new(TextInner {
-                element_data: ElementData::new(me.clone(), false),
+    pub fn new(elements: &mut Elements, text: &str) -> Self {
+        let inner = elements.insert_with(|me, access_tree| {
+            Box::new(TextNode {
+                element_data: ElementData::new(me, false, access_tree),
                 selectable: true,
                 state: TextState::default(),
-                me: me.clone(),
             })
         });
-        let mut inner_mut = inner.borrow_mut();
+        let inner_mut = elements.get_as_mut::<TextNode>(inner);
 
         inner_mut.element_data.set_accessibility_role(issho::Role::Label);
         let selectable = inner_mut.selectable;
         inner_mut.set_selectable(selectable);
 
         let text_context = Some(LayoutContext::Text(GummyTextContext {
-            element: inner_mut.me.clone(),
+            element: inner_mut.element_data.me,
         }));
-        inner_mut.element_data.create_layout_node(text_context);
-        inner_mut.set_text(text);
+        let _ = inner_mut;
+        elements.create_layout_node(inner, text_context);
+        elements.get_as_mut::<TextNode>(inner).set_text(text);
 
-        drop(inner_mut);
         Text { inner }
     }
 
-    pub fn get_selectable(&self) -> bool {
-        self.inner.borrow().selectable
+    pub fn get_selectable(&self, elements: &Elements) -> bool {
+        elements
+            .try_get_as::<TextNode>(self.inner)
+            .is_some_and(|text| text.selectable)
     }
 
-    pub fn selectable(self, selectable: bool) -> Self {
-        self.inner.borrow_mut().set_selectable(selectable);
+    pub fn selectable(self, elements: &mut Elements, selectable: bool) -> Self {
+        if let Some(text) = elements.try_get_as_mut::<TextNode>(self.inner) {
+            text.set_selectable(selectable);
+        }
         self
     }
 
-    pub fn get_text(&self) -> String {
-        self.inner.borrow().get_text().to_owned()
+    /// Returns the current text, or an empty string if this handle is stale.
+    pub fn get_text(&self, elements: &Elements) -> String {
+        elements
+            .try_get_as::<TextNode>(self.inner)
+            .map_or_else(String::new, |text| text.get_text().to_owned())
     }
 
-    pub fn text(self, text: &str) -> Self {
-        self.inner.borrow_mut().set_text(text);
+    pub fn text(self, elements: &mut Elements, text: &str) -> Self {
+        if let Some(element) = elements.try_get_as_mut::<TextNode>(self.inner) {
+            element.set_text(text);
+        }
         self
     }
 
-    pub fn set_text_smol_str(self, text: SmolStr) -> Self {
-        self.inner.borrow_mut().set_text_smol_str(text);
+    pub fn set_text_smol_str(self, elements: &mut Elements, text: SmolStr) -> Self {
+        if let Some(element) = elements.try_get_as_mut::<TextNode>(self.inner) {
+            element.set_text_smol_str(text);
+        }
         self
     }
 }
 
-impl TextInner {
+impl TextNode {
     pub fn set_selectable(&mut self, selectable: bool) -> &mut Self {
         self.selectable = selectable;
         self.element_data.set_selectable(self.selectable);
@@ -537,16 +539,20 @@ impl TextState {
         text_brush: Brush,
         use_glyph_cache: bool,
     ) {
+        let glyph_cache_changed = self.use_glyph_cache != use_glyph_cache;
+        let brush_changed = self.override_brush.as_ref() != Some(&text_brush);
         self.use_glyph_cache = use_glyph_cache;
+        self.override_brush = Some(text_brush);
 
         if self.current_render_key == self.current_layout_key {
+            if glyph_cache_changed || brush_changed {
+                self.refresh_text_snapshot();
+            }
             return;
         }
 
         let layout = self.layout.as_ref().unwrap();
-        let mut text_render = text_render_data::from_editor(layout);
-        text_render.override_brush = Some(text_brush);
-        self.text_render = Some(text_render);
+        self.text_render = Some(Rc::new(text_render_data::from_editor(layout)));
         self.current_render_key = self.current_layout_key;
 
         self.update_text_selection(selection_brush);
@@ -590,13 +596,14 @@ impl TextState {
         self.last_requested_measure_key = None;
         self.current_render_key = None;
         self.text_render = None;
+        self.text_snapshot = None;
         self.content_widths = None;
         self.is_layout_dirty = false;
     }
 
     fn update_text_selection(&mut self, selection_brush: Brush) {
         if let Some(layout) = self.layout.as_ref() {
-            let text_renderer = self.text_render.as_mut().unwrap();
+            let text_renderer = Rc::make_mut(self.text_render.as_mut().unwrap());
             for line in text_renderer.lines.iter_mut() {
                 line.selections.clear();
             }
@@ -611,6 +618,61 @@ impl TextState {
                     selection_brush.clone(),
                 ));
             });
+            self.refresh_text_snapshot();
         }
+    }
+
+    fn refresh_text_snapshot(&mut self) {
+        self.text_snapshot = self.text_render.clone().map(|render| {
+            Rc::new(TextSnapshot::from_shared(
+                render,
+                self.override_brush.clone(),
+                self.use_glyph_cache,
+            )) as Rc<dyn TextData>
+        });
+    }
+}
+
+#[cfg(test)]
+mod animation_tests {
+    use std::rc::Rc;
+    use std::time::Duration;
+
+    use retgui_renderer::text_renderer_data::TextRender;
+
+    use super::{Text, TextNode};
+    use crate::elements::{ElementNode, Elements};
+    use crate::style::{Animation, KeyFrame, Repeat, StyleVariant, TimingFunction};
+    use crate::{Brush, Color};
+
+    #[test]
+    fn animated_brush_refreshes_snapshot_without_cloning_glyph_data() {
+        let mut elements = Elements::new();
+        let text = Text::new(&mut elements, "animated");
+        let render = Rc::new(TextRender {
+            lines: Vec::new(),
+            cursor: None,
+            override_brush: None,
+        });
+        {
+            let text = elements.get_as_mut::<TextNode>(text.inner);
+            text.state.text_render = Some(render.clone());
+            text.state.refresh_text_snapshot();
+            text.element_data.animations = vec![
+                Animation::new(Duration::from_secs(1), Repeat::Forever, TimingFunction::Linear)
+                    .push(KeyFrame::new(0.0).push(StyleVariant::TextBrush(Brush::Color(Color::BLACK))))
+                    .push(KeyFrame::new(100.0).push(StyleVariant::TextBrush(Brush::Color(Color::WHITE)))),
+            ];
+        }
+
+        elements
+            .get_as_mut::<TextNode>(text.inner)
+            .animation_tick(Duration::from_millis(500));
+
+        let text = elements.get_as::<TextNode>(text.inner);
+        let snapshot = text.state.text_snapshot.as_ref().unwrap();
+        assert!(snapshot.override_brush().is_some());
+        assert_ne!(snapshot.override_brush(), Some(&Brush::Color(Color::BLACK)));
+        assert!(Rc::ptr_eq(text.state.text_render.as_ref().unwrap(), &render));
     }
 }

@@ -1,7 +1,5 @@
 use peniko::Color;
 use retgui_primitives::geometry::{Point, Rectangle};
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use retgui_primitives::brush::Brush;
@@ -14,10 +12,9 @@ use retgui_resource_manager::ResourceManager;
 use winit::event::ElementState;
 use winit::keyboard::KeyCode;
 
-use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, DynElement, Element, ElementInternals};
+use crate::elements::{DynElement, Element, ElementNode, Elements};
 use crate::events::{Event, EventKind, SliderValueChangedEvent};
 use crate::layout::GummyTree;
 use crate::palette;
@@ -31,13 +28,13 @@ pub enum SliderDirection {
     Vertical,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Slider {
-    pub(crate) inner: Rc<RefCell<SliderInner>>,
+    pub(crate) inner: DynElement,
 }
 
 #[derive(Clone)]
-pub(crate) struct SliderInner {
+pub(crate) struct SliderNode {
     element_data: ElementData,
 
     step: f64,
@@ -58,121 +55,169 @@ pub(crate) struct SliderInner {
 }
 
 impl Slider {
-    pub fn new(thumb_size: f32) -> Self {
+    pub fn new(elements: &mut Elements, thumb_size: f32) -> Self {
         Self {
-            inner: SliderInner::new(thumb_size),
+            inner: SliderNode::new(elements, thumb_size),
         }
     }
 
-    pub fn value(self, value: f64) -> Self {
-        self.inner.borrow_mut().set_value(value);
+    pub fn value(self, elements: &mut Elements, value: f64) -> Self {
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_value(value);
+        }
         self
     }
 
-    pub fn get_value(&self) -> f64 {
-        self.inner.borrow().get_value()
+    pub fn get_value(&self, elements: &Elements) -> f64 {
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or(0.0, SliderNode::get_value)
     }
 
-    pub fn step(self, value: f64) -> Self {
-        self.inner.borrow_mut().set_step(value);
+    pub fn step(self, elements: &mut Elements, value: f64) -> Self {
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_step(value);
+        }
         self
     }
 
-    pub fn get_step(&self) -> f64 {
-        self.inner.borrow().get_step()
+    pub fn get_step(&self, elements: &Elements) -> f64 {
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or(0.0, SliderNode::get_step)
     }
 
-    pub fn min(self, min: f64) -> Self {
-        self.inner.borrow_mut().set_min(min);
+    pub fn min(self, elements: &mut Elements, min: f64) -> Self {
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_min(min);
+        }
         self
     }
 
-    pub fn get_min(&self) -> f64 {
-        self.inner.borrow().get_min()
+    pub fn get_min(&self, elements: &Elements) -> f64 {
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or(0.0, SliderNode::get_min)
     }
 
-    pub fn max(self, max: f64) -> Self {
-        self.inner.borrow_mut().set_max(max);
+    pub fn max(self, elements: &mut Elements, max: f64) -> Self {
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_max(max);
+        }
         self
     }
 
-    pub fn get_max(&self) -> f64 {
-        self.inner.borrow().get_max()
+    pub fn get_max(&self, elements: &Elements) -> f64 {
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or(0.0, SliderNode::get_max)
     }
 
-    pub fn direction(self, direction: SliderDirection) -> Self {
-        self.inner.borrow_mut().set_direction(direction);
+    pub fn direction(self, elements: &mut Elements, direction: SliderDirection) -> Self {
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_direction(direction);
+        }
         self
     }
 
-    pub fn get_direction(&self) -> SliderDirection {
-        self.inner.borrow().get_direction()
+    pub fn get_direction(&self, elements: &Elements) -> SliderDirection {
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or_else(SliderDirection::default, SliderNode::get_direction)
     }
 
-    pub fn thumb_size(self, thumb_size: f64) -> Self {
-        self.inner.borrow_mut().set_thumb_size(thumb_size);
+    pub fn thumb_size(self, elements: &mut Elements, thumb_size: f64) -> Self {
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_thumb_size(thumb_size);
+        }
         self
     }
 
-    pub fn get_thumb_size(&self) -> f64 {
-        self.inner.borrow().get_thumb_size()
+    pub fn get_thumb_size(&self, elements: &Elements) -> f64 {
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or(0.0, SliderNode::get_thumb_size)
     }
 
-    pub fn thumb_color(self, thumb_background_color: Brush) -> Self {
-        self.inner.borrow_mut().set_thumb_color(thumb_background_color);
+    pub fn thumb_color(self, elements: &mut Elements, thumb_background_color: Brush) -> Self {
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_thumb_color(thumb_background_color);
+        }
         self
     }
 
-    pub fn get_thumb_brush(&self) -> Brush {
-        self.inner.borrow().get_thumb_brush()
+    pub fn get_thumb_brush(&self, elements: &Elements) -> Brush {
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .map_or_else(Brush::default, SliderNode::get_thumb_brush)
     }
 
-    pub fn thumb_border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
-        self.inner
-            .borrow_mut()
-            .set_thumb_border_radius(top, right, bottom, left);
+    pub fn thumb_border_radius(
+        self,
+        elements: &mut Elements,
+        top: (f32, f32),
+        right: (f32, f32),
+        bottom: (f32, f32),
+        left: (f32, f32),
+    ) -> Self {
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_thumb_border_radius(top, right, bottom, left);
+        }
         self
     }
 
-    pub fn get_thumb_border_radius(&self) -> Option<[(f32, f32); 4]> {
-        self.inner.borrow().get_thumb_border_radius()
+    pub fn get_thumb_border_radius(&self, elements: &Elements) -> Option<[(f32, f32); 4]> {
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .and_then(SliderNode::get_thumb_border_radius)
     }
 
-    pub fn track_color(self, track_background_color: Color) -> Self {
-        self.inner
-            .borrow_mut()
-            .set_track_brush(Brush::Color(track_background_color));
+    pub fn track_color(self, elements: &mut Elements, track_background_color: Color) -> Self {
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_track_brush(Brush::Color(track_background_color));
+        }
         self
     }
 
-    pub fn track_gradient(self, track_background_gradient: Gradient) -> Self {
-        self.inner
-            .borrow_mut()
-            .set_track_brush(Brush::Gradient(track_background_gradient));
+    pub fn track_gradient(self, elements: &mut Elements, track_background_gradient: Gradient) -> Self {
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_track_brush(Brush::Gradient(track_background_gradient));
+        }
         self
     }
 
-    pub fn get_track_brush(&self) -> Option<Brush> {
-        self.inner.borrow().get_track_brush()
+    pub fn get_track_brush(&self, elements: &Elements) -> Option<Brush> {
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .and_then(SliderNode::get_track_brush)
     }
 
-    pub fn track_border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
-        self.inner
-            .borrow_mut()
-            .set_track_border_radius(top, right, bottom, left);
+    pub fn track_border_radius(
+        self,
+        elements: &mut Elements,
+        top: (f32, f32),
+        right: (f32, f32),
+        bottom: (f32, f32),
+        left: (f32, f32),
+    ) -> Self {
+        if let Some(slider) = elements.try_get_as_mut::<SliderNode>(self.inner) {
+            slider.set_track_border_radius(top, right, bottom, left);
+        }
         self
     }
 
-    pub fn get_track_border_radius(&self) -> Option<[(f32, f32); 4]> {
-        self.inner.borrow().get_track_border_radius()
+    pub fn get_track_border_radius(&self, elements: &Elements) -> Option<[(f32, f32); 4]> {
+        elements
+            .try_get_as::<SliderNode>(self.inner)
+            .and_then(SliderNode::get_track_border_radius)
     }
 }
 
-impl SliderInner {
-    pub fn new(thumb_size: f32) -> Rc<RefCell<Self>> {
-        let me = Rc::new_cyclic(|me: &Weak<RefCell<Self>>| {
-            RefCell::new(Self {
-                element_data: ElementData::new(me.clone(), false),
+impl SliderNode {
+    pub fn new(elements: &mut Elements, thumb_size: f32) -> DynElement {
+        let me = elements.insert_with(|me, access_tree| {
+            Box::new(Self {
+                element_data: ElementData::new(me, false, access_tree),
                 step: 1.0,
                 min: 0.0,
                 max: 100.0,
@@ -187,36 +232,24 @@ impl SliderInner {
             })
         });
 
-        me.borrow_mut().element_data.create_layout_node(None);
-        me.borrow_mut().element_data.set_accessibility_role(issho::Role::Slider);
-
-        me.borrow_mut()
-            .set_background_brush(Brush::Color(palette::css::LIGHT_GRAY));
+        elements.create_layout_node(me, None);
+        let element = elements.get_as_mut::<Self>(me);
+        element.element_data.set_accessibility_role(issho::Role::Slider);
+        element.set_background_brush(Brush::Color(palette::css::LIGHT_GRAY));
         let border_radius = 25.0;
-        me.borrow_mut().set_border_radius(
+        element.set_border_radius(
             (border_radius, border_radius),
             (border_radius, border_radius),
             (border_radius, border_radius),
             (border_radius, border_radius),
         );
-        if me.borrow_mut().direction == SliderDirection::Horizontal {
-            me.borrow_mut().set_width(Unit::Px(140.0));
-            me.borrow_mut().set_height(Unit::Px(10.0));
+        if element.direction == SliderDirection::Horizontal {
+            element.set_width(Unit::Px(140.0));
+            element.set_height(Unit::Px(10.0));
         } else {
-            me.borrow_mut().set_height(Unit::Px(140.0));
-            me.borrow_mut().set_width(Unit::Px(10.0));
+            element.set_height(Unit::Px(140.0));
+            element.set_width(Unit::Px(10.0));
         }
-
-        // TODO: FIX
-        /* {
-            let mut gummy_tree = self.element_data.gummy_tree.borrow_mut();
-            let node_id = gummy_tree.new_leaf(me.borrow().style().to_gummy_style());
-            me.borrow_mut().element_data.layout_item.gummy_node_id = Some(node_id);
-        });
-
-        ELEMENTS.with_borrow_mut(|elements| {
-            elements.insert(me.borrow().deref());
-        });*/
 
         me
     }
@@ -226,14 +259,13 @@ impl SliderInner {
         self.request_window_redraw();
     }
 
-    fn update_value_from_event(&mut self, value: f64) {
+    fn update_value_from_event(&mut self, elements: &mut Elements, value: f64) {
         let value = value.clamp(self.min, self.max);
         if (value - self.value).abs() > f64::EPSILON {
             self.set_value(value);
-            let target = self.element_data.me.upgrade().unwrap();
-            queue_event(EventKind::SliderValueChanged(SliderValueChangedEvent::new(
-                DynElement::new(target),
-                self.value,
+            let target = self.element_data.me;
+            elements.queue_event(EventKind::SliderValueChanged(SliderValueChangedEvent::new(
+                target, self.value,
             )));
         }
     }
@@ -341,25 +373,13 @@ impl SliderInner {
     }
 }
 
-impl Element for Slider {}
-
-impl Drop for SliderInner {
-    fn drop(&mut self) {
-        ElementInternals::drop(self)
+impl Element for Slider {
+    fn as_dyn_element(&self) -> DynElement {
+        self.inner
     }
 }
 
-impl AsElement for Slider {
-    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
-        callback(&*self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
-        callback(&mut *self.inner.borrow_mut())
-    }
-}
-
-impl crate::elements::ElementData for SliderInner {
+impl crate::elements::ElementNodeData for SliderNode {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -369,9 +389,9 @@ impl crate::elements::ElementData for SliderInner {
     }
 }
 
-impl ElementInternals for SliderInner {
-    fn deep_clone(&self) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
+impl ElementNode for SliderNode {
+    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
 
     fn apply_layout(
@@ -385,7 +405,7 @@ impl ElementInternals for SliderInner {
         let layout = gummy_tree.get_layout(node);
         let has_new_layout = gummy_tree.has_new_layout(node);
 
-        self.element_data.layout.has_new_layout = has_new_layout;
+        self.element_data.layout.has_new_layout.set(has_new_layout);
 
         if has_new_layout {
             self.resolve_box(layout, z_index);
@@ -395,7 +415,8 @@ impl ElementInternals for SliderInner {
     }
 
     fn draw(
-        &mut self,
+        &self,
+        _elements: &Elements,
         _renderer: &mut dyn Renderer,
         _resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -416,7 +437,7 @@ impl ElementInternals for SliderInner {
         self.maybe_end_overlay(_renderer);
     }
 
-    fn add_hit_testable(&mut self, renderer: &mut dyn Renderer, hit_testable: bool, scale_factor: f64) {
+    fn add_hit_testable(&self, renderer: &mut dyn Renderer, hit_testable: bool, scale_factor: f64) {
         if !hit_testable {
             return;
         }
@@ -439,7 +460,7 @@ impl ElementInternals for SliderInner {
         );
     }
 
-    fn on_event(&mut self, event: &mut EventKind, _text_context: &mut TextContext) {
+    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
         match event {
             EventKind::KeyDown(key) | EventKind::KeyUp(key) => {
                 if key.state != ElementState::Pressed || !self.is_focused() {
@@ -457,25 +478,25 @@ impl ElementInternals for SliderInner {
                 };
 
                 if let Some(new_value) = new_value {
-                    self.update_value_from_event(new_value);
+                    self.update_value_from_event(elements, new_value);
                     key.stop_propagation();
                     key.prevent_default();
                 }
             }
             EventKind::PointerUp(pointer_button_update) => {
-                self.focus();
+                self.focus(elements);
                 self.dragging = false;
-                self.release_pointer_capture(pointer_button_update.pointer.pointer_id.unwrap());
+                self.release_pointer_capture(elements, pointer_button_update.pointer.pointer_id.unwrap());
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
-                self.update_value_from_event(value);
+                self.update_value_from_event(elements, value);
             }
             EventKind::PointerDown(pointer_button_update) => {
                 self.dragging = true;
-                self.set_pointer_capture(pointer_button_update.pointer.pointer_id.unwrap());
+                self.set_pointer_capture(elements, pointer_button_update.pointer.pointer_id.unwrap());
 
                 let value = self.compute_slider_value(&pointer_button_update.state.logical_point());
-                self.update_value_from_event(value);
+                self.update_value_from_event(elements, value);
             }
             EventKind::PointerMoved(pointer_update) => {
                 if !self.dragging {
@@ -483,7 +504,7 @@ impl ElementInternals for SliderInner {
                 }
 
                 let value = self.compute_slider_value(&pointer_update.current.logical_point());
-                self.update_value_from_event(value);
+                self.update_value_from_event(elements, value);
             }
             _ => {}
         }
@@ -505,6 +526,11 @@ impl ElementInternals for SliderInner {
         );
 
         let contains = thumb_rect.contains(&point) || rect.contains(&point);
-        contains && element_data.layout.clip_bounds.is_none_or(|clip| clip.contains(&point))
+        contains
+            && element_data
+                .layout
+                .clip_bounds
+                .get()
+                .is_none_or(|clip| clip.contains(&point))
     }
 }

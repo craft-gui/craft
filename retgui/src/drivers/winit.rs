@@ -5,13 +5,13 @@ use retgui_logging::info;
 use std::time;
 
 use winit::application::ApplicationHandler;
-use winit::event::{StartCause, WindowEvent};
+use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoopBuilder};
 #[cfg(target_os = "android")]
 use winit::platform::android::EventLoopBuilderExtAndroid;
 use winit::window::WindowId;
 
-use crate::app::{App, WINDOW_MANAGER, WindowEventResult};
+use crate::app::{App, WindowEventResult};
 use crate::drivers::Driver;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -23,10 +23,6 @@ pub struct WinitDriver {
 }
 
 impl ApplicationHandler for WinitDriver {
-    fn new_events(&mut self, _event_loop: &dyn ActiveEventLoop, cause: StartCause) {
-        self.app.wait_cancelled = matches!(cause, StartCause::WaitCancelled { .. })
-    }
-
     fn can_create_surfaces(&mut self, event_loop: &dyn ActiveEventLoop) {
         self.app.on_resume(Some(event_loop));
     }
@@ -48,7 +44,11 @@ impl ApplicationHandler for WinitDriver {
         self.app.on_about_to_wait(Some(event_loop));
         self.maybe_exit(event_loop);
 
-        let perf_stats_enabled = WINDOW_MANAGER.with_borrow(|window_manager| window_manager.any_perf_stats_enabled());
+        let perf_stats_enabled = self
+            .app
+            .elements
+            .window_manager
+            .any_perf_stats_enabled(&self.app.elements);
         #[cfg(not(target_arch = "wasm32"))]
         {
             if perf_stats_enabled {
@@ -84,12 +84,17 @@ impl Driver for WinitDriver {
         #[cfg(target_os = "android")]
         {
             let app = crate::ANDROID_APP
-                .take()
+                .get()
+                .cloned()
                 .expect("retgui_set_android_app must be called.");
             event_loop_builder.with_android_app(app);
         }
 
         let event_loop = event_loop_builder.build().expect("Failed to create winit event loop.");
+        let proxy = event_loop.create_proxy();
+        self.app.set_gui_waker(move || {
+            proxy.wake_up();
+        });
         info!("Created winit event loop.");
         event_loop.run_app(self).expect("run_app failed");
     }

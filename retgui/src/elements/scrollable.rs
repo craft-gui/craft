@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::rc::Rc;
 
 use issho::{AccessEvent, ScrollAmount, ScrollEvent};
 
@@ -9,9 +7,8 @@ use retgui_primitives::geometry::{Point, Vec2};
 use winit::event::ElementState;
 use winit::keyboard::KeyCode;
 
-use crate::app::queue_event;
 use crate::elements::element_data::ElementData;
-use crate::elements::{DynElement, ElementInternals};
+use crate::elements::{DynElement, ElementNode, Elements};
 use crate::events::{Event, EventKind, PointerButton, PointerId, PointerType, ScrollDelta, ScrollEvent as RetGuiScrollEvent};
 use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};
 use crate::style::{Overflow, Style};
@@ -103,17 +100,17 @@ impl ScrollState {
     }
 }
 
-pub(crate) fn scroll_to_bottom(data: &mut ElementData) -> bool {
+pub(crate) fn scroll_to_bottom(elements: &mut Elements, data: &mut ElementData) -> bool {
     let bottom_y = data.layout.max_scroll_y;
-    scroll_to(data, bottom_y)
+    scroll_to(elements, data, bottom_y)
 }
 
-pub(crate) fn scroll_to_top(data: &mut ElementData) -> bool {
-    scroll_to(data, 0.0)
+pub(crate) fn scroll_to_top(elements: &mut Elements, data: &mut ElementData) -> bool {
+    scroll_to(elements, data, 0.0)
 }
 
 /// Scroll to y. A valid y is in the interval [0, max_scroll_y].
-pub(crate) fn scroll_to(data: &mut ElementData, y: f32) -> bool {
+pub(crate) fn scroll_to(elements: &mut Elements, data: &mut ElementData, y: f32) -> bool {
     if !data.is_scrollable() {
         return false;
     }
@@ -121,34 +118,43 @@ pub(crate) fn scroll_to(data: &mut ElementData, y: f32) -> bool {
     let changed = set_scroll_y(&mut data.layout, y);
     data.apply_accessibility_scroll_data();
 
-    let target = DynElement::new(data.me.upgrade().unwrap().clone());
-    queue_event(EventKind::Scroll(RetGuiScrollEvent::new(target)));
+    let target = data.me;
+    elements.queue_event(EventKind::Scroll(RetGuiScrollEvent::new(target)));
     changed
 }
 
 /// Scroll an amount y from the current scroll position.
-pub(crate) fn scroll_by(data: &mut ElementData, y: f32) -> bool {
-    scroll_to(data, data.scroll().scroll_y() + y)
+pub(crate) fn scroll_by(elements: &mut Elements, data: &mut ElementData, y: f32) -> bool {
+    scroll_to(elements, data, data.scroll().scroll_y() + y)
 }
 
 /// Scrolls to a child with the `id` and uses level-order traversal.
-pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &str, options: ScrollOptions) -> bool {
+pub(crate) fn scroll_to_child_by_id_with_options(
+    elements: &mut Elements,
+    data: &mut ElementData,
+    id: &str,
+    options: ScrollOptions,
+) -> bool {
     let mut child_y: Option<f32> = None;
     if !data.is_scrollable() {
         return false;
     }
 
-    let mut queue: VecDeque<(Rc<RefCell<dyn ElementInternals>>, Point)> = VecDeque::new();
+    let mut queue: VecDeque<(DynElement, Point)> = VecDeque::new();
     for child in data.children.as_slice() {
-        let position = child.borrow().element_data().layout.local_box_in_parent().position;
-        queue.push_back((child.clone().inner, position));
+        let position = elements
+            .get(*child)
+            .element_data()
+            .layout
+            .local_box_in_parent()
+            .position;
+        queue.push_back((*child, position));
     }
 
     let top_py = data.layout.local_box().padding_rectangle().top();
 
     while let Some((child, offset)) = queue.pop_front() {
-        let child = child.borrow();
-        let element_data = child.element_data();
+        let element_data = elements.get(child).element_data();
         if let Some(child_id) = element_data.id.as_ref()
             && child_id.as_str() == id
         {
@@ -164,10 +170,15 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
             break;
         }
 
-        for descendant in &child.element_data().children {
-            let local_position = descendant.borrow().element_data().layout.local_box_in_parent().position;
+        for descendant in &element_data.children {
+            let local_position = elements
+                .get(*descendant)
+                .element_data()
+                .layout
+                .local_box_in_parent()
+                .position;
             queue.push_back((
-                descendant.clone().inner,
+                *descendant,
                 Point::new(offset.x + local_position.x, offset.y + local_position.y),
             ));
         }
@@ -175,7 +186,7 @@ pub(crate) fn scroll_to_child_by_id_with_options(data: &mut ElementData, id: &st
 
     if let Some(child_y) = child_y {
         let offset = options.offset.unwrap_or(Point::new(0.0, 0.0));
-        scroll_to(data, child_y + offset.y as f32)
+        scroll_to(elements, data, child_y + offset.y as f32)
     } else {
         false
     }
@@ -291,12 +302,13 @@ pub struct HandleScrollLogicResult {
     pub pointer_id: Option<PointerId>,
 }
 
-pub(crate) fn handle_scroll_logic(element: &mut dyn ElementInternals, event: &mut EventKind) {
-    handle_scroll_logic_internal(element, event, true);
+pub(crate) fn handle_scroll_logic(elements: &mut Elements, element: &mut dyn ElementNode, event: &mut EventKind) {
+    handle_scroll_logic_internal(elements, element, event, true);
 }
 
 fn handle_scroll_logic_internal(
-    element: &mut dyn ElementInternals,
+    elements: &mut Elements,
+    element: &mut dyn ElementNode,
     event: &mut EventKind,
     focus_on_pointer_down: bool,
 ) {
@@ -319,20 +331,20 @@ fn handle_scroll_logic_internal(
         element.request_window_redraw();
 
         if matches!(event, EventKind::KeyDown(_) | EventKind::KeyUp(_)) {
-            queue_event(EventKind::Scroll(RetGuiScrollEvent::new(element.to_dyn_element())));
+            elements.queue_event(EventKind::Scroll(RetGuiScrollEvent::new(element.to_dyn_element())));
         }
     }
 
     if result.set_pointer_capture {
-        element.set_pointer_capture(result.pointer_id.unwrap())
+        element.set_pointer_capture(elements, result.pointer_id.unwrap())
     }
 
     if result.release_pointer_capture {
-        element.release_pointer_capture(result.pointer_id.unwrap());
+        element.release_pointer_capture(elements, result.pointer_id.unwrap());
     }
 
     if focus_on_pointer_down {
-        element.focus();
+        element.focus(elements);
         event.stop_propagation();
     }
 }
@@ -498,21 +510,25 @@ pub(crate) fn handle_scroll_logic_advance(
     result
 }
 
-pub(crate) fn handle_accessibility_scroll_event(element: &mut dyn ElementInternals, event: &AccessEvent) {
+pub(crate) fn handle_accessibility_scroll_event(
+    elements: &mut Elements,
+    element: &mut dyn ElementNode,
+    event: &AccessEvent,
+) {
     match event {
         AccessEvent::Scroll(scroll_event) => {
-            if scroll_from_accessibility(element.element_data_mut(), *scroll_event) {
+            if scroll_from_accessibility(elements, element.element_data_mut(), *scroll_event) {
                 element.request_window_redraw();
             }
         }
         AccessEvent::ScrollIntoView => {
-            scroll_into_view(element);
+            scroll_into_view(elements, element);
         }
         _ => {}
     }
 }
 
-fn scroll_from_accessibility(data: &mut ElementData, event: ScrollEvent) -> bool {
+fn scroll_from_accessibility(elements: &mut Elements, data: &mut ElementData, event: ScrollEvent) -> bool {
     if !data.is_scrollable() {
         return false;
     }
@@ -535,20 +551,16 @@ fn scroll_from_accessibility(data: &mut ElementData, event: ScrollEvent) -> bool
         }
     };
 
-    scroll_to(data, target)
+    scroll_to(elements, data, target)
 }
 
-fn scroll_into_view(element: &mut dyn ElementInternals) -> bool {
+fn scroll_into_view(elements: &mut Elements, element: &mut dyn ElementNode) -> bool {
     let target = element.element_data().layout.world_box().border_rectangle();
-    let mut ancestor = element.element_data().parent.clone();
+    let mut ancestor = element.element_data().parent;
 
-    while let Some(ancestor_weak) = ancestor {
-        let Some(ancestor_rc) = ancestor_weak.upgrade() else {
-            return false;
-        };
-
+    while let Some(ancestor_handle) = ancestor {
         let (next_ancestor, current, target_scroll) = {
-            let ancestor = ancestor_rc.borrow();
+            let ancestor = elements.get(ancestor_handle);
             let data = ancestor.element_data();
             let next_ancestor = data.parent.clone();
 
@@ -572,9 +584,11 @@ fn scroll_into_view(element: &mut dyn ElementInternals) -> bool {
             if target_scroll == current {
                 return false;
             }
-            let changed = scroll_to(ancestor_rc.borrow_mut().element_data_mut(), target_scroll);
+            let changed = elements.dispatch_mut(ancestor_handle, |ancestor, elements| {
+                scroll_to(elements, ancestor.element_data_mut(), target_scroll)
+            });
             if changed {
-                ancestor_rc.borrow().request_window_redraw();
+                elements.get(ancestor_handle).request_window_redraw();
             }
             return changed;
         }

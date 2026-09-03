@@ -8,7 +8,7 @@ use image::RgbImage;
 use retgui::drivers::headless::HeadlessApp;
 use retgui::elements::Window;
 
-pub fn screenshot_rgb(test: &HeadlessApp, window: &Window) -> RgbImage {
+pub fn screenshot_rgb(test: &mut HeadlessApp, window: &Window) -> RgbImage {
     let screenshot = test.screenshot(window);
     let image = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
         screenshot.width as u32,

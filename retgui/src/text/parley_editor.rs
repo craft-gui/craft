@@ -17,7 +17,6 @@ use core::ops::Range;
 use retgui_primitives::brush::Brush;
 use retgui_undo::UndoManager;
 
-use crate::app::{request_apply_layout, request_layout};
 use crate::text::RangedStyles;
 use crate::text::text_commands::TextCommand;
 
@@ -75,8 +74,9 @@ impl Display for SplitString<'_> {
 
 /// Iterate through the source strings.
 impl<'source> IntoIterator for SplitString<'source> {
-    type Item = &'source str;
     type IntoIter = <[&'source str; 2] as IntoIterator>::IntoIter;
+    type Item = &'source str;
+
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
@@ -673,15 +673,12 @@ impl PlainEditorDriver<'_> {
     }
 
     fn request_apply_layout(&self) {
-        if let Some(gummy_id) = self.editor.gummy_id {
-            request_apply_layout(gummy_id);
-        }
+        // The owning text input observes editor generation changes and marks
+        // its slot-map-owned layout node during event dispatch.
     }
 
     fn request_layout(&self) {
-        if let Some(gummy_id) = self.editor.gummy_id {
-            request_layout(gummy_id);
-        }
+        // Full layout invalidation is tracked by TextInputState::is_layout_dirty.
     }
 
     /// Collapse selection into caret.

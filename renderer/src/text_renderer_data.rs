@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use peniko::kurbo::{Affine, Line};
 
 use retgui_primitives::brush::Brush;
@@ -69,8 +71,54 @@ pub struct TextRenderGlyph {
 pub trait TextData {
     fn get_text_renderer(&self) -> Option<&TextRender>;
 
+    /// Overrides the brushes stored in individual text runs.
+    fn override_brush(&self) -> Option<&Brush> {
+        self.get_text_renderer()
+            .and_then(|render| render.override_brush.as_ref())
+    }
+
     /// Whether glyphs should be rasterized into and reused from the glyph atlas.
     fn use_glyph_cache(&self) -> bool {
         true
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct TextSnapshot {
+    render: Rc<TextRender>,
+    override_brush: Option<Brush>,
+    use_glyph_cache: bool,
+}
+
+impl TextSnapshot {
+    pub fn new(render: TextRender, use_glyph_cache: bool) -> Self {
+        let override_brush = render.override_brush.clone();
+        Self {
+            render: Rc::new(render),
+            override_brush,
+            use_glyph_cache,
+        }
+    }
+
+    pub fn from_shared(render: Rc<TextRender>, override_brush: Option<Brush>, use_glyph_cache: bool) -> Self {
+        Self {
+            render,
+            override_brush,
+            use_glyph_cache,
+        }
+    }
+}
+
+impl TextData for TextSnapshot {
+    fn get_text_renderer(&self) -> Option<&TextRender> {
+        Some(self.render.as_ref())
+    }
+
+    fn override_brush(&self) -> Option<&Brush> {
+        self.override_brush.as_ref()
+    }
+
+    fn use_glyph_cache(&self) -> bool {
+        self.use_glyph_cache
     }
 }

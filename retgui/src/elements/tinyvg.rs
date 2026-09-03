@@ -1,7 +1,5 @@
 //! Displays an TinyVg.
 
-use std::cell::RefCell;
-use std::rc::{Rc, Weak};
 use std::sync::Arc;
 
 use peniko::Color;
@@ -22,30 +20,29 @@ use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::resource_type::ResourceType;
 use retgui_resource_manager::{ResourceId, ResourceManager};
 
-use crate::app::{GUMMY_TREE, PENDING_RESOURCES};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
 use crate::elements::traits::clone_element;
-use crate::elements::{AsElement, DynElement, Element, ElementInternals};
+use crate::elements::{DynElement, Element, ElementNode, Elements};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{LayoutContext, TinyVgContext};
 use crate::rgba;
 use crate::text::text_context::TextContext;
 
 /// Displays an TinyVg.
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct TinyVg {
-    pub(crate) inner: Rc<RefCell<TinyVgInner>>,
+    pub(crate) inner: DynElement,
 }
 
 #[derive(Clone)]
-pub(crate) struct TinyVgInner {
+pub(crate) struct TinyVgNode {
     is_tiny_vg_dirty: bool,
     resource_id: ResourceId,
     element_data: ElementData,
 }
 
-impl crate::elements::ElementData for TinyVgInner {
+impl crate::elements::ElementNodeData for TinyVgNode {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -55,27 +52,15 @@ impl crate::elements::ElementData for TinyVgInner {
     }
 }
 
-impl Element for TinyVg {}
-
-impl Drop for TinyVgInner {
-    fn drop(&mut self) {
-        ElementInternals::drop(self)
+impl Element for TinyVg {
+    fn as_dyn_element(&self) -> DynElement {
+        self.inner
     }
 }
 
-impl AsElement for TinyVg {
-    fn with<R>(&self, callback: impl FnOnce(&dyn ElementInternals) -> R) -> R {
-        callback(&*self.inner.borrow())
-    }
-
-    fn with_mut<R>(&self, callback: impl FnOnce(&mut dyn ElementInternals) -> R) -> R {
-        callback(&mut *self.inner.borrow_mut())
-    }
-}
-
-impl ElementInternals for TinyVgInner {
-    fn deep_clone(&self) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, |_, _| None))
+impl ElementNode for TinyVgNode {
+    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
 
     fn apply_layout(
@@ -89,7 +74,8 @@ impl ElementInternals for TinyVgInner {
     }
 
     fn draw(
-        &mut self,
+        &self,
+        _elements: &Elements,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
@@ -129,66 +115,73 @@ impl ElementInternals for TinyVgInner {
 }
 
 impl TinyVg {
-    pub fn new(resource_id: ResourceId) -> Self {
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TinyVgInner>>| {
-            RefCell::new(TinyVgInner {
+    pub fn new(elements: &mut Elements, resource_id: ResourceId) -> Self {
+        let inner = elements.insert_with(|me, access_tree| {
+            Box::new(TinyVgNode {
                 is_tiny_vg_dirty: false,
                 resource_id: resource_id.clone(),
-                element_data: ElementData::new(me.clone(), false),
+                element_data: ElementData::new(me, false, access_tree),
             })
         });
         let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(resource_id.clone())));
-        inner.borrow_mut().element_data.create_layout_node(layout_context);
-        inner
-            .borrow_mut()
+        elements.create_layout_node(inner, layout_context);
+        elements
+            .get_as_mut::<TinyVgNode>(inner)
             .style_mut()
             .set_text_brush(Brush::Color(Color::TRANSPARENT));
 
-        PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id, ResourceType::TinyVg));
-        });
+        elements
+            .pending_resources
+            .push_back((resource_id, ResourceType::TinyVg));
 
         Self { inner }
     }
 
-    pub fn dummy() -> Self {
-        let inner = Rc::new_cyclic(|me: &Weak<RefCell<TinyVgInner>>| {
-            RefCell::new(TinyVgInner {
+    pub fn dummy(elements: &mut Elements) -> Self {
+        let inner = elements.insert_with(|me, access_tree| {
+            Box::new(TinyVgNode {
                 is_tiny_vg_dirty: false,
                 resource_id: ResourceId::DUMMY,
-                element_data: ElementData::new(me.clone(), false),
+                element_data: ElementData::new(me, false, access_tree),
             })
         });
         let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(ResourceId::DUMMY)));
-        inner.borrow_mut().element_data.create_layout_node(layout_context);
-        inner
-            .borrow_mut()
+        elements.create_layout_node(inner, layout_context);
+        elements
+            .get_as_mut::<TinyVgNode>(inner)
             .style_mut()
             .set_text_brush(Brush::Color(Color::TRANSPARENT));
 
         Self { inner }
     }
 
-    pub fn resource_id(self, resource_id: ResourceId) -> Self {
-        self.inner.borrow_mut().set_resource_id(resource_id);
+    pub fn resource_id(self, elements: &mut Elements, resource_id: ResourceId) -> Self {
+        elements.try_dispatch_mut(self.inner, |tiny, elements| {
+            (tiny as &mut dyn std::any::Any)
+                .downcast_mut::<TinyVgNode>()
+                .unwrap()
+                .set_resource_id(elements, resource_id)
+        });
         self
     }
 
-    pub fn get_resource_id(&self) -> ResourceId {
-        self.inner.borrow().get_resource_id().clone()
+    pub fn get_resource_id(&self, elements: &Elements) -> ResourceId {
+        elements
+            .try_get_as::<TinyVgNode>(self.inner)
+            .map_or(ResourceId::DUMMY, |tiny| tiny.get_resource_id().clone())
     }
 }
 
-impl TinyVgInner {
-    pub fn set_resource_id(&mut self, resource_id: ResourceId) {
+impl TinyVgNode {
+    pub fn set_resource_id(&mut self, elements: &mut Elements, resource_id: ResourceId) {
         self.is_tiny_vg_dirty = true;
         self.resource_id = resource_id.clone();
 
-        PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            pending_resources.push_back((resource_id.clone(), ResourceType::TinyVg));
-        });
+        elements
+            .pending_resources
+            .push_back((resource_id.clone(), ResourceType::TinyVg));
 
-        GUMMY_TREE.with_borrow_mut(|gummy_tree| {
+        elements.with_gummy_tree(|gummy_tree, _| {
             let context = LayoutContext::TinyVg(TinyVgContext::new(resource_id));
             let node = self
                 .element_data

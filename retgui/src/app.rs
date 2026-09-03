@@ -1,12 +1,9 @@
-use std::cell::RefCell;
 use std::collections::VecDeque;
-use std::rc::{Rc, Weak};
 use std::sync::Arc;
-use std::time::Instant as JobInstant;
+#[cfg(target_arch = "wasm32")]
+use std::sync::mpsc::{Receiver, Sender};
 #[cfg(all(feature = "audio", not(target_arch = "wasm32")))]
 use std::time::{Duration, Instant};
-
-use gummy::NodeId;
 
 use issho::AccessEvent;
 
@@ -17,7 +14,10 @@ use retgui_primitives::geometry::{Point, Size};
 use retgui_resource_manager::resource_type::ResourceType;
 use retgui_resource_manager::{ResourceId, ResourceManager};
 
-use retgui_runtime::{Job, RetGuiRuntime, pop_gui_thread_work, push_gui_thread_work};
+#[cfg(target_arch = "wasm32")]
+use retgui_renderer::renderer::Renderer;
+
+use retgui_runtime::RetGuiRuntime;
 
 #[cfg(all(feature = "audio", target_arch = "wasm32"))]
 use web_time::{Duration, Instant};
@@ -26,25 +26,17 @@ use winit::dpi::PhysicalPosition;
 use winit::event::{ElementState, Ime, KeyEvent, PointerKind, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 
-use crate::RetGuiOptions;
-use crate::accessibility::ACCESS_TREE;
 #[cfg(feature = "audio")]
-use crate::elements::{AUDIO_CONTEXT, AudioInner};
-use crate::elements::{DynElement, ElementIdMap, ElementInternals, Window, scrollable, set_focus_outline_visible};
+use crate::elements::AudioNode;
+use crate::elements::{DynElement, Elements, Window, WindowNode, scrollable, set_focus_outline_visible};
 use crate::events::{EventDispatcher, EventKind, ImeEvent, KeyboardEvent, PointerButtonEvent, PointerInfo, PointerMovedEvent, PointerScrollEvent, PointerState};
-use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
-use crate::window_manager::WindowManager;
 
-thread_local! {
-    pub(crate) static ELEMENTS: RefCell<ElementIdMap> = RefCell::new(ElementIdMap::new());
-    pub(crate) static PENDING_RESOURCES: RefCell<VecDeque<(ResourceId, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
-    pub(crate) static IN_PROGRESS_RESOURCES: RefCell<VecDeque<(ResourceId, ResourceType)>> = const { RefCell::new(VecDeque::new()) };
-    pub(crate) static FOCUS: RefCell<Option<Weak<RefCell<dyn ElementInternals>>>> = RefCell::new(None);
-    pub(crate) static WINDOW_MANAGER: RefCell<WindowManager> = RefCell::new(WindowManager::new());
-    pub(crate) static GUMMY_TREE: RefCell<GummyTree> = RefCell::new(GummyTree::new());
-    /// An event queue that users or elements can manipulate. Cleared at the start and end of every event dispatch.
-    static EVENT_DISPATCH_QUEUE: RefCell<VecDeque<EventKind>> = RefCell::new(VecDeque::with_capacity(10));
+#[cfg(target_arch = "wasm32")]
+pub(crate) struct CreatedRenderer {
+    pub(crate) window: DynElement,
+    pub(crate) renderer: Box<dyn Renderer>,
+    pub(crate) size: Size<f32>,
 }
 
 /// Update interval for audio elements.
@@ -57,10 +49,11 @@ fn audio_ui_update_due(last_update: Option<Instant>, now: Instant) -> bool {
 }
 
 pub struct App {
-    pub(crate) event_dispatcher: Rc<RefCell<EventDispatcher>>,
-    /// The text context is used to manage fonts and text rendering. It is only valid between resume and pause.
-    pub(crate) text_context: Rc<RefCell<Option<TextContext>>>,
-    pub(crate) reload_fonts: bool,
+    pub(crate) event_dispatcher: EventDispatcher,
+    /// Shared font and text-layout state.
+    pub(crate) text_context: TextContext,
+    pub(crate) elements: Elements,
+    in_progress_resources: VecDeque<(ResourceId, ResourceType)>,
     /// The resource manager is used to manage resources such as images and fonts.
     ///
     /// The resource manager is responsible for loading, caching, and providing access to resources.
@@ -68,13 +61,15 @@ pub struct App {
 
     pub(crate) runtime: RetGuiRuntime,
 
-    pub(super) target_scratch: Vec<Rc<RefCell<dyn ElementInternals>>>,
-    #[allow(dead_code)]
-    pub(crate) retgui_options: RetGuiOptions,
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) created_renderer_sender: Sender<CreatedRenderer>,
+    #[cfg(target_arch = "wasm32")]
+    created_renderer_receiver: Receiver<CreatedRenderer>,
+
+    pub(super) target_scratch: Vec<DynElement>,
 
     /// True if the winit app is active.
     pub(crate) active: bool,
-    pub(crate) wait_cancelled: bool,
     pub(crate) close_requested: bool,
 
     #[cfg(feature = "audio")]
@@ -90,26 +85,28 @@ pub enum WindowEventResult {
 }
 
 impl App {
-    pub(crate) fn new(retgui_options: RetGuiOptions) -> Self {
+    pub(crate) fn new(elements: Elements) -> Self {
         let runtime = RetGuiRuntime::new();
         info!("Created async runtime");
 
         #[allow(clippy::arc_with_non_send_sync)]
         let resource_manager = Arc::new(ResourceManager::new(runtime.handle()));
-
-        let (event_dispatcher, text_context) =
-            ACCESS_TREE.with(|access_tree| (access_tree.event_dispatcher.clone(), access_tree.text_context.clone()));
+        #[cfg(target_arch = "wasm32")]
+        let (created_renderer_sender, created_renderer_receiver) = std::sync::mpsc::channel();
 
         Self {
-            event_dispatcher,
-            text_context,
+            event_dispatcher: EventDispatcher::new(),
+            text_context: create_text_context(),
+            elements,
+            in_progress_resources: VecDeque::new(),
             resource_manager,
-            reload_fonts: false,
             runtime,
+            #[cfg(target_arch = "wasm32")]
+            created_renderer_sender,
+            #[cfg(target_arch = "wasm32")]
+            created_renderer_receiver,
             target_scratch: Vec::new(),
-            retgui_options,
             active: false,
-            wait_cancelled: false,
             close_requested: false,
             #[cfg(feature = "audio")]
             last_audio_ui_update: None,
@@ -131,7 +128,9 @@ impl App {
         match event {
             WindowEvent::KeyboardInput { event, .. } => self.on_keyboard_input(window, event),
             WindowEvent::ModifiersChanged(modifiers) => {
-                window.inner.borrow_mut().update_modifiers(modifiers.state());
+                self.elements
+                    .get_as_mut::<WindowNode>(window.inner)
+                    .update_modifiers(modifiers.state());
             }
             WindowEvent::PointerMoved {
                 position,
@@ -139,7 +138,7 @@ impl App {
                 source,
                 ..
             } => {
-                let scale_factor = window.effective_scale_factor();
+                let scale_factor = window.effective_scale_factor(&self.elements);
                 let pointer = PointerInfo::from_source(&source, primary);
                 self.on_pointer_moved(window, pointer, PointerState::new(position, scale_factor));
             }
@@ -150,7 +149,7 @@ impl App {
                 button,
                 ..
             } => {
-                let scale_factor = window.effective_scale_factor();
+                let scale_factor = window.effective_scale_factor(&self.elements);
                 let pointer = PointerInfo::from_button(&button, primary);
                 self.on_pointer_button(
                     window,
@@ -161,8 +160,8 @@ impl App {
                 );
             }
             WindowEvent::MouseWheel { delta, .. } => {
-                let scale_factor = window.effective_scale_factor();
-                let logical_position = window.mouse_position().unwrap_or_default();
+                let scale_factor = window.effective_scale_factor(&self.elements);
+                let logical_position = window.mouse_position(&self.elements).unwrap_or_default();
                 let physical_position =
                     PhysicalPosition::new(logical_position.x * scale_factor, logical_position.y * scale_factor);
                 self.on_pointer_scroll(
@@ -173,14 +172,15 @@ impl App {
                 );
             }
             WindowEvent::CloseRequested => {
-                return WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-                    window_manager.close_window(&window);
-                    if window_manager.is_empty() {
-                        self.on_close_requested();
-                        self.close_requested = true;
-                    }
-                    WindowEventResult::Continue
+                let empty = self.elements.with_window_manager(|window_manager, elements| {
+                    window_manager.close_window(elements, &window);
+                    window_manager.is_empty()
                 });
+                if empty {
+                    self.on_close_requested();
+                    self.close_requested = true;
+                }
+                return WindowEventResult::Continue;
             }
             WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
                 self.on_scale_factor_changed(window, scale_factor);
@@ -193,9 +193,9 @@ impl App {
             WindowEvent::Moved(_) => self.on_move(window),
             WindowEvent::Focused(focused) => {
                 if !focused {
-                    window.inner.borrow_mut().ime_composing = false;
+                    self.elements.get_as_mut::<WindowNode>(window.inner).ime_composing = false;
                 }
-                window.on_focused(focused);
+                window.on_focused(&self.elements, focused);
             }
             _ => {}
         }
@@ -208,16 +208,15 @@ impl App {
     }
 
     pub fn on_scale_factor_changed(&mut self, window: Window, scale_factor: f64) {
-        window.on_scale_factor_changed(scale_factor);
+        window.on_scale_factor_changed(&mut self.elements, scale_factor);
     }
 
     pub fn on_resume(&mut self, event_loop: Option<&dyn ActiveEventLoop>) {
         self.active = true;
-        self.setup_text_context();
 
-        WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-            window_manager.on_resume(self, event_loop);
-        });
+        let mut elements = std::mem::take(&mut self.elements);
+        elements.with_window_manager(|window_manager, elements| window_manager.on_resume(self, elements, event_loop));
+        self.elements = elements;
     }
 
     pub fn on_about_to_wait(&mut self, event_loop: Option<&dyn ActiveEventLoop>) {
@@ -226,86 +225,88 @@ impl App {
             retgui_runtime::task::yield_now().await;
         });
         self.runtime.handle().update_local_set();
+        self.elements.run_gui_actions();
+        #[cfg(target_arch = "wasm32")]
+        self.process_created_renderers();
         self.process_resources();
-        self.process_external_work();
-        if let Some(text_context) = self.text_context.borrow_mut().as_mut() {
-            self.event_dispatcher.borrow_mut().dispatch_queued_events(text_context);
-        }
+        self.process_accessibility_events();
+        self.event_dispatcher
+            .dispatch_queued_events(&mut self.text_context, &mut self.elements);
 
         #[cfg(feature = "audio")]
         self.update_audio_ui();
 
-        WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-            window_manager.on_about_to_wait(self, event_loop);
+        let mut elements = std::mem::take(&mut self.elements);
+        elements.with_window_manager(|window_manager, elements| {
+            window_manager.on_about_to_wait(self, elements, event_loop)
         });
+        self.elements = elements;
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn process_created_renderers(&mut self) {
+        while let Ok(created) = self.created_renderer_receiver.try_recv() {
+            if self.elements.contains(created.window) {
+                self.elements
+                    .get_as_mut::<WindowNode>(created.window)
+                    .on_renderer_created(created.renderer, created.size);
+            }
+        }
+    }
+
+    fn process_accessibility_events(&mut self) {
+        let tree = self.elements.access_tree.clone();
+        while let Some((target, event)) = tree.pop_event() {
+            if !self.elements.contains(target) {
+                continue;
+            }
+            let _ = self.elements.dispatch_mut(target, |target, elements| {
+                scrollable::handle_accessibility_scroll_event(elements, target, &event);
+                target.on_access_event(elements, event)
+            });
+        }
     }
 
     fn process_resources(&mut self) {
         let mut resource_loaded = false;
-        IN_PROGRESS_RESOURCES.with_borrow_mut(|in_progress| {
-            in_progress.retain(|(resource_id, resource_type)| {
-                if !self.resource_manager.contains(resource_id) {
-                    return true;
-                }
+        self.in_progress_resources.retain(|(resource_id, _resource_type)| {
+            if !self.resource_manager.contains(resource_id) {
+                return true;
+            }
 
-                resource_loaded = true;
-                if *resource_type == ResourceType::Font {
-                    self.reload_fonts = true;
-                }
-                false
-            });
+            resource_loaded = true;
+            false
         });
 
         if resource_loaded {
-            WINDOW_MANAGER.with_borrow_mut(|window_manager| {
-                window_manager.dirty_and_redraw_all_windows(self);
+            let mut elements = std::mem::take(&mut self.elements);
+            let active = self.active;
+            elements.with_window_manager(|window_manager, elements| {
+                window_manager.dirty_and_redraw_all_windows(elements, active)
             });
-        }
-    }
-
-    fn process_external_work(&mut self) {
-        // Elements changed by scheduled work request their own redraws.
-        let mut timer_jobs: Vec<Job> = vec![];
-        while let Some(mut work) = pop_gui_thread_work() {
-            if work.interval.is_none() || work.last_run.elapsed() >= work.interval.unwrap() {
-                (work.callback)();
-                work.last_run = JobInstant::now();
-            }
-
-            if work.interval.is_some() {
-                timer_jobs.push(work);
-            }
-        }
-
-        for timer_job in timer_jobs {
-            push_gui_thread_work(timer_job);
+            self.elements = elements;
         }
     }
 
     #[cfg(feature = "audio")]
     fn update_audio_ui(&mut self) {
         use std::any::Any;
-        use std::ops::DerefMut;
         let now = Instant::now();
         if !audio_ui_update_due(self.last_audio_ui_update, now) {
             return;
         }
         self.last_audio_ui_update = Some(now);
 
-        AUDIO_CONTEXT.with(|audio_context| {
-            if let Some(ctx) = audio_context.get() {
-                for audio_element in &ctx.borrow().sounds {
-                    if let Some(audio) = ELEMENTS.with(|elements| elements.borrow().get(*audio_element).cloned()) {
-                        let audio = audio.upgrade().unwrap();
-                        let mut audio = audio.borrow_mut();
-                        let audio: &mut AudioInner = (audio.deref_mut() as &mut dyn Any)
-                            .downcast_mut()
-                            .expect("Failed to downcast");
-                        audio.update();
-                    }
-                }
+        for audio_element in self.elements.audio_elements() {
+            if self.elements.contains(audio_element) {
+                self.elements.dispatch_mut(audio_element, |audio, elements| {
+                    let audio = (audio as &mut dyn Any)
+                        .downcast_mut::<AudioNode>()
+                        .expect("audio handle changed type");
+                    audio.update(elements);
+                });
             }
-        });
+        }
     }
 
     /// Suspends rendering until the application is resumed again.
@@ -315,7 +316,7 @@ impl App {
 
     /// Returns the window associated with a winit window ID.
     pub fn window_by_id(&self, window_id: winit::window::WindowId) -> Option<Window> {
-        WINDOW_MANAGER.with_borrow(|window_manager| window_manager.get_window_by_id(window_id))
+        self.elements.window_manager.get_window_by_id(&self.elements, window_id)
     }
 
     /// Returns whether the driver should exit its event loop.
@@ -323,9 +324,15 @@ impl App {
         self.close_requested
     }
 
+    /// Installs the driver callback used to wake a sleeping GUI event loop when
+    /// asynchronous work schedules an element-store action.
+    pub fn set_gui_waker(&self, waker: impl Fn() + Send + Sync + 'static) {
+        self.elements.set_gui_waker(waker);
+    }
+
     /// Handles the window resize event.
     pub fn on_resize(&mut self, window: Window, new_size: Size<f32>) {
-        window.on_resize(new_size);
+        window.on_resize(&mut self.elements, new_size);
     }
 
     /// Updates the tree, layouts the elements, and draws the view.
@@ -344,7 +351,13 @@ impl App {
     ) {
         let pointer_scroll_update =
             PointerScrollEvent::new(DynElement::new(window.inner.clone()), pointer, delta, state);
-        if window.inner.borrow_mut().maybe_zoom(&pointer_scroll_update) {
+        let zoomed = self.elements.dispatch_mut(window.inner, |window, elements| {
+            (window as &mut dyn std::any::Any)
+                .downcast_mut::<WindowNode>()
+                .unwrap()
+                .maybe_zoom(elements, &pointer_scroll_update)
+        });
+        if zoomed {
             return;
         }
         self.dispatch_event(window, EventKind::PointerScroll(pointer_scroll_update));
@@ -359,7 +372,7 @@ impl App {
         is_up: bool,
     ) {
         if !is_up {
-            set_focus_outline_visible(false);
+            set_focus_outline_visible(&mut self.elements, false);
         }
 
         let cursor_position = state.logical_point();
@@ -370,13 +383,16 @@ impl App {
         } else {
             EventKind::PointerDown(pointer_event)
         };
-        window.set_mouse_position(Some(Point::new(cursor_position.x, cursor_position.y)));
+        window.set_mouse_position(
+            &mut self.elements,
+            Some(Point::new(cursor_position.x, cursor_position.y)),
+        );
 
         self.dispatch_event(window.clone(), event);
     }
 
     pub fn on_pointer_moved(&mut self, window: Window, pointer: PointerInfo, state: PointerState) {
-        window.set_mouse_position(Some(state.logical_point()));
+        window.set_mouse_position(&mut self.elements, Some(state.logical_point()));
         let event = PointerMovedEvent::new(DynElement::new(window.inner.clone()), pointer, state);
         self.dispatch_event(window.clone(), EventKind::PointerMoved(event));
     }
@@ -387,7 +403,7 @@ impl App {
             Ime::Enabled | Ime::Commit(_) | Ime::Disabled => Some(false),
             _ => None,
         } {
-            window.inner.borrow_mut().ime_composing = is_composing;
+            self.elements.get_as_mut::<WindowNode>(window.inner).ime_composing = is_composing;
         }
         let event = ImeEvent::new(DynElement::new(window.inner.clone()), ime);
         self.dispatch_event(window.clone(), EventKind::Ime(event));
@@ -395,12 +411,12 @@ impl App {
 
     pub fn on_keyboard_input(&mut self, window: Window, keyboard_input: KeyEvent) {
         let (modifiers, is_composing) = {
-            let window = window.inner.borrow();
+            let window = self.elements.get_as::<WindowNode>(window.inner);
             (window.modifiers, window.ime_composing)
         };
         let state = keyboard_input.state;
         if state == ElementState::Pressed && !modifiers.control_key() && !modifiers.alt_key() && !modifiers.meta_key() {
-            set_focus_outline_visible(true);
+            set_focus_outline_visible(&mut self.elements, true);
         }
         let event = KeyboardEvent::new(
             DynElement::new(window.inner.clone()),
@@ -408,107 +424,123 @@ impl App {
             modifiers,
             is_composing,
         );
-        if window.inner.borrow_mut().maybe_toggle_perf_stats(&event) {
+        let toggled = self.elements.dispatch_mut(window.inner, |window, elements| {
+            (window as &mut dyn std::any::Any)
+                .downcast_mut::<WindowNode>()
+                .unwrap()
+                .maybe_toggle_perf_stats(elements, &event)
+        });
+        if toggled {
             return;
         }
-        if window.inner.borrow_mut().maybe_zoom_keyboard(&event) {
+        let zoomed = self.elements.dispatch_mut(window.inner, |window, elements| {
+            (window as &mut dyn std::any::Any)
+                .downcast_mut::<WindowNode>()
+                .unwrap()
+                .maybe_zoom_keyboard(elements, &event)
+        });
+        if zoomed {
             return;
         }
-        let navigation_target = window.inner.borrow().tab_navigation_target(&event);
+        let navigation_target = self
+            .elements
+            .get_as::<WindowNode>(window.inner)
+            .tab_navigation_target(&self.elements, &event);
         let event = match state {
             ElementState::Pressed => EventKind::KeyDown(event),
             ElementState::Released => EventKind::KeyUp(event),
         };
         let prevent_defaults = self.dispatch_event(window.clone(), event);
         if !prevent_defaults && let Some(target) = navigation_target {
-            target.borrow_mut().focus();
-            scrollable::handle_accessibility_scroll_event(&mut *target.borrow_mut(), &AccessEvent::ScrollIntoView);
-            window.request_redraw();
+            self.elements.dispatch_mut(target, |target, elements| {
+                target.focus(elements);
+                scrollable::handle_accessibility_scroll_event(elements, target, &AccessEvent::ScrollIntoView);
+            });
+            window.request_redraw(&self.elements);
         }
     }
 
     fn on_request_redraw_internal(&mut self, window: Window) {
-        let delta = window.animation_delta();
-        let has_active_animations =
-            WINDOW_MANAGER.with_borrow_mut(|window_manager| window_manager.animation_tick(&window, delta));
+        let delta = window.animation_delta(&mut self.elements);
+        let has_active_animations = self
+            .elements
+            .with_window_manager(|window_manager, elements| window_manager.animation_tick(elements, &window, delta));
         self.update_resources();
         window.on_redraw(
-            self.text_context.borrow_mut().as_mut().unwrap(),
+            &mut self.elements,
+            &mut self.text_context,
             self.resource_manager.clone(),
         );
 
-        if has_active_animations && window.winit_window().is_some() {
-            window.request_redraw();
+        if has_active_animations && window.winit_window(&self.elements).is_some() {
+            window.request_redraw(&self.elements);
         }
     }
 
     fn dispatch_event(&mut self, window: Window, mut event: EventKind) -> bool {
-        let mouse_pos = window.mouse_position();
-        let binding = window.inner.borrow().renderer.clone();
-        let renderer = &mut *binding.borrow_mut();
-        self.event_dispatcher.borrow_mut().dispatch_event(
+        let mouse_pos = window.mouse_position(&self.elements);
+        let mut renderer = std::mem::replace(
+            &mut self.elements.get_as_mut::<WindowNode>(window.inner).renderer,
+            Box::new(retgui_renderer::blank_renderer::BlankRenderer::default()),
+        );
+        let prevented = self.event_dispatcher.dispatch_event(
             &mut event,
             mouse_pos,
-            window.inner.clone(),
-            self.text_context.borrow_mut().as_mut().unwrap(),
-            renderer,
+            window.inner,
+            &mut self.text_context,
+            &mut *renderer,
             &mut self.target_scratch,
-        )
+            &mut self.elements,
+        );
+        self.elements.get_as_mut::<WindowNode>(window.inner).renderer = renderer;
+        prevented
     }
 
     fn update_resources(&mut self) {
-        PENDING_RESOURCES.with_borrow_mut(|pending_resources| {
-            IN_PROGRESS_RESOURCES.with_borrow_mut(|in_progress| {
-                for (resource, resource_type) in pending_resources.drain(..) {
-                    if self.resource_manager.contains(&resource)
-                        || in_progress.contains(&(resource.clone(), resource_type.clone()))
-                    {
-                        continue;
-                    }
-                    self.resource_manager
-                        .async_download_resource(resource.clone(), &resource_type);
-                    in_progress.push_back((resource, resource_type));
-                }
-            });
-        });
-    }
-
-    /// Initialize any data needed to layout/render text.
-    fn setup_text_context(&mut self) {
-        if self.text_context.borrow().is_none() {
-            #[cfg(any(target_arch = "wasm32", not(feature = "system_fonts")))]
-            let mut text_context = TextContext::new();
-            #[cfg(all(not(target_arch = "wasm32"), feature = "system_fonts"))]
-            let text_context = TextContext::new();
-
-            #[cfg(any(target_arch = "wasm32", not(feature = "system_fonts")))]
+        for (resource, resource_type) in self.elements.pending_resources.drain(..) {
+            if self.resource_manager.contains(&resource)
+                || self
+                    .in_progress_resources
+                    .contains(&(resource.clone(), resource_type.clone()))
             {
-                let regular = include_bytes!("../../assets/fonts/Roboto-Regular.ttf");
-                let bold = include_bytes!("../../assets/fonts/Roboto-Bold.ttf");
-                let semi_bold = include_bytes!("../../assets/fonts/Roboto-SemiBold.ttf");
-                let medium = include_bytes!("../../assets/fonts/Roboto-Medium.ttf");
-
-                fn register_and_append(font_data: &'static [u8], text_context: &mut TextContext) {
-                    let blob = peniko::Blob::new(Arc::new(font_data));
-                    let fonts = text_context.font_context.collection.register_fonts(blob, None);
-
-                    // Register all the Roboto families under parley::GenericFamily::SystemUi.
-                    // This will become the fallback font for platforms like WASM.
-                    text_context
-                        .font_context
-                        .collection
-                        .append_generic_families(parley::GenericFamily::SystemUi, fonts.iter().map(|f| f.0));
-                }
-
-                register_and_append(regular, &mut text_context);
-                register_and_append(bold, &mut text_context);
-                register_and_append(semi_bold, &mut text_context);
-                register_and_append(medium, &mut text_context);
+                continue;
             }
-
-            *self.text_context.borrow_mut() = Some(text_context);
+            self.resource_manager
+                .async_download_resource(resource.clone(), &resource_type);
+            self.in_progress_resources.push_back((resource, resource_type));
         }
     }
+}
+
+fn create_text_context() -> TextContext {
+    #[cfg(any(target_arch = "wasm32", not(feature = "system_fonts")))]
+    let mut text_context = TextContext::new();
+    #[cfg(all(not(target_arch = "wasm32"), feature = "system_fonts"))]
+    let text_context = TextContext::new();
+
+    #[cfg(any(target_arch = "wasm32", not(feature = "system_fonts")))]
+    {
+        let regular = include_bytes!("../../assets/fonts/Roboto-Regular.ttf");
+        let bold = include_bytes!("../../assets/fonts/Roboto-Bold.ttf");
+        let semi_bold = include_bytes!("../../assets/fonts/Roboto-SemiBold.ttf");
+        let medium = include_bytes!("../../assets/fonts/Roboto-Medium.ttf");
+
+        fn register_and_append(font_data: &'static [u8], text_context: &mut TextContext) {
+            let blob = peniko::Blob::new(Arc::new(font_data));
+            let fonts = text_context.font_context.collection.register_fonts(blob, None);
+            text_context
+                .font_context
+                .collection
+                .append_generic_families(parley::GenericFamily::SystemUi, fonts.iter().map(|font| font.0));
+        }
+
+        register_and_append(regular, &mut text_context);
+        register_and_append(bold, &mut text_context);
+        register_and_append(semi_bold, &mut text_context);
+        register_and_append(medium, &mut text_context);
+    }
+
+    text_context
 }
 
 #[cfg(all(test, feature = "audio"))]
@@ -529,30 +561,4 @@ mod tests {
             first_update + AUDIO_UI_UPDATE_INTERVAL,
         ));
     }
-}
-
-/// Enqueues an event at the back of the dispatch queue.
-pub fn queue_event(event: EventKind) {
-    EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| {
-        event_queue.push_back(event);
-    });
-}
-
-/// Pops from the front of the event dispatch queue and returns the result.
-pub fn dequeue_event() -> Option<EventKind> {
-    EVENT_DISPATCH_QUEUE.with_borrow_mut(|event_queue| event_queue.pop_front())
-}
-
-#[inline]
-pub fn request_layout(gummy_node: NodeId) {
-    GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-        gummy_tree.mark_dirty(gummy_node);
-    });
-}
-
-#[inline]
-pub fn request_apply_layout(node: NodeId) {
-    GUMMY_TREE.with_borrow_mut(|gummy_tree| {
-        gummy_tree.request_apply_layout(node);
-    });
 }

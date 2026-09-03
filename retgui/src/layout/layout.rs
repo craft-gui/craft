@@ -1,4 +1,5 @@
 use gummy::NodeId;
+use std::cell::Cell;
 
 use retgui_primitives::geometry::borders::{BOTTOM, CssRoundedRect, LEFT, RIGHT, TOP};
 use retgui_primitives::geometry::{Affine, BezPath, Border, ElementBox, Margin, Padding, Point, Rectangle, Shape, Size, TrblRectangle, Vec2};
@@ -30,7 +31,7 @@ pub struct Layout {
     /// The resolved paint order relative to its siblings.
     pub layout_order: u32,
     /// Effective clip captured by the most recent draw traversal.
-    pub clip_bounds: Option<Rectangle>,
+    pub clip_bounds: Cell<Option<Rectangle>>,
 
     //cache_border_spec: Option<(CssRoundedRect, f64)>, // f64 for scale factor
     cache_border_spec: Option<BorderSpec>,
@@ -38,10 +39,10 @@ pub struct Layout {
     computed_border: ComputedBorder,
     computed_outline: Option<Box<CssComputedBorder>>,
     /// True if the layout is new.
-    pub has_new_layout: bool,
+    pub has_new_layout: Cell<bool>,
     /// The transform captured by the most recent draw traversal. Layout itself
     /// remains parent-local; this is retained only for world-coordinate APIs.
-    render_transform: Affine,
+    render_transform: Cell<Affine>,
     /// The element's border-box position in its parent's coordinate space.
     local_position: Point,
 
@@ -176,12 +177,13 @@ impl Layout {
 
     /// Returns this element's box in window coordinates.
     pub(crate) fn world_box(&self) -> ElementBox {
-        self.computed_box.transform(self.render_transform)
+        self.computed_box.transform(self.render_transform.get())
     }
 
     pub(crate) fn world_scroll_track(&self) -> Rectangle {
         Rectangle::from_kurbo(
             self.render_transform
+                .get()
                 .transform_rect_bbox(self.computed_scroll_track.to_kurbo()),
         )
     }
@@ -189,16 +191,17 @@ impl Layout {
     pub(crate) fn world_scroll_thumb(&self) -> Rectangle {
         Rectangle::from_kurbo(
             self.render_transform
+                .get()
                 .transform_rect_bbox(self.computed_scroll_thumb.to_kurbo()),
         )
     }
 
     /// Records spatial state produced as a side effect of drawing. This must
     /// never participate in layout dirtiness or geometry cache keys.
-    pub(crate) fn update_render_state(&mut self, render_transform: Affine, clip_bounds: Option<Rectangle>) -> bool {
-        let changed = self.render_transform != render_transform || self.clip_bounds != clip_bounds;
-        self.render_transform = render_transform;
-        self.clip_bounds = clip_bounds;
+    pub(crate) fn update_render_state(&self, render_transform: Affine, clip_bounds: Option<Rectangle>) -> bool {
+        let changed = self.render_transform.get() != render_transform || self.clip_bounds.get() != clip_bounds;
+        self.render_transform.set(render_transform);
+        self.clip_bounds.set(clip_bounds);
         changed
     }
 

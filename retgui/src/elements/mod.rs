@@ -1,7 +1,7 @@
 #[cfg(feature = "audio")]
 pub use crate::elements::audio::Audio;
 #[cfg(feature = "audio")]
-pub(crate) use crate::elements::audio::AudioInner;
+pub(crate) use crate::elements::audio::AudioNode;
 pub use crate::elements::button::Button;
 pub use crate::elements::calendar::Calendar;
 pub use crate::elements::checkbox::Checkbox;
@@ -11,27 +11,27 @@ pub use crate::elements::codeeditor::CodeEditor;
 pub use crate::elements::container::Container;
 pub use crate::elements::dropdown::Dropdown;
 pub use crate::elements::dyn_element::DynElement;
-pub(crate) use crate::elements::element_id_map::ElementIdMap;
+pub use crate::elements::editor::ElementEditor;
+pub use crate::elements::element_data::ElementData;
 pub use crate::elements::image::Image;
 #[cfg(feature = "markdown")]
 pub use crate::elements::markdown::render_markdown;
 pub use crate::elements::radio::Radio;
-pub(crate) use crate::elements::radio::RadioInner;
+pub(crate) use crate::elements::radio::RadioNode;
 pub use crate::elements::radiogroup::RadioGroup;
 pub use crate::elements::scrollable::{ScrollOptions, ScrollState, ScrollToBox};
-pub(crate) use crate::elements::slider::SliderInner;
+pub(crate) use crate::elements::slider::SliderNode;
 pub use crate::elements::slider::{Slider, SliderDirection};
+pub use crate::elements::store::{Elements, State};
 pub use crate::elements::text::Text;
-pub(crate) use crate::elements::text::TextInner;
-pub use crate::elements::text_input::{TextInput, TextInputInner};
+pub(crate) use crate::elements::text::TextNode;
+pub use crate::elements::text_input::TextInput;
+pub(crate) use crate::elements::text_input::TextInputNode;
 pub use crate::elements::tinyvg::TinyVg;
 pub(crate) use crate::elements::traits::set_focus_outline_visible;
-pub use crate::elements::traits::{AsElement, Element, ElementData, ElementInternals};
+pub use crate::elements::traits::{Element, ElementNode, ElementNodeData, clone_element};
 pub use crate::elements::window::Window;
-pub(crate) use crate::elements::window::WindowInternal;
-
-#[cfg(feature = "audio")]
-pub(crate) use crate::elements::audio::AUDIO_CONTEXT;
+pub(crate) use crate::elements::window::WindowNode;
 
 pub(crate) mod internal_helpers;
 pub(crate) mod scrollable;
@@ -47,15 +47,17 @@ mod codeeditor;
 mod container;
 mod dropdown;
 mod dyn_element;
+mod editor;
 mod element_data;
 mod element_id;
-mod element_id_map;
+mod gui_actions;
 mod image;
 #[cfg(feature = "markdown")]
 mod markdown;
 mod radio;
 mod radiogroup;
 mod slider;
+mod store;
 mod text;
 mod text_input;
 mod tinyvg;
