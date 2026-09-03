@@ -131,7 +131,7 @@ fn main() {
 RetGui can run on those platforms, but they are not officially supported. We would like to support those platforms, but it requires a lot of platform integration. Please use SwiftUI, Jetpack Compose, Flutter, and etc.
 
 ### 2. Why do mutations need `Elements`?
-Element values are copyable slot-map handles. The `Elements` arena owns their data, so every read or mutation is tied to a normal Rust borrow. For fluent mutation, call `.edit(&mut elements)` once, chain operations, and call `.finish()` to recover the handle.
+Elements owns all RetGUI data and an element is just a handle to some data in elements. 
 
 ## License
 Distributed under the Unlicense License. See the [LICENSE](./LICENSE) for more information.
