@@ -4,13 +4,13 @@
 
 RetGUI is a retained Rust GUI library.
 Elements and events are the low level primitives that make up a RetGUI app.
-Elements are cloneable and reference counted at runtime.
-While the code remains safe, this is a tradeoff between Rust's focus on compile time correctness and ease of use.
+Elements are copy and are lightweight handles.
+Elements are dropped when they are deleted from the UI tree and any dangling handles will ignore future reads/writes.
 Styling and layout are roughly based on the web.
 Keeping application state and UI tree in sync is left up the developer.
 No state management or styling systems are included.
 It should be quite easy to add in Elm, reactive diffing, or fine grain reactivity on top.
-If you are looking for a simple framework without the borrow checker getting in your way you may find RetGUI interesting.
+If you are looking for a simple retained GUI, you should try out RetGUI.
 
 ## Hello World
 A simple app can be setup as follows.
@@ -35,10 +35,14 @@ opt-level = 1
 
 ```rust
 use retgui::elements::{Element, Text, Window};
-use retgui::{RetGuiOptions, retgui_main};
+use retgui::{Elements, RetGuiOptions, retgui_main};
 
 fn main() {
-    Window::new("Hello World App").push(Text::new("Hello World!"));
-    retgui_main(RetGuiOptions::basic("hello_world_app"));
+    let mut elements = Elements::new();
+    Window::new(&mut elements, "Hello World App")
+        .edit(&mut elements)
+        .push_with(|elements| Text::new(elements, "Hello World!"))
+        .finish();
+    retgui_main(elements, RetGuiOptions::basic("hello_world_app"));
 }
 ```
