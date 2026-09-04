@@ -1372,14 +1372,13 @@ mod tests {
         let original_color = Color::from_rgb8(10, 20, 30);
         let updated_color = Color::from_rgb8(40, 50, 60);
         let mut elements = Elements::new();
-        let button = Button::new(&mut elements)
-            .outline_color_all(&mut elements, original_color)
-            .outline_width_all(&mut elements, Unit::Px(1.0));
+        let button = Button::new(&mut elements);
+        button.set_outline_color_all(&mut elements, original_color);
+        button.set_outline_width_all(&mut elements, Unit::Px(1.0));
 
         button.focus(&mut elements);
-        button
-            .outline_color_all(&mut elements, updated_color)
-            .outline_width_all(&mut elements, Unit::Px(3.0));
+        button.set_outline_color_all(&mut elements, updated_color);
+        button.set_outline_width_all(&mut elements, Unit::Px(3.0));
 
         assert_eq!(
             elements.get(button.as_dyn_element()).style().get_outline_color(),

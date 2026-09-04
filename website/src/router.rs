@@ -81,7 +81,7 @@ fn navigate_to(state: State<RouterState>, elements: &mut Elements, route: &str) 
     };
 
     global_state.write(elements).set_route(route);
-    if let Some(current) = root.get_children(elements).get(1).copied() {
+    if let Some(current) = root.children(elements).get(1).copied() {
         root.remove_child(elements, current)
             .expect("failed to remove routed page");
     }

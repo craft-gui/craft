@@ -108,7 +108,7 @@ impl CodeEditor {
 
 impl CodeEditorNode {
     fn highlight(&mut self, elements: &mut Elements) {
-        let text = self.text_input.get_text(elements);
+        let text = self.text_input.text(elements);
         let code_editor = compute_code_editor_style(&text, None, None, &self.extension, &self.theme);
         let text = elements.get_as_mut::<crate::elements::TextInputNode>(self.text_input.inner);
         text.set_ranged_styles(code_editor.ranged_styles);

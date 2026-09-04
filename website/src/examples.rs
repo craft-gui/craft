@@ -25,7 +25,7 @@ const TEXT: &str = "/examples/text";
 
 fn show_example(elements: &mut Elements, examples: &[Container], selected: usize) {
     for (index, example) in examples.iter().enumerate() {
-        example.display(
+        example.set_display(
             elements,
             if index == selected {
                 Display::Flex

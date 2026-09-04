@@ -63,38 +63,36 @@ impl TextInput {
     }
 
     /// Disables the text input.
-    pub fn disabled(self, elements: &mut Elements, disabled: bool) -> Self {
+    pub fn set_disabled(&self, elements: &mut Elements, disabled: bool) {
         if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
             input.disabled(disabled);
         }
-        self
     }
 
     /// Returns whether the element is disabled.
-    pub fn get_disabled(&self, elements: &Elements) -> bool {
+    pub fn is_disabled(&self, elements: &Elements) -> bool {
         elements
             .try_get_as::<TextInputNode>(self.inner)
             .is_some_and(|input| input.disabled)
     }
 
     /// Returns whether the text input is multiline.
-    pub fn get_multiline(&self, elements: &Elements) -> bool {
+    pub fn is_multiline(&self, elements: &Elements) -> bool {
         elements
             .try_get_as::<TextInputNode>(self.inner)
             .is_some_and(|input| input.state.multiline)
     }
 
-    pub fn multiline(self, elements: &mut Elements, multiline: bool) -> Self {
+    pub fn set_multiline(&self, elements: &mut Elements, multiline: bool) {
         if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
             input.multiline(multiline);
         }
-        self
     }
 
     /// Returns the text in the text input.
     ///
     /// This does not include the ime preedit text.
-    pub fn get_text(&self, elements: &Elements) -> String {
+    pub fn text(&self, elements: &Elements) -> String {
         elements
             .try_get_as::<TextInputNode>(self.inner)
             .map_or_else(String::new, |input| input.state.editor().text().chars().collect())
@@ -104,23 +102,21 @@ impl TextInput {
     ///
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
-    pub fn text(self, elements: &mut Elements, text: &str) -> Self {
+    pub fn set_text(&self, elements: &mut Elements, text: &str) {
         if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
             input.set_text(text);
         }
-        self
     }
 
     /// Styles the text along ranges.
-    pub fn ranged_styles(self, elements: &mut Elements, ranged_styles: RangedStyles) -> Self {
+    pub fn set_ranged_styles(&self, elements: &mut Elements, ranged_styles: RangedStyles) {
         if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
             input.set_ranged_styles(ranged_styles);
         }
-        self
     }
 
     /// Returns the ranged styles.
-    pub fn get_ranged_styles(&self, elements: &Elements) -> Option<RangedStyles> {
+    pub fn ranged_styles(&self, elements: &Elements) -> Option<RangedStyles> {
         elements
             .try_get_as::<TextInputNode>(self.inner)
             .and_then(|input| input.ranged_styles.clone())

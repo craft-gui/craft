@@ -977,7 +977,8 @@ mod tests {
     fn deleting_an_event_target_during_dispatch_is_safe() {
         let mut elements = Elements::new();
         let parent = Container::new(&mut elements);
-        let child = Container::new(&mut elements).on_click(&mut elements, move |_event, elements| {
+        let child = Container::new(&mut elements);
+        child.on_click(&mut elements, move |_event, elements| {
             parent.delete_all_children(elements);
         });
         parent.push(&mut elements, child);

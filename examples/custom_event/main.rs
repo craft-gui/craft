@@ -15,7 +15,10 @@ pub fn custom_event(elements: &mut Elements) -> Container {
         .edit(elements)
         .on_custom_event(move |event, elements| {
             if let Some(greeting) = event.data::<Greeting>() {
-                message.text(elements, &format!("Hello, {}!", greeting.name));
+                message
+                    .edit(elements)
+                    .text(&format!("Hello, {}!", greeting.name))
+                    .finish();
             }
         })
         .push(message)

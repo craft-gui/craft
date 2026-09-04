@@ -253,7 +253,7 @@ impl Radio {
     }
 
     /// Hide the default circle radio button.
-    pub fn set_hide_radio(&mut self, elements: &mut Elements, value: bool) {
+    pub fn set_hide_radio(&self, elements: &mut Elements, value: bool) {
         // TODO: Hide in gummy.
         if let Some(inner) = elements.try_get_as_mut::<RadioNode>(self.inner) {
             inner.hide_radio = value;
@@ -262,18 +262,17 @@ impl Radio {
     }
 
     /// Hide the default circle radio button.
-    pub fn hide_radio(mut self, elements: &mut Elements) -> Self {
+    pub fn hide_radio(&self, elements: &mut Elements) {
         self.set_hide_radio(elements, true);
-        self
     }
 
-    pub fn get_label(&self, elements: &Elements) -> String {
+    pub fn label(&self, elements: &Elements) -> String {
         elements
             .try_get_as::<RadioNode>(self.inner)
             .map_or_else(String::new, |radio| radio.label.clone())
     }
 
-    pub fn get_value(&self, elements: &Elements) -> String {
+    pub fn value(&self, elements: &Elements) -> String {
         elements
             .try_get_as::<RadioNode>(self.inner)
             .map_or_else(String::new, |radio| radio.value.clone())

@@ -33,17 +33,17 @@ fn with_element_mut<E: Element, R>(
     elements.try_dispatch_mut(element.as_dyn_element(), callback)
 }
 
-/// A builder pattern for elements.
+/// Exposes common element functionality likes styles and tree modifications.
 pub trait Element: Copy {
     /// Returns an element as a DynElement.
     fn as_dyn_element(&self) -> DynElement;
 
     /// Bind elements while building.
-    fn edit(self, elements: &mut Elements) -> ElementEditor<'_, Self>
+    fn edit<'a>(&self, elements: &'a mut Elements) -> ElementEditor<'a, Self>
     where
         Self: Sized,
     {
-        ElementEditor::new(self, elements)
+        ElementEditor::new(*self, elements)
     }
 
     /// Requests a redraw of this element's owning window.
@@ -54,36 +54,36 @@ pub trait Element: Copy {
     }
 
     /// Returns the element's children.
-    fn get_children(&self, elements: &Elements) -> Vec<DynElement> {
+    fn children(&self, elements: &Elements) -> Vec<DynElement> {
         with_element(*self, elements, |element| element.get_children().to_vec()).unwrap_or_default()
     }
 
     /// Returns the element's previous sibling or a not found error.
-    fn get_previous_sibling(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
+    fn previous_sibling(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
         with_element(*self, elements, |element| element.get_previous_sibling(elements))
             .unwrap_or(Err(RetGuiError::ElementNotFound))
     }
 
     /// Returns the element's next sibling or a not found error.
-    fn get_next_sibling(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
+    fn next_sibling(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
         with_element(*self, elements, |element| element.get_next_sibling(elements))
             .unwrap_or(Err(RetGuiError::ElementNotFound))
     }
 
     /// Returns the element's parent or a not found error.
-    fn get_parent(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
+    fn parent(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
         with_element(*self, elements, |element| element.parent())
             .flatten()
             .ok_or(RetGuiError::ElementNotFound)
     }
 
     /// Returns the element's first child or a not found error.
-    fn get_first_child(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
+    fn first_child(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
         with_element(*self, elements, |element| element.get_first_child()).unwrap_or(Err(RetGuiError::ElementNotFound))
     }
 
     /// Returns the element's last child or a not found error.
-    fn get_last_child(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
+    fn last_child(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
         with_element(*self, elements, |element| element.get_last_child()).unwrap_or(Err(RetGuiError::ElementNotFound))
     }
 
@@ -127,156 +127,139 @@ pub trait Element: Copy {
     }
 
     /// Pushes a child.
-    fn push(self, elements: &mut Elements, child: impl Element) -> Self {
+    fn push(&self, elements: &mut Elements, child: impl Element) {
         let child = child.as_dyn_element();
         push_child_to_element(elements, self.as_dyn_element(), child);
-        self
     }
 
     /// Adds an event listener.
-    fn add_event_listener(
-        self,
-        elements: &mut Elements,
-        callback: EventCallbackKind,
-        options: EventListenerOptions,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn add_event_listener(&self, elements: &mut Elements, callback: EventCallbackKind, options: EventListenerOptions) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.add_event_listener(callback, options)
         });
-        self
     }
 
     /// Adds a pointer enter listener.
     fn on_pointer_enter(
-        self,
+        &self,
         elements: &mut Elements,
         on_pointer_enter: impl Fn(&mut PointerEnterEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_pointer_enter(Rc::new(on_pointer_enter))
         });
-        self
     }
 
     /// Adds a pointer leave listener.
     fn on_pointer_leave(
-        self,
+        &self,
         elements: &mut Elements,
         on_pointer_leave: impl Fn(&mut PointerLeaveEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_pointer_leave(Rc::new(on_pointer_leave))
         });
-        self
     }
 
     /// Adds a radio value changed listener.
     fn on_radio_value_changed(
-        self,
+        &self,
         elements: &mut Elements,
         on_radio_value_changed: impl Fn(&mut RadioValueChangedEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_radio_value_changed(Rc::new(on_radio_value_changed))
         });
-        self
     }
 
     /// Adds a checkbox toggled listener.
     fn on_checkbox_toggled(
-        self,
+        &self,
         elements: &mut Elements,
         on_checkbox_toggled: impl Fn(&mut CheckboxToggledEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_checkbox_toggled(Rc::new(on_checkbox_toggled))
         });
-        self
     }
 
     /// Adds a text intput changed listener.
     fn on_text_input_changed(
-        self,
+        &self,
         elements: &mut Elements,
         on_text_input_changed: impl Fn(&mut TextInputChangedEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_text_input_changed(Rc::new(on_text_input_changed))
         });
-        self
     }
 
     /// Sets the element's user based id.
-    fn id(self, elements: &mut Elements, id: &str) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_id(id));
-        self
+    fn set_id(&self, elements: &mut Elements, id: &str) {
+        with_element_mut(*self, elements, |element, _elements| element.set_id(id));
     }
 
     /// Sets the accessibility name.
-    fn accessibility_name(self, elements: &mut Elements, name: &str) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_accessibility_name(&self, elements: &mut Elements, name: &str) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.element_data_mut().set_accessibility_name(name)
         });
-        self
     }
 
     /// Returns the element's user based id. This id is not used by RetGUI.
-    fn get_id(&self, elements: &Elements) -> Option<SmolStr> {
+    fn id(&self, elements: &Elements) -> Option<SmolStr> {
         with_element(*self, elements, |element| element.get_id()).flatten()
     }
 
     /// Adds a pointer button down listener.
     fn on_pointer_button_down(
-        self,
+        &self,
         elements: &mut Elements,
         on_pointer_button_down: impl Fn(&mut PointerButtonEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_pointer_button_down(Rc::new(on_pointer_button_down))
         });
-        self
     }
 
     /// Adds a pointer button moved listener.
     fn on_pointer_moved(
-        self,
+        &self,
         elements: &mut Elements,
         on_pointer_moved: impl Fn(&mut PointerMovedEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_pointer_moved(Rc::new(on_pointer_moved))
         });
-        self
     }
 
     /// Adds a pointer button up listener.
     fn on_pointer_button_up(
-        self,
+        &self,
         elements: &mut Elements,
         on_pointer_button_up: impl Fn(&mut PointerButtonEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_pointer_button_up(Rc::new(on_pointer_button_up))
         });
-        self
     }
 
     /// Adds a click listener.
-    fn on_click(self, elements: &mut Elements, on_click: impl Fn(&mut ClickEvent, &mut Elements) + 'static) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.on_click(Rc::new(on_click)));
-        self
+    fn on_click(&self, elements: &mut Elements, on_click: impl Fn(&mut ClickEvent, &mut Elements) + 'static) {
+        with_element_mut(*self, elements, |element, _elements| {
+            element.on_click(Rc::new(on_click))
+        });
     }
 
     /// Adds a custom event listener.
     fn on_custom_event(
-        self,
+        &self,
         elements: &mut Elements,
         on_custom_event: impl Fn(&mut CustomEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_custom_event(Rc::new(on_custom_event))
         });
-        self
     }
 
     /// Emits a custom event using the element as the target element.
@@ -288,671 +271,585 @@ pub trait Element: Copy {
     }
 
     /// Adds a focus event listener.
-    fn on_focus(self, elements: &mut Elements, on_focus: impl Fn(&mut FocusEvent, &mut Elements) + 'static) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.on_focus(Rc::new(on_focus)));
-        self
+    fn on_focus(&self, elements: &mut Elements, on_focus: impl Fn(&mut FocusEvent, &mut Elements) + 'static) {
+        with_element_mut(*self, elements, |element, _elements| {
+            element.on_focus(Rc::new(on_focus))
+        });
     }
 
     /// Adds an unfocus event listener.
-    fn on_unfocus(
-        self,
-        elements: &mut Elements,
-        on_unfocus: impl Fn(&mut UnfocusEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn on_unfocus(&self, elements: &mut Elements, on_unfocus: impl Fn(&mut UnfocusEvent, &mut Elements) + 'static) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_unfocus(Rc::new(on_unfocus))
         });
-        self
     }
 
     /// Adds a lost pointer capture event listener.
     fn on_lost_pointer_capture(
-        self,
+        &self,
         elements: &mut Elements,
         on_lost_pointer_capture: impl Fn(&mut PointerCaptureEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_lost_pointer_capture(Rc::new(on_lost_pointer_capture))
         });
-        self
     }
 
     /// Adds a got pointer capture event listener.
     fn on_got_pointer_capture(
-        self,
+        &self,
         elements: &mut Elements,
         on_got_pointer_capture: impl Fn(&mut PointerCaptureEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_got_pointer_capture(Rc::new(on_got_pointer_capture))
         });
-        self
     }
 
     /// Adds a keyboard input event listener.
     fn on_keyboard_input(
-        self,
+        &self,
         elements: &mut Elements,
         on_keyboard_input: impl Fn(&mut KeyboardEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_keyboard_input(Rc::new(on_keyboard_input))
         });
-        self
     }
 
     /// Adds a slider value changed event listener.
     fn on_slider_value_changed(
-        self,
+        &self,
         elements: &mut Elements,
         on_slider_value_changed: impl Fn(&mut SliderValueChangedEvent, &mut Elements) + 'static,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_slider_value_changed(Rc::new(on_slider_value_changed))
         });
-        self
     }
 
     /// Adds a scroll event listener.
-    fn on_scroll(self, elements: &mut Elements, on_scroll: impl Fn(&mut ScrollEvent, &mut Elements) + 'static) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn on_scroll(&self, elements: &mut Elements, on_scroll: impl Fn(&mut ScrollEvent, &mut Elements) + 'static) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.on_scroll(Rc::new(on_scroll))
         });
-        self
     }
 
     /// Scrolls to a child based on the child's user id.
-    fn scroll_to_child_by_id(self, elements: &mut Elements, id: &str) -> Self {
+    fn scroll_to_child_by_id(&self, elements: &mut Elements, id: &str) {
         let handle = self.as_dyn_element();
         elements.try_dispatch_mut(handle, |element, elements| {
             element.scroll_to_child_by_id_with_options(elements, id, ScrollOptions::default())
         });
-        self
     }
 
     /// Scrolls to a child based on the child's user id according to the scroll options.
-    fn scroll_to_child_by_id_with_options(self, elements: &mut Elements, id: &str, options: ScrollOptions) -> Self {
+    fn scroll_to_child_by_id_with_options(&self, elements: &mut Elements, id: &str, options: ScrollOptions) {
         let handle = self.as_dyn_element();
         elements.try_dispatch_mut(handle, |element, elements| {
             element.scroll_to_child_by_id_with_options(elements, id, options)
         });
-        self
     }
 
     /// Scrolls to a specific y value in logical pixels.
-    fn scroll_to(self, elements: &mut Elements, y: f32) -> Self {
-        with_element_mut(self, elements, |element, elements| element.scroll_to(elements, y));
-        self
+    fn scroll_to(&self, elements: &mut Elements, y: f32) {
+        with_element_mut(*self, elements, |element, elements| element.scroll_to(elements, y));
     }
 
     /// Scrolls to the top of the element.
-    fn scroll_to_top(self, elements: &mut Elements) -> Self {
-        with_element_mut(self, elements, |element, elements| element.scroll_to_top(elements));
-        self
+    fn scroll_to_top(&self, elements: &mut Elements) {
+        with_element_mut(*self, elements, |element, elements| element.scroll_to_top(elements));
     }
 
     /// Scrolls to the button of the element.
-    fn scroll_to_bottom(self, elements: &mut Elements) -> Self {
-        with_element_mut(self, elements, |element, elements| element.scroll_to_bottom(elements));
-        self
+    fn scroll_to_bottom(&self, elements: &mut Elements) {
+        with_element_mut(*self, elements, |element, elements| element.scroll_to_bottom(elements));
     }
 
     /// Scrolls by a logical amount of pixels.
-    fn scroll_by(self, elements: &mut Elements, y: f32) -> Self {
-        with_element_mut(self, elements, |element, elements| element.scroll_by(elements, y));
-        self
+    fn scroll_by(&self, elements: &mut Elements, y: f32) {
+        with_element_mut(*self, elements, |element, elements| element.scroll_by(elements, y));
     }
 
     /// Returns the elements current scroll state.
-    fn get_scroll_state(&self, elements: &Elements) -> ScrollState {
+    fn scroll_state(&self, elements: &Elements) -> ScrollState {
         with_element(*self, elements, |element| element.get_scroll_state()).unwrap_or_default()
     }
 
     /// Sets the layout algorith e.g. block, flex, etc.
-    fn display(self, elements: &mut Elements, display: Display) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_display(display));
-        self
+    fn set_display(&self, elements: &mut Elements, display: Display) {
+        with_element_mut(*self, elements, |element, _elements| element.set_display(display));
     }
 
     /// Sets the box sizing e.g. content box/border box.
-    fn box_sizing(self, elements: &mut Elements, box_sizing: BoxSizing) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_box_sizing(box_sizing));
-        self
+    fn set_box_sizing(&self, elements: &mut Elements, box_sizing: BoxSizing) {
+        with_element_mut(*self, elements, |element, _elements| element.set_box_sizing(box_sizing));
     }
 
     /// Sets the position of the element.
     ///
     /// Unlike HTML, this has no effect on the visual order of the element.
-    fn position(self, elements: &mut Elements, position: Position) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_position(position));
-        self
+    fn set_position(&self, elements: &mut Elements, position: Position) {
+        with_element_mut(*self, elements, |element, _elements| element.set_position(position));
     }
 
     /// Puts the element on top of other elements.
-    fn overlay(self, elements: &mut Elements, overlay: bool) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_overlay(overlay));
-        self
+    fn set_overlay(&self, elements: &mut Elements, overlay: bool) {
+        with_element_mut(*self, elements, |element, _elements| element.set_overlay(overlay));
     }
 
     /// Returns if the element is put on top of other elements.
-    fn get_overlay(&self, elements: &Elements) -> bool {
+    fn is_overlay(&self, elements: &Elements) -> bool {
         with_element(*self, elements, |element| element.style().get_overlay()).unwrap_or(false)
     }
 
     /// Sets the non interactable/visual space surrounding the element.
-    fn margin(self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_margin(&self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_margin(top, right, bottom, left)
         });
-        self
     }
 
     /// Sets the non interactable/visual space surrounding the element.
-    fn margin_all(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_margin_all(value));
-        self
+    fn set_margin_all(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_margin_all(value));
     }
 
     /// Sets the non interactable/visual space surrounding the element.
-    fn margin_vertical(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_margin_vertical(value));
-        self
+    fn set_margin_vertical(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_margin_vertical(value));
     }
 
     /// Sets the non interactable/visual space surrounding the element.
-    fn margin_horizontal(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_margin_horizontal(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_margin_horizontal(value)
         });
-        self
     }
 
     /// Sets the interactable/visual space surrounding the element's content.
-    fn padding(self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_padding(&self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_padding(top, right, bottom, left)
         });
-        self
     }
 
     /// Sets the interactable/visual space surrounding the element's content.
-    fn padding_all(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_padding_all(value));
-        self
+    fn set_padding_all(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_padding_all(value));
     }
 
     /// Sets the interactable/visual space surrounding the element's content.
-    fn padding_vertical(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_padding_vertical(value));
-        self
+    fn set_padding_vertical(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
+            element.set_padding_vertical(value)
+        });
     }
 
     /// Sets the interactable/visual space surrounding the element's content.
-    fn padding_horizontal(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_padding_horizontal(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_padding_horizontal(value)
         });
-        self
     }
 
     /// Sets the gap between children for flex/grid containers.
-    fn gap(self, elements: &mut Elements, row_gap: Unit, column_gap: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_gap(&self, elements: &mut Elements, row_gap: Unit, column_gap: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_gap(row_gap, column_gap)
         });
-        self
     }
 
     /// Sets the row gap between children for flex/grid containers.
-    fn row_gap(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_row_gap(value));
-        self
+    fn set_row_gap(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_row_gap(value));
     }
 
     /// Sets the column gap between children for flex/grid containers.
-    fn column_gap(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_column_gap(value));
-        self
+    fn set_column_gap(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_column_gap(value));
     }
 
     /// Align the element relative to its sides. Only applies to positioned elements.
-    fn inset(self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_inset(&self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_inset(top, right, bottom, left)
         });
-        self
     }
 
     /// Sets the minium width of the element.
-    fn min_width(self, elements: &mut Elements, min_width: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_min_width(min_width));
-        self
+    fn set_min_width(&self, elements: &mut Elements, min_width: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_min_width(min_width));
     }
 
     /// Sets the minium height of the element.
-    fn min_height(self, elements: &mut Elements, min_height: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_min_height(min_height));
-        self
+    fn set_min_height(&self, elements: &mut Elements, min_height: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_min_height(min_height));
     }
 
     /// Sets the width of the element.
-    fn width(self, elements: &mut Elements, width: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_width(width));
-        self
+    fn set_width(&self, elements: &mut Elements, width: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_width(width));
     }
 
     /// Sets the height of the element.
-    fn height(self, elements: &mut Elements, height: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_height(height));
-        self
+    fn set_height(&self, elements: &mut Elements, height: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_height(height));
     }
 
     /// Sets the max width of the element.
-    fn max_width(self, elements: &mut Elements, max_width: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_max_width(max_width));
-        self
+    fn set_max_width(&self, elements: &mut Elements, max_width: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_max_width(max_width));
     }
 
     /// Sets the max height of the element.
-    fn max_height(self, elements: &mut Elements, max_height: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_max_height(max_height));
-        self
+    fn set_max_height(&self, elements: &mut Elements, max_height: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_max_height(max_height));
     }
 
     /// Sets the wrapping behavior for flex elements.
-    fn wrap(self, elements: &mut Elements, wrap: FlexWrap) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_wrap(wrap));
-        self
+    fn set_wrap(&self, elements: &mut Elements, wrap: FlexWrap) {
+        with_element_mut(*self, elements, |element, _elements| element.set_wrap(wrap));
     }
 
     /// Determines how flex/grid children are laid out on the cross axis.
-    fn align_items(self, elements: &mut Elements, align_items: AlignItems) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_align_items(&self, elements: &mut Elements, align_items: AlignItems) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_align_items(align_items)
         });
-        self
     }
 
     /// Overrides a parent's align_items.
-    fn align_self(self, elements: &mut Elements, align_self: AlignSelf) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_align_self(align_self));
-        self
+    fn set_align_self(&self, elements: &mut Elements, align_self: AlignSelf) {
+        with_element_mut(*self, elements, |element, _elements| element.set_align_self(align_self));
     }
 
-    fn align_content(self, elements: &mut Elements, align_content: AlignContent) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_align_content(&self, elements: &mut Elements, align_content: AlignContent) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_align_content(align_content)
         });
-        self
     }
 
-    fn justify_content(self, elements: &mut Elements, justify_content: JustifyContent) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_justify_content(&self, elements: &mut Elements, justify_content: JustifyContent) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_justify_content(justify_content)
         });
-        self
     }
 
-    fn flex_direction(self, elements: &mut Elements, flex_direction: FlexDirection) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_flex_direction(&self, elements: &mut Elements, flex_direction: FlexDirection) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_flex_direction(flex_direction)
         });
-        self
     }
 
-    fn flex_grow(self, elements: &mut Elements, flex_grow: f32) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_flex_grow(flex_grow));
-        self
+    fn set_flex_grow(&self, elements: &mut Elements, flex_grow: f32) {
+        with_element_mut(*self, elements, |element, _elements| element.set_flex_grow(flex_grow));
     }
 
-    fn flex_shrink(self, elements: &mut Elements, flex_shrink: f32) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_flex_shrink(&self, elements: &mut Elements, flex_shrink: f32) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_flex_shrink(flex_shrink)
         });
-        self
     }
 
-    fn flex_basis(self, elements: &mut Elements, flex_basis: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_flex_basis(flex_basis));
-        self
+    fn set_flex_basis(&self, elements: &mut Elements, flex_basis: Unit) {
+        with_element_mut(*self, elements, |element, _elements| element.set_flex_basis(flex_basis));
     }
 
-    fn order(self, elements: &mut Elements, order: i32) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_order(order));
-        self
+    fn set_order(&self, elements: &mut Elements, order: i32) {
+        with_element_mut(*self, elements, |element, _elements| element.set_order(order));
     }
 
-    fn font_family(self, elements: &mut Elements, font_family: FontFamily) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_font_family(&self, elements: &mut Elements, font_family: FontFamily) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_font_family(font_family)
         });
-        self
     }
 
-    fn color(self, elements: &mut Elements, color: Color) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_color(&self, elements: &mut Elements, color: Color) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_text_brush(Brush::Color(color))
         });
-        self
     }
 
-    fn text_gradient(self, elements: &mut Elements, gradient: Gradient) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_text_gradient(&self, elements: &mut Elements, gradient: Gradient) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_text_brush(Brush::Gradient(gradient))
         });
-        self
     }
 
-    fn background_color(self, elements: &mut Elements, background_color: Color) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_background_color(&self, elements: &mut Elements, background_color: Color) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_background_brush(Brush::Color(background_color))
         });
-        self
     }
 
-    fn background_gradient(self, elements: &mut Elements, gradient: Gradient) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_background_gradient(&self, elements: &mut Elements, gradient: Gradient) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_background_brush(Brush::Gradient(gradient))
         });
-        self
     }
 
-    fn font_size(self, elements: &mut Elements, font_size: f32) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_font_size(font_size));
-        self
+    fn set_font_size(&self, elements: &mut Elements, font_size: f32) {
+        with_element_mut(*self, elements, |element, _elements| element.set_font_size(font_size));
     }
 
-    fn line_height(self, elements: &mut Elements, line_height: f32) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_line_height(&self, elements: &mut Elements, line_height: f32) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_line_height(line_height)
         });
-        self
     }
 
-    fn font_weight(self, elements: &mut Elements, font_weight: FontWeight) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_font_weight(&self, elements: &mut Elements, font_weight: FontWeight) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_font_weight(font_weight)
         });
-        self
     }
 
-    fn font_style(self, elements: &mut Elements, font_style: FontStyle) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_font_style(font_style));
-        self
+    fn set_font_style(&self, elements: &mut Elements, font_style: FontStyle) {
+        with_element_mut(*self, elements, |element, _elements| element.set_font_style(font_style));
     }
 
-    fn text_align(self, elements: &mut Elements, text_align: TextAlign) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_text_align(text_align));
-        self
+    fn set_text_align(&self, elements: &mut Elements, text_align: TextAlign) {
+        with_element_mut(*self, elements, |element, _elements| element.set_text_align(text_align));
     }
 
-    fn underline(self, elements: &mut Elements, thickness: Option<f32>, color: Color, offset: Option<f32>) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_underline(&self, elements: &mut Elements, thickness: Option<f32>, color: Color, offset: Option<f32>) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_underline(Some(Underline {
                 thickness,
                 brush: Brush::Color(color),
                 offset,
             }))
         });
-
-        self
     }
 
-    fn underline_gradient(
-        self,
+    fn set_underline_gradient(
+        &self,
         elements: &mut Elements,
         thickness: Option<f32>,
         gradient: Gradient,
         offset: Option<f32>,
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_underline(Some(Underline {
                 thickness,
                 brush: Brush::Gradient(gradient),
                 offset,
             }))
         });
-
-        self
     }
 
-    fn overflow(self, elements: &mut Elements, overflow_x: Overflow, overflow_y: Overflow) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_overflow(&self, elements: &mut Elements, overflow_x: Overflow, overflow_y: Overflow) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_overflow(overflow_x, overflow_y)
         });
-        self
     }
 
-    fn overflow_x(self, elements: &mut Elements, overflow_x: Overflow) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_overflow_x(overflow_x));
-        self
+    fn set_overflow_x(&self, elements: &mut Elements, overflow_x: Overflow) {
+        with_element_mut(*self, elements, |element, _elements| element.set_overflow_x(overflow_x));
     }
 
-    fn overflow_y(self, elements: &mut Elements, overflow_y: Overflow) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_overflow_y(overflow_y));
-        self
+    fn set_overflow_y(&self, elements: &mut Elements, overflow_y: Overflow) {
+        with_element_mut(*self, elements, |element, _elements| element.set_overflow_y(overflow_y));
     }
 
-    fn border_color(self, elements: &mut Elements, top: Color, right: Color, bottom: Color, left: Color) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_border_color(&self, elements: &mut Elements, top: Color, right: Color, bottom: Color, left: Color) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_border_color(top, right, bottom, left)
         });
-        self
     }
 
-    fn border_color_all(self, elements: &mut Elements, value: Color) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_border_color_all(value));
-        self
+    fn set_border_color_all(&self, elements: &mut Elements, value: Color) {
+        with_element_mut(*self, elements, |element, _elements| {
+            element.set_border_color_all(value)
+        });
     }
 
-    fn border_color_vertical(self, elements: &mut Elements, value: Color) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_border_color_vertical(&self, elements: &mut Elements, value: Color) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_border_color_vertical(value)
         });
-        self
     }
 
-    fn border_color_horizontal(self, elements: &mut Elements, value: Color) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_border_color_horizontal(&self, elements: &mut Elements, value: Color) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_border_color_horizontal(value)
         });
-        self
     }
 
-    fn border_width(self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_border_width(&self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_border_width(top, right, bottom, left)
         });
-        self
     }
 
-    fn border_width_all(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| element.set_border_width_all(value));
-        self
+    fn set_border_width_all(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
+            element.set_border_width_all(value)
+        });
     }
 
-    fn border_width_vertical(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_border_width_vertical(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_border_width_vertical(value)
         });
-        self
     }
 
-    fn border_width_horizontal(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_border_width_horizontal(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_border_width_horizontal(value)
         });
-        self
     }
 
-    fn outline_color(self, elements: &mut Elements, top: Color, right: Color, bottom: Color, left: Color) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_outline_color(&self, elements: &mut Elements, top: Color, right: Color, bottom: Color, left: Color) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_outline_color(top, right, bottom, left)
         });
-        self
     }
 
-    fn outline_color_all(self, elements: &mut Elements, value: Color) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_outline_color_all(&self, elements: &mut Elements, value: Color) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_outline_color_all(value)
         });
-        self
     }
 
-    fn outline_color_vertical(self, elements: &mut Elements, value: Color) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_outline_color_vertical(&self, elements: &mut Elements, value: Color) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_outline_color_vertical(value)
         });
-        self
     }
 
-    fn outline_color_horizontal(self, elements: &mut Elements, value: Color) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_outline_color_horizontal(&self, elements: &mut Elements, value: Color) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_outline_color_horizontal(value)
         });
-        self
     }
 
-    fn outline_width(self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_outline_width(&self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_outline_width(top, right, bottom, left)
         });
-        self
     }
 
-    fn outline_width_all(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_outline_width_all(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_outline_width_all(value)
         });
-        self
     }
 
-    fn outline_width_vertical(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_outline_width_vertical(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_outline_width_vertical(value)
         });
-        self
     }
 
-    fn outline_width_horizontal(self, elements: &mut Elements, value: Unit) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_outline_width_horizontal(&self, elements: &mut Elements, value: Unit) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_outline_width_horizontal(value)
         });
-        self
     }
 
-    fn border_radius(
-        self,
+    fn set_border_radius(
+        &self,
         elements: &mut Elements,
         top: (f32, f32),
         right: (f32, f32),
         bottom: (f32, f32),
         left: (f32, f32),
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_border_radius(top, right, bottom, left)
         });
-        self
     }
 
-    fn border_radius_all(self, elements: &mut Elements, value: (f32, f32)) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_border_radius_all(&self, elements: &mut Elements, value: (f32, f32)) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_border_radius_all(value)
         });
-        self
     }
 
-    fn border_radius_vertical(self, elements: &mut Elements, value: (f32, f32)) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_border_radius_vertical(&self, elements: &mut Elements, value: (f32, f32)) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_border_radius_vertical(value)
         });
-        self
     }
 
-    fn border_radius_horizontal(self, elements: &mut Elements, value: (f32, f32)) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_border_radius_horizontal(&self, elements: &mut Elements, value: (f32, f32)) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_border_radius_horizontal(value)
         });
-        self
     }
 
-    fn scrollbar_color(self, elements: &mut Elements, scrollbar_color: ScrollbarColor) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_scrollbar_color(&self, elements: &mut Elements, scrollbar_color: ScrollbarColor) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_scrollbar_color(scrollbar_color)
         });
-        self
     }
 
-    fn scrollbar_thumb_margin(self, elements: &mut Elements, top: f32, right: f32, bottom: f32, left: f32) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_scrollbar_thumb_margin(&self, elements: &mut Elements, top: f32, right: f32, bottom: f32, left: f32) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_scrollbar_thumb_margin(top, right, bottom, left)
         });
-        self
     }
 
-    fn scrollbar_thumb_radius(
-        self,
+    fn set_scrollbar_thumb_radius(
+        &self,
         elements: &mut Elements,
         top: (f32, f32),
         right: (f32, f32),
         bottom: (f32, f32),
         left: (f32, f32),
-    ) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    ) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_scrollbar_thumb_radius(top, right, bottom, left)
         });
-        self
     }
 
-    fn scrollbar_width(self, elements: &mut Elements, scrollbar_width: f32) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_scrollbar_width(&self, elements: &mut Elements, scrollbar_width: f32) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_scrollbar_width(scrollbar_width)
         });
-        self
     }
 
     /// Sets the list of animations.
-    fn animations(self, elements: &mut Elements, animations: Vec<Animation>) -> Self {
-        with_element_mut(self, elements, |element, elements| {
+    fn set_animations(&self, elements: &mut Elements, animations: Vec<Animation>) {
+        with_element_mut(*self, elements, |element, elements| {
             element.set_animations(elements, animations)
         });
-        self
     }
 
     /// Sets the box shadows on this element.
-    fn box_shadows(self, elements: &mut Elements, box_shadows: Vec<BoxShadow>) -> Self {
-        with_element_mut(self, elements, |element, _elements| {
+    fn set_box_shadows(&self, elements: &mut Elements, box_shadows: Vec<BoxShadow>) {
+        with_element_mut(*self, elements, |element, _elements| {
             element.set_box_shadows(box_shadows)
         });
-        self
     }
 
     /// Focus the element.
-    fn focus(self, elements: &mut Elements) -> Self {
+    fn focus(&self, elements: &mut Elements) {
         let handle = self.as_dyn_element();
         elements.try_dispatch_mut(handle, |element, elements| element.focus(elements));
-        self
     }
 
     /// Returns whether the element current has focus.
-    fn is_focused(&self, elements: &mut Elements) -> bool {
+    fn is_focused(&self, elements: &Elements) -> bool {
         with_element(*self, elements, |element| element.is_focused()).unwrap_or(false)
     }
 
     /// Unfocuses the element.
-    fn unfocus(self, elements: &mut Elements) -> Self {
+    fn unfocus(&self, elements: &mut Elements) {
         let handle = self.as_dyn_element();
         elements.try_dispatch_mut(handle, |element, elements| element.unfocus(elements));
-        self
     }
 
     /// Get the elements box in logical pixels.
-    fn get_computed_box_transformed(&self, elements: &Elements) -> ElementBox {
+    fn computed_box_transformed(&self, elements: &Elements) -> ElementBox {
         with_element(*self, elements, |element| element.get_computed_box_transformed()).unwrap_or_default()
     }
 
     /// Returns whether the element has pointer capture.
-    fn has_pointer_capture(&self, elements: &mut Elements, pointer_id: PointerId) -> bool {
+    fn has_pointer_capture(&self, elements: &Elements, pointer_id: PointerId) -> bool {
         with_element(*self, elements, |element| {
             element.has_pointer_capture(elements, pointer_id)
         })

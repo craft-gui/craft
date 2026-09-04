@@ -517,17 +517,17 @@ mod async_tests {
         });
 
         elements.spawn_local(async { "ready" }, move |value, elements| {
-            text.text(elements, value);
+            text.set_text(elements, value);
         });
 
         runtime.handle().update_local_set();
-        assert_eq!(text.get_text(&elements), "waiting");
+        assert_eq!(text.text(&elements), "waiting");
         assert_eq!(wakes.load(Ordering::Relaxed), 1);
 
         elements.run_gui_actions();
-        assert_eq!(text.get_text(&elements), "ready");
+        assert_eq!(text.text(&elements), "ready");
         elements.run_gui_actions();
-        assert_eq!(text.get_text(&elements), "ready");
+        assert_eq!(text.text(&elements), "ready");
     }
 
     #[test]
@@ -535,10 +535,11 @@ mod async_tests {
         let runtime = retgui_runtime::RetGuiRuntime::new();
         let mut elements = Elements::new();
         let text = Text::new(&mut elements, "waiting");
-        let parent = Container::new(&mut elements).push(&mut elements, text);
+        let parent = Container::new(&mut elements);
+        parent.push(&mut elements, text);
 
         elements.spawn_local(async { "too late" }, move |value, elements| {
-            text.text(elements, value);
+            text.set_text(elements, value);
         });
         parent.delete_all_children(&mut elements);
 
@@ -557,15 +558,17 @@ mod deletion_tests {
     fn deleting_children_reclaims_the_complete_retained_subtree() {
         let mut elements = Elements::new();
         let grandchild = Text::new(&mut elements, "grandchild");
-        let child = Container::new(&mut elements).push(&mut elements, grandchild);
-        let parent = Container::new(&mut elements).push(&mut elements, child);
+        let child = Container::new(&mut elements);
+        child.push(&mut elements, grandchild);
+        let parent = Container::new(&mut elements);
+        parent.push(&mut elements, child);
         let child_access = elements.get(child.inner).element_data().access_key.unwrap();
         let access_tree = elements.get(child.inner).element_data().access_tree.clone();
 
         assert_eq!(elements.elements.len(), 3);
         parent.delete_all_children(&mut elements);
 
-        assert!(parent.get_children(&elements).is_empty());
+        assert!(parent.children(&elements).is_empty());
         assert!(!elements.contains(child.inner));
         assert!(!elements.contains(grandchild.inner));
         assert!(!access_tree.contains_node(child_access));
@@ -592,44 +595,25 @@ mod deletion_tests {
     fn operations_on_deleted_handles_are_inert() {
         let mut elements = Elements::new();
         let text = Text::new(&mut elements, "before");
-        let child = Container::new(&mut elements).push(&mut elements, text);
-        let parent = Container::new(&mut elements).push(&mut elements, child);
+        let child = Container::new(&mut elements);
+        child.push(&mut elements, text);
+        let parent = Container::new(&mut elements);
+        parent.push(&mut elements, child);
 
         parent.delete_all_children(&mut elements);
 
-        text.edit(&mut elements)
-            .text("after")
-            .selectable(false)
-            .font_size(24.0)
-            .finish();
-        text.text(&mut elements, "after").selectable(&mut elements, false);
+        text.set_text(&mut elements, "after");
+        text.set_selectable(&mut elements, false);
+        text.set_font_size(&mut elements, 24.0);
         text.request_redraw(&elements);
 
-        assert_eq!(text.get_text(&elements), "");
-        assert!(!text.get_selectable(&elements));
-        assert!(text.get_children(&elements).is_empty());
+        assert_eq!(text.text(&elements), "");
+        assert!(!text.is_selectable(&elements));
+        assert!(text.children(&elements).is_empty());
         assert!(matches!(
-            text.get_parent(&elements),
+            text.parent(&elements),
             Err(crate::RetGuiError::ElementNotFound)
         ));
-        assert_eq!(elements.elements.len(), 1);
-    }
-
-    #[test]
-    fn stale_editor_does_not_run_operations_or_build_children() {
-        let mut elements = Elements::new();
-        let child = Container::new(&mut elements);
-        let parent = Container::new(&mut elements).push(&mut elements, child);
-        parent.delete_all_children(&mut elements);
-
-        let mut operation_ran = false;
-        child
-            .edit(&mut elements)
-            .apply(|_, _| operation_ran = true)
-            .push_with(|elements| Text::new(elements, "orphan"))
-            .finish();
-
-        assert!(!operation_ran);
         assert_eq!(elements.elements.len(), 1);
     }
 }

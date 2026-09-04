@@ -818,7 +818,7 @@ fn content_pane(elements: &mut Elements) -> Container {
 
 fn select_example(elements: &mut Elements, examples: &[GalleryExample], selected: usize) {
     for (index, example) in examples.iter().enumerate() {
-        example.section.display(
+        example.section.set_display(
             elements,
             if index == selected {
                 Display::Flex

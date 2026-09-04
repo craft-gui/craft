@@ -48,7 +48,7 @@ fn create_button(
                 let create_window = state.change(delta);
                 (create_window, state.count())
             });
-            count_text.text(elements, &format!("Count: {count}"));
+            count_text.edit(elements).text(&format!("Count: {count}")).finish();
             if create_window {
                 counter(elements);
             }

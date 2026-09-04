@@ -105,7 +105,8 @@ impl RenderStats {
 
 impl PerfStats {
     pub(crate) fn new(elements: &mut Elements) -> Self {
-        let text = Text::new(elements, "").selectable(elements, false);
+        let text = Text::new(elements, "");
+        text.set_selectable(elements, false);
         {
             let text_inner = elements.get_as_mut::<TextNode>(text.inner);
             text_inner.set_font_size(16.0);

@@ -155,17 +155,16 @@ impl TinyVg {
         Self { inner }
     }
 
-    pub fn resource_id(self, elements: &mut Elements, resource_id: ResourceId) -> Self {
+    pub fn set_resource_id(&self, elements: &mut Elements, resource_id: ResourceId) {
         elements.try_dispatch_mut(self.inner, |tiny, elements| {
             (tiny as &mut dyn std::any::Any)
                 .downcast_mut::<TinyVgNode>()
                 .unwrap()
                 .set_resource_id(elements, resource_id)
         });
-        self
     }
 
-    pub fn get_resource_id(&self, elements: &Elements) -> ResourceId {
+    pub fn resource_id(&self, elements: &Elements) -> ResourceId {
         elements
             .try_get_as::<TinyVgNode>(self.inner)
             .map_or(ResourceId::DUMMY, |tiny| tiny.get_resource_id().clone())

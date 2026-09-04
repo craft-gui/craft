@@ -353,38 +353,35 @@ impl Text {
         Text { inner }
     }
 
-    pub fn get_selectable(&self, elements: &Elements) -> bool {
+    pub fn is_selectable(&self, elements: &Elements) -> bool {
         elements
             .try_get_as::<TextNode>(self.inner)
             .is_some_and(|text| text.selectable)
     }
 
-    pub fn selectable(self, elements: &mut Elements, selectable: bool) -> Self {
+    pub fn set_selectable(&self, elements: &mut Elements, selectable: bool) {
         if let Some(text) = elements.try_get_as_mut::<TextNode>(self.inner) {
             text.set_selectable(selectable);
         }
-        self
     }
 
     /// Returns the current text, or an empty string if this handle is stale.
-    pub fn get_text(&self, elements: &Elements) -> String {
+    pub fn text(&self, elements: &Elements) -> String {
         elements
             .try_get_as::<TextNode>(self.inner)
             .map_or_else(String::new, |text| text.get_text().to_owned())
     }
 
-    pub fn text(self, elements: &mut Elements, text: &str) -> Self {
+    pub fn set_text(&self, elements: &mut Elements, text: &str) {
         if let Some(element) = elements.try_get_as_mut::<TextNode>(self.inner) {
             element.set_text(text);
         }
-        self
     }
 
-    pub fn set_text_smol_str(self, elements: &mut Elements, text: SmolStr) -> Self {
+    pub fn set_text_smol_str(&self, elements: &mut Elements, text: SmolStr) {
         if let Some(element) = elements.try_get_as_mut::<TextNode>(self.inner) {
             element.set_text_smol_str(text);
         }
-        self
     }
 }
 

@@ -591,15 +591,14 @@ impl Dropdown {
         Self { inner }
     }
 
-    pub fn selected_item(self, elements: &mut Elements, index: usize) -> Self {
+    pub fn set_selected_item(&self, elements: &mut Elements, index: usize) {
         elements.try_dispatch_mut(self.inner, |inner, elements| {
             let inner = (inner as &mut dyn Any).downcast_mut::<DropdownNode>().unwrap();
             inner.set_selected_element(elements, index);
         });
-        self
     }
 
-    pub fn get_selected_item(self, elements: &Elements) -> Option<usize> {
+    pub fn selected_item(&self, elements: &Elements) -> Option<usize> {
         elements
             .try_get_as::<DropdownNode>(self.inner)
             .and_then(|dropdown| dropdown.selected_element_index)

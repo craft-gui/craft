@@ -107,13 +107,15 @@ impl Calendar {
         let locale = get_locale_or_default();
         let first_day = first_day_of_week(&locale);
         let start_of_month = current_month();
-        let week_grid = Container::new(elements)
-            .display(elements, Display::Flex)
-            .flex_direction(elements, FlexDirection::Column);
+        let week_grid = Container::new(elements);
+        week_grid.set_display(elements, Display::Flex);
+        week_grid.set_flex_direction(elements, FlexDirection::Column);
         let day_header = Container::new(elements);
         let nav = Container::new(elements);
-        let year_dropdown = Dropdown::new(elements).width(elements, px(100));
-        let month_dropdown = Dropdown::new(elements).width(elements, px(100));
+        let year_dropdown = Dropdown::new(elements);
+        year_dropdown.set_width(elements, px(100));
+        let month_dropdown = Dropdown::new(elements);
+        month_dropdown.set_width(elements, px(100));
         let inner = elements.insert_with(|me, access_tree| {
             Box::new(CalendarNode {
                 element_data: ElementData::new(me, true, access_tree),
@@ -141,29 +143,31 @@ impl Calendar {
             let mut current_header_day = inner.first_day;
             for _ in 0..COLUMNS {
                 let label = day_abbreviation(&inner.locale, current_header_day);
-                let text = Text::new(elements, label.as_str()).selectable(elements, false);
-                let day = Container::new(elements)
-                    .display(elements, Display::Flex)
-                    .justify_content(elements, JustifyContent::Center)
-                    .align_items(elements, AlignItems::Center)
-                    .push(elements, text)
-                    .width(elements, CELL_SIZE)
-                    .height(elements, CELL_SIZE);
+                let text = Text::new(elements, label.as_str());
+                text.set_selectable(elements, false);
+                let day = Container::new(elements);
+                day.set_display(elements, Display::Flex);
+                day.set_justify_content(elements, JustifyContent::Center);
+                day.set_align_items(elements, AlignItems::Center);
+                day.push(elements, text);
+                day.set_width(elements, CELL_SIZE);
+                day.set_height(elements, CELL_SIZE);
                 inner.day_header.push(elements, day);
                 current_header_day = Weekday::from_days_since_sunday(current_header_day as isize + 1);
             }
             for _ in 0..ROWS {
-                let week = Container::new(elements)
-                    .display(elements, Display::Flex)
-                    .flex_direction(elements, FlexDirection::Row);
+                let week = Container::new(elements);
+                week.set_display(elements, Display::Flex);
+                week.set_flex_direction(elements, FlexDirection::Row);
                 for _ in 0..COLUMNS {
-                    let text = Text::new(elements, "").selectable(elements, false);
-                    let day = Container::new(elements)
-                        .justify_content(elements, JustifyContent::Center)
-                        .align_items(elements, AlignItems::Center)
-                        .width(elements, CELL_SIZE)
-                        .height(elements, CELL_SIZE)
-                        .push(elements, text);
+                    let text = Text::new(elements, "");
+                    text.set_selectable(elements, false);
+                    let day = Container::new(elements);
+                    day.set_justify_content(elements, JustifyContent::Center);
+                    day.set_align_items(elements, AlignItems::Center);
+                    day.set_width(elements, CELL_SIZE);
+                    day.set_height(elements, CELL_SIZE);
+                    day.push(elements, text);
                     week.push(elements, day);
                     inner.days.push(text);
                 }
@@ -172,15 +176,13 @@ impl Calendar {
             inner.update_calendar(elements);
             inner.set_display(Display::Flex);
             inner.set_flex_direction(FlexDirection::Column);
-            inner
-                .nav
-                .display(elements, Display::Flex)
-                .justify_content(elements, JustifyContent::SpaceAround)
-                .align_items(elements, AlignItems::Center)
-                .flex_direction(elements, FlexDirection::Row)
-                .width(elements, px(CELL_SIZE.raw_value() * 7.0))
-                .push(elements, inner.year_dropdown)
-                .push(elements, inner.month_dropdown);
+            inner.nav.set_display(elements, Display::Flex);
+            inner.nav.set_justify_content(elements, JustifyContent::SpaceAround);
+            inner.nav.set_align_items(elements, AlignItems::Center);
+            inner.nav.set_flex_direction(elements, FlexDirection::Row);
+            inner.nav.set_width(elements, px(CELL_SIZE.raw_value() * 7.0));
+            inner.nav.push(elements, inner.year_dropdown);
+            inner.nav.push(elements, inner.month_dropdown);
         });
         crate::elements::internal_helpers::push_child_to_element(elements, inner, nav.inner);
         crate::elements::internal_helpers::push_child_to_element(elements, inner, day_header.inner);
@@ -188,9 +190,9 @@ impl Calendar {
         Self { inner }
     }
 
-    pub fn start_year(self, elements: &mut Elements, year: i32) -> Self {
+    pub fn set_start_year(&self, elements: &mut Elements, year: i32) {
         if !elements.contains(self.inner) {
-            return self;
+            return;
         }
         if year < MIN_YEAR {
             panic!("Dates below {MIN_YEAR} are not supported.");
@@ -204,12 +206,11 @@ impl Calendar {
                 .unwrap()
                 .set_start_year(elements, year)
         });
-        self
     }
 
-    pub fn end_year(self, elements: &mut Elements, year: i32) -> Self {
+    pub fn set_end_year(&self, elements: &mut Elements, year: i32) {
         if !elements.contains(self.inner) {
-            return self;
+            return;
         }
         if year < MIN_YEAR {
             panic!("Dates below {MIN_YEAR} are not supported.");
@@ -223,7 +224,6 @@ impl Calendar {
                 .unwrap()
                 .set_end_year(elements, year)
         });
-        self
     }
 }
 
@@ -233,7 +233,8 @@ impl CalendarNode {
         for day_element in &self.days {
             let is_in_current_month = start_date.month().ordinal == self.focus_month;
             let date_str = format_date_day_number(&self.locale, &start_date);
-            day_element.text(elements, date_str.as_str()).color(
+            day_element.set_text(elements, date_str.as_str());
+            day_element.set_color(
                 elements,
                 if is_in_current_month {
                     rgb(0, 0, 0)
@@ -261,10 +262,12 @@ impl CalendarNode {
         let dropdown = self.year_dropdown;
         dropdown.remove_all_children(elements);
         for year in (self.start_year..(self.end_year + 1)).rev() {
-            let text = Text::new(elements, &year_name(&self.locale, year)).selectable(elements, false);
-            dropdown.push(elements, text).font_size(elements, 20.0);
+            let text = Text::new(elements, &year_name(&self.locale, year));
+            text.set_selectable(elements, false);
+            dropdown.push(elements, text);
+            dropdown.set_font_size(elements, 20.0);
             if year == self.focus_year {
-                dropdown.selected_item(elements, (self.end_year - year) as usize);
+                dropdown.set_selected_item(elements, (self.end_year - year) as usize);
             }
         }
     }
@@ -276,11 +279,12 @@ impl CalendarNode {
             let text = Text::new(
                 elements,
                 &month_name(&self.locale, Month::new(month + 1), self.focus_year),
-            )
-            .selectable(elements, false);
-            dropdown.push(elements, text).font_size(elements, 20.0);
+            );
+            text.set_selectable(elements, false);
+            dropdown.push(elements, text);
+            dropdown.set_font_size(elements, 20.0);
             if month + 1 == self.focus_month {
-                dropdown.selected_item(elements, month as usize);
+                dropdown.set_selected_item(elements, month as usize);
             }
         }
     }

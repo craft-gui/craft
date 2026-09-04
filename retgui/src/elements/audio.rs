@@ -125,24 +125,25 @@ impl Audio {
         let pause_icon = ResourceId::StaticBytes(PAUSE);
         let volume_icon = ResourceId::StaticBytes(VOLUME);
 
-        let play_button = Button::new(elements).accessibility_name(elements, "play");
-        let play_button_icon = TinyVg::new(elements, play_icon.clone())
-            .color(elements, Color::WHITE)
-            .width(elements, Unit::Px(16.0))
-            .height(elements, Unit::Px(16.0));
-        let track = Slider::new(elements, 16.0)
-            .width(elements, Unit::Px(200.0))
-            .thumb_color(elements, Brush::Color(Color::WHITE));
-        let volume_track = Slider::new(elements, 16.0)
-            .thumb_color(elements, Brush::Color(Color::WHITE))
-            .min(elements, 0.0)
-            .max(elements, 100.0)
-            .value(elements, 100.0)
-            .step(elements, 1.0);
-        let duration = Text::new(elements, "")
-            .selectable(elements, false)
-            .line_height(elements, 0.5)
-            .color(elements, Color::WHITE);
+        let play_button = Button::new(elements);
+        play_button.set_accessibility_name(elements, "play");
+        let play_button_icon = TinyVg::new(elements, play_icon.clone());
+        play_button_icon.set_color(elements, Color::WHITE);
+        play_button_icon.set_width(elements, Unit::Px(16.0));
+        play_button_icon.set_height(elements, Unit::Px(16.0));
+        let track = Slider::new(elements, 16.0);
+        track.set_width(elements, Unit::Px(200.0));
+        track.set_thumb_color(elements, Brush::Color(Color::WHITE));
+        let volume_track = Slider::new(elements, 16.0);
+        volume_track.set_thumb_color(elements, Brush::Color(Color::WHITE));
+        volume_track.set_min(elements, 0.0);
+        volume_track.set_max(elements, 100.0);
+        volume_track.set_value(elements, 100.0);
+        volume_track.set_step(elements, 1.0);
+        let duration = Text::new(elements, "");
+        duration.set_selectable(elements, false);
+        duration.set_line_height(elements, 0.5);
+        duration.set_color(elements, Color::WHITE);
 
         let inner = elements.insert_with(|me, access_tree| {
             Box::new(AudioNode {
@@ -170,17 +171,17 @@ impl Audio {
         }
         elements.create_layout_node(inner, None);
 
-        let play_control = play_button
-            .push(elements, play_button_icon)
-            .on_click(elements, move |_event, elements| {
-                elements.dispatch_mut(inner, |audio, elements| {
-                    (audio as &mut dyn std::any::Any)
-                        .downcast_mut::<AudioNode>()
-                        .expect("audio handle changed type")
-                        .toggle(elements);
-                });
+        play_button.push(elements, play_button_icon);
+        play_button.on_click(elements, move |_event, elements| {
+            elements.dispatch_mut(inner, |audio, elements| {
+                (audio as &mut dyn std::any::Any)
+                    .downcast_mut::<AudioNode>()
+                    .expect("audio handle changed type")
+                    .toggle(elements);
             });
-        let track_control = track.on_slider_value_changed(elements, move |event, elements| {
+        });
+        let play_control = play_button;
+        track.on_slider_value_changed(elements, move |event, elements| {
             elements.dispatch_mut(inner, |audio, elements| {
                 (audio as &mut dyn std::any::Any)
                     .downcast_mut::<AudioNode>()
@@ -188,7 +189,8 @@ impl Audio {
                     .set_cursor(elements, event.value as f32);
             });
         });
-        let volume_control = volume_track.on_slider_value_changed(elements, move |event, elements| {
+        let track_control = track;
+        volume_track.on_slider_value_changed(elements, move |event, elements| {
             elements.dispatch_mut(inner, |audio, elements| {
                 (audio as &mut dyn std::any::Any)
                     .downcast_mut::<AudioNode>()
@@ -196,10 +198,11 @@ impl Audio {
                     .set_volume(elements, event.value as f32);
             });
         });
-        let volume_icon_element = TinyVg::new(elements, volume_icon)
-            .color(elements, Color::WHITE)
-            .width(elements, Unit::Px(16.0))
-            .height(elements, Unit::Px(16.0));
+        let volume_control = volume_track;
+        let volume_icon_element = TinyVg::new(elements, volume_icon);
+        volume_icon_element.set_color(elements, Color::WHITE);
+        volume_icon_element.set_width(elements, Unit::Px(16.0));
+        volume_icon_element.set_height(elements, Unit::Px(16.0));
 
         for child in [
             play_control.as_dyn_element(),
@@ -221,41 +224,37 @@ impl Audio {
         Self { inner }
     }
 
-    pub fn controls(self, elements: &mut Elements, controls: bool) -> Self {
+    pub fn set_controls(&self, elements: &mut Elements, controls: bool) {
         if let Some(audio) = elements.try_get_as_mut::<AudioNode>(self.inner) {
             audio.set_controls(controls);
         }
-        self
     }
 
-    pub fn play(self, elements: &mut Elements) -> Self {
+    pub fn play(&self, elements: &mut Elements) {
         elements.try_dispatch_mut(self.inner, |audio, elements| {
             (audio as &mut dyn std::any::Any)
                 .downcast_mut::<AudioNode>()
                 .expect("audio handle changed type")
                 .play(elements);
         });
-        self
     }
 
-    pub fn pause(self, elements: &mut Elements) -> Self {
+    pub fn pause(&self, elements: &mut Elements) {
         elements.try_dispatch_mut(self.inner, |audio, elements| {
             (audio as &mut dyn std::any::Any)
                 .downcast_mut::<AudioNode>()
                 .expect("audio handle changed type")
                 .pause(elements);
         });
-        self
     }
 
-    pub fn toggle(self, elements: &mut Elements) -> Self {
+    pub fn toggle(&self, elements: &mut Elements) {
         elements.try_dispatch_mut(self.inner, |audio, elements| {
             (audio as &mut dyn std::any::Any)
                 .downcast_mut::<AudioNode>()
                 .expect("audio handle changed type")
                 .toggle(elements);
         });
-        self
     }
 
     pub fn is_playing(&self, elements: &Elements) -> bool {
@@ -289,9 +288,9 @@ impl AudioNode {
             (sound, end_notifier, duration, current_time)
         });
 
-        self.track.max(elements, duration);
+        self.track.set_max(elements, duration);
         self.duration
-            .text(elements, &format_time(current_time, duration as u32));
+            .set_text(elements, &format_time(current_time, duration as u32));
         self.sound_data = Some(elements.insert_state(SoundData {
             sound,
             end_notifier,
@@ -300,13 +299,13 @@ impl AudioNode {
         elements.with_audio_context(|context, _| {
             context.sounds.insert(me);
         });
-        let volume = self.volume_track.get_value(elements) as f32;
+        let volume = self.volume_track.value(elements) as f32;
         self.set_volume(elements, volume);
     }
 
     fn play(&self, elements: &mut Elements) {
-        self.play_button.accessibility_name(elements, "pause");
-        self.play_button_icon.resource_id(elements, self.pause_icon.clone());
+        self.play_button.set_accessibility_name(elements, "pause");
+        self.play_button_icon.set_resource_id(elements, self.pause_icon.clone());
         if let Some(sound_data) = self.sound_data {
             elements
                 .state_mut(sound_data)
@@ -317,8 +316,8 @@ impl AudioNode {
     }
 
     fn pause(&self, elements: &mut Elements) {
-        self.play_button.accessibility_name(elements, "play");
-        self.play_button_icon.resource_id(elements, self.play_icon.clone());
+        self.play_button.set_accessibility_name(elements, "play");
+        self.play_button_icon.set_resource_id(elements, self.play_icon.clone());
         if let Some(sound_data) = self.sound_data {
             elements
                 .state_mut(sound_data)
@@ -353,13 +352,13 @@ impl AudioNode {
             (current_time, total_time)
         };
 
-        if self.track.get_value(elements) != current_time {
-            self.track.value(elements, current_time);
+        if self.track.value(elements) != current_time {
+            self.track.set_value(elements, current_time);
             self.duration
-                .text(elements, &format_time(current_time as u32, total_time));
+                .set_text(elements, &format_time(current_time as u32, total_time));
         }
         if ended {
-            self.play_button_icon.resource_id(elements, self.play_icon.clone());
+            self.play_button_icon.set_resource_id(elements, self.play_icon.clone());
         }
     }
 

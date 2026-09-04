@@ -40,12 +40,11 @@ struct MarkdownRenderer<'a, 'elements> {
 
 impl<'a, 'elements> MarkdownRenderer<'a, 'elements> {
     pub fn new(elements: &'elements mut Elements) -> Self {
-        let root = Container::new(elements)
-            .display(elements, Display::Block)
-            .as_dyn_element();
+        let root = Container::new(elements);
+        root.set_display(elements, Display::Block);
         MarkdownRenderer {
             elements,
-            element_stack: vec![root],
+            element_stack: vec![root.as_dyn_element()],
             list_ids: Vec::new(),
             styled_text: StyledText {
                 text: String::new(),
@@ -101,16 +100,18 @@ impl<'a, 'elements> MarkdownRenderer<'a, 'elements> {
             return;
         }
 
-        let mut text = if let Some(text_input) = text_input {
-            text_input.text(self.elements, self.styled_text.text.as_str())
+        let text = if let Some(text_input) = text_input {
+            text_input.set_text(self.elements, self.styled_text.text.as_str());
+            text_input
         } else {
-            TextInput::new(self.elements, &self.styled_text.text)
-                .display(self.elements, Display::Block)
-                .border_width_all(self.elements, px(0))
-                .disabled(self.elements, true)
+            let text_input = TextInput::new(self.elements, &self.styled_text.text);
+            text_input.set_display(self.elements, Display::Block);
+            text_input.set_border_width_all(self.elements, px(0));
+            text_input.set_disabled(self.elements, true);
+            text_input
         };
 
-        text = text.ranged_styles(self.elements, self.styled_text.style.clone());
+        text.set_ranged_styles(self.elements, self.styled_text.style.clone());
         self.push(text.as_dyn_element());
         self.styled_text = StyledText::new();
     }
@@ -187,10 +188,10 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                     let children_count = renderer.list_ids.len();
                     renderer.push_list_id(item);
                     let padding = if children_count == 0 { 0 } else { 20 };
-                    let list = Container::new(renderer.elements)
-                        .display(renderer.elements, Display::Flex)
-                        .flex_direction(renderer.elements, FlexDirection::Column)
-                        .margin(renderer.elements, px(0), px(0), px(0), px(padding));
+                    let list = Container::new(renderer.elements);
+                    list.set_display(renderer.elements, Display::Flex);
+                    list.set_flex_direction(renderer.elements, FlexDirection::Column);
+                    list.set_margin(renderer.elements, px(0), px(0), px(0), px(padding));
                     renderer.push_container(list.as_dyn_element())
                 }
                 Tag::Item => {
@@ -201,9 +202,9 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                     } else {
                         renderer.push_text("• ");
                     }
-                    let item_container = Container::new(renderer.elements)
-                        .display(renderer.elements, Display::Block)
-                        .border_width_all(renderer.elements, px(0));
+                    let item_container = Container::new(renderer.elements);
+                    item_container.set_display(renderer.elements, Display::Block);
+                    item_container.set_border_width_all(renderer.elements, px(0));
                     renderer.push_container(item_container.as_dyn_element());
                 }
                 Tag::Emphasis => {
@@ -224,10 +225,11 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                     } else {
                         ResourceId::File(PathBuf::from_str(&dest_url).expect("Invalid file path for image"))
                     };
-                    let image = Image::new(renderer.elements, resource)
-                        .width(renderer.elements, Unit::Auto)
-                        .height(renderer.elements, Unit::Auto);
-                    let image_container = Container::new(renderer.elements).push(renderer.elements, image);
+                    let image = Image::new(renderer.elements, resource);
+                    image.set_width(renderer.elements, Unit::Auto);
+                    image.set_height(renderer.elements, Unit::Auto);
+                    let image_container = Container::new(renderer.elements);
+                    image_container.push(renderer.elements, image);
                     renderer.push(image_container.as_dyn_element())
                 }
                 _ => {}
@@ -262,10 +264,10 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                             HeadingLevel::H5 => 15,
                             HeadingLevel::H6 => 10,
                         };
-                        let text_input = TextInput::new(renderer.elements, "")
-                            .margin(renderer.elements, px(margin), px(0), px(margin), px(0))
-                            .border_width_all(renderer.elements, px(0))
-                            .disabled(renderer.elements, true);
+                        let text_input = TextInput::new(renderer.elements, "");
+                        text_input.set_margin(renderer.elements, px(margin), px(0), px(margin), px(0));
+                        text_input.set_border_width_all(renderer.elements, px(0));
+                        text_input.set_disabled(renderer.elements, true);
                         renderer.push_rich_text(Some(text_input));
                         renderer.font_size = None;
                     }
@@ -359,14 +361,13 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                 renderer.push_text("\n");
             }
             Event::Rule => {
-                let rule = Container::new(renderer.elements)
-                    .display(renderer.elements, Display::Block)
-                    .width(renderer.elements, pct(100))
-                    .height(renderer.elements, px(1))
-                    .background_color(renderer.elements, rgb(0xD3, 0xD3, 0xD3))
-                    .margin(renderer.elements, px(20), px(0), px(20), px(0))
-                    .as_dyn_element();
-                renderer.push(rule);
+                let rule = Container::new(renderer.elements);
+                rule.set_display(renderer.elements, Display::Block);
+                rule.set_width(renderer.elements, pct(100));
+                rule.set_height(renderer.elements, px(1));
+                rule.set_background_color(renderer.elements, rgb(0xD3, 0xD3, 0xD3));
+                rule.set_margin(renderer.elements, px(20), px(0), px(20), px(0));
+                renderer.push(rule.as_dyn_element());
             }
             _ => {}
         }

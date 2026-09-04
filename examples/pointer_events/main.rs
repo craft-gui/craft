@@ -85,7 +85,7 @@ fn pointer_capture_example(elements: &mut Elements) -> Container {
         })
         .on_pointer_moved(move |event, elements| {
             let mouse_x = event.current.logical_position().x as f32;
-            let half_width = draggable_text.get_computed_box_transformed(elements).size.width / 2.0;
+            let half_width = draggable_text.computed_box_transformed(elements).size.width / 2.0;
             if draggable_text.has_pointer_capture(elements, event.pointer.pointer_id.unwrap()) {
                 draggable_text
                     .edit(elements)

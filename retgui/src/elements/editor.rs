@@ -75,13 +75,13 @@ impl<'a, E: Element> ElementEditor<'a, E> {
 
     pub fn id(self, id: &str) -> Self {
         self.apply(|element, elements| {
-            element.id(elements, id);
+            element.set_id(elements, id);
         })
     }
 
     pub fn accessibility_name(self, name: &str) -> Self {
         self.apply(|element, elements| {
-            element.accessibility_name(elements, name);
+            element.set_accessibility_name(elements, name);
         })
     }
 
@@ -241,415 +241,415 @@ impl<'a, E: Element> ElementEditor<'a, E> {
 
     pub fn display(self, value: Display) -> Self {
         self.apply(|element, elements| {
-            element.display(elements, value);
+            element.set_display(elements, value);
         })
     }
 
     pub fn box_sizing(self, value: BoxSizing) -> Self {
         self.apply(|element, elements| {
-            element.box_sizing(elements, value);
+            element.set_box_sizing(elements, value);
         })
     }
 
     pub fn position(self, value: Position) -> Self {
         self.apply(|element, elements| {
-            element.position(elements, value);
+            element.set_position(elements, value);
         })
     }
 
     pub fn overlay(self, value: bool) -> Self {
         self.apply(|element, elements| {
-            element.overlay(elements, value);
+            element.set_overlay(elements, value);
         })
     }
 
     pub fn margin(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
         self.apply(|element, elements| {
-            element.margin(elements, top, right, bottom, left);
+            element.set_margin(elements, top, right, bottom, left);
         })
     }
 
     pub fn margin_all(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.margin_all(elements, value);
+            element.set_margin_all(elements, value);
         })
     }
 
     pub fn margin_vertical(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.margin_vertical(elements, value);
+            element.set_margin_vertical(elements, value);
         })
     }
 
     pub fn margin_horizontal(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.margin_horizontal(elements, value);
+            element.set_margin_horizontal(elements, value);
         })
     }
 
     pub fn padding(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
         self.apply(|element, elements| {
-            element.padding(elements, top, right, bottom, left);
+            element.set_padding(elements, top, right, bottom, left);
         })
     }
 
     pub fn padding_all(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.padding_all(elements, value);
+            element.set_padding_all(elements, value);
         })
     }
 
     pub fn padding_vertical(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.padding_vertical(elements, value);
+            element.set_padding_vertical(elements, value);
         })
     }
 
     pub fn padding_horizontal(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.padding_horizontal(elements, value);
+            element.set_padding_horizontal(elements, value);
         })
     }
 
     pub fn gap(self, row_gap: Unit, column_gap: Unit) -> Self {
         self.apply(|element, elements| {
-            element.gap(elements, row_gap, column_gap);
+            element.set_gap(elements, row_gap, column_gap);
         })
     }
 
     pub fn row_gap(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.row_gap(elements, value);
+            element.set_row_gap(elements, value);
         })
     }
 
     pub fn column_gap(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.column_gap(elements, value);
+            element.set_column_gap(elements, value);
         })
     }
 
     pub fn inset(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
         self.apply(|element, elements| {
-            element.inset(elements, top, right, bottom, left);
+            element.set_inset(elements, top, right, bottom, left);
         })
     }
 
     pub fn min_width(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.min_width(elements, value);
+            element.set_min_width(elements, value);
         })
     }
 
     pub fn min_height(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.min_height(elements, value);
+            element.set_min_height(elements, value);
         })
     }
 
     pub fn width(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.width(elements, value);
+            element.set_width(elements, value);
         })
     }
 
     pub fn height(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.height(elements, value);
+            element.set_height(elements, value);
         })
     }
 
     pub fn max_width(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.max_width(elements, value);
+            element.set_max_width(elements, value);
         })
     }
 
     pub fn max_height(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.max_height(elements, value);
+            element.set_max_height(elements, value);
         })
     }
 
     pub fn wrap(self, value: FlexWrap) -> Self {
         self.apply(|element, elements| {
-            element.wrap(elements, value);
+            element.set_wrap(elements, value);
         })
     }
 
     pub fn align_items(self, value: AlignItems) -> Self {
         self.apply(|element, elements| {
-            element.align_items(elements, value);
+            element.set_align_items(elements, value);
         })
     }
 
     pub fn align_self(self, value: AlignSelf) -> Self {
         self.apply(|element, elements| {
-            element.align_self(elements, value);
+            element.set_align_self(elements, value);
         })
     }
 
     pub fn align_content(self, value: AlignContent) -> Self {
         self.apply(|element, elements| {
-            element.align_content(elements, value);
+            element.set_align_content(elements, value);
         })
     }
 
     pub fn justify_content(self, value: JustifyContent) -> Self {
         self.apply(|element, elements| {
-            element.justify_content(elements, value);
+            element.set_justify_content(elements, value);
         })
     }
 
     pub fn flex_direction(self, value: FlexDirection) -> Self {
         self.apply(|element, elements| {
-            element.flex_direction(elements, value);
+            element.set_flex_direction(elements, value);
         })
     }
 
     pub fn flex_grow(self, value: f32) -> Self {
         self.apply(|element, elements| {
-            element.flex_grow(elements, value);
+            element.set_flex_grow(elements, value);
         })
     }
 
     pub fn flex_shrink(self, value: f32) -> Self {
         self.apply(|element, elements| {
-            element.flex_shrink(elements, value);
+            element.set_flex_shrink(elements, value);
         })
     }
 
     pub fn flex_basis(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.flex_basis(elements, value);
+            element.set_flex_basis(elements, value);
         })
     }
 
     pub fn order(self, value: i32) -> Self {
         self.apply(|element, elements| {
-            element.order(elements, value);
+            element.set_order(elements, value);
         })
     }
 
     pub fn font_family(self, value: FontFamily) -> Self {
         self.apply(|element, elements| {
-            element.font_family(elements, value);
+            element.set_font_family(elements, value);
         })
     }
 
     pub fn color(self, value: Color) -> Self {
         self.apply(|element, elements| {
-            element.color(elements, value);
+            element.set_color(elements, value);
         })
     }
 
     pub fn text_gradient(self, value: Gradient) -> Self {
         self.apply(|element, elements| {
-            element.text_gradient(elements, value);
+            element.set_text_gradient(elements, value);
         })
     }
 
     pub fn background_color(self, value: Color) -> Self {
         self.apply(|element, elements| {
-            element.background_color(elements, value);
+            element.set_background_color(elements, value);
         })
     }
 
     pub fn background_gradient(self, value: Gradient) -> Self {
         self.apply(|element, elements| {
-            element.background_gradient(elements, value);
+            element.set_background_gradient(elements, value);
         })
     }
 
     pub fn font_size(self, value: f32) -> Self {
         self.apply(|element, elements| {
-            element.font_size(elements, value);
+            element.set_font_size(elements, value);
         })
     }
 
     pub fn line_height(self, value: f32) -> Self {
         self.apply(|element, elements| {
-            element.line_height(elements, value);
+            element.set_line_height(elements, value);
         })
     }
 
     pub fn font_weight(self, value: FontWeight) -> Self {
         self.apply(|element, elements| {
-            element.font_weight(elements, value);
+            element.set_font_weight(elements, value);
         })
     }
 
     pub fn font_style(self, value: FontStyle) -> Self {
         self.apply(|element, elements| {
-            element.font_style(elements, value);
+            element.set_font_style(elements, value);
         })
     }
 
     pub fn text_align(self, value: TextAlign) -> Self {
         self.apply(|element, elements| {
-            element.text_align(elements, value);
+            element.set_text_align(elements, value);
         })
     }
 
     pub fn underline(self, thickness: Option<f32>, color: Color, offset: Option<f32>) -> Self {
         self.apply(|element, elements| {
-            element.underline(elements, thickness, color, offset);
+            element.set_underline(elements, thickness, color, offset);
         })
     }
 
     pub fn underline_gradient(self, thickness: Option<f32>, gradient: Gradient, offset: Option<f32>) -> Self {
         self.apply(|element, elements| {
-            element.underline_gradient(elements, thickness, gradient, offset);
+            element.set_underline_gradient(elements, thickness, gradient, offset);
         })
     }
 
     pub fn overflow(self, overflow_x: Overflow, overflow_y: Overflow) -> Self {
         self.apply(|element, elements| {
-            element.overflow(elements, overflow_x, overflow_y);
+            element.set_overflow(elements, overflow_x, overflow_y);
         })
     }
 
     pub fn overflow_x(self, value: Overflow) -> Self {
         self.apply(|element, elements| {
-            element.overflow_x(elements, value);
+            element.set_overflow_x(elements, value);
         })
     }
 
     pub fn overflow_y(self, value: Overflow) -> Self {
         self.apply(|element, elements| {
-            element.overflow_y(elements, value);
+            element.set_overflow_y(elements, value);
         })
     }
 
     pub fn border_color(self, top: Color, right: Color, bottom: Color, left: Color) -> Self {
         self.apply(|element, elements| {
-            element.border_color(elements, top, right, bottom, left);
+            element.set_border_color(elements, top, right, bottom, left);
         })
     }
 
     pub fn border_color_all(self, value: Color) -> Self {
         self.apply(|element, elements| {
-            element.border_color_all(elements, value);
+            element.set_border_color_all(elements, value);
         })
     }
 
     pub fn border_color_vertical(self, value: Color) -> Self {
         self.apply(|element, elements| {
-            element.border_color_vertical(elements, value);
+            element.set_border_color_vertical(elements, value);
         })
     }
 
     pub fn border_color_horizontal(self, value: Color) -> Self {
         self.apply(|element, elements| {
-            element.border_color_horizontal(elements, value);
+            element.set_border_color_horizontal(elements, value);
         })
     }
 
     pub fn border_width(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
         self.apply(|element, elements| {
-            element.border_width(elements, top, right, bottom, left);
+            element.set_border_width(elements, top, right, bottom, left);
         })
     }
 
     pub fn border_width_all(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.border_width_all(elements, value);
+            element.set_border_width_all(elements, value);
         })
     }
 
     pub fn border_width_vertical(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.border_width_vertical(elements, value);
+            element.set_border_width_vertical(elements, value);
         })
     }
 
     pub fn border_width_horizontal(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.border_width_horizontal(elements, value);
+            element.set_border_width_horizontal(elements, value);
         })
     }
 
     pub fn outline_color(self, top: Color, right: Color, bottom: Color, left: Color) -> Self {
         self.apply(|element, elements| {
-            element.outline_color(elements, top, right, bottom, left);
+            element.set_outline_color(elements, top, right, bottom, left);
         })
     }
 
     pub fn outline_color_all(self, value: Color) -> Self {
         self.apply(|element, elements| {
-            element.outline_color_all(elements, value);
+            element.set_outline_color_all(elements, value);
         })
     }
 
     pub fn outline_color_vertical(self, value: Color) -> Self {
         self.apply(|element, elements| {
-            element.outline_color_vertical(elements, value);
+            element.set_outline_color_vertical(elements, value);
         })
     }
 
     pub fn outline_color_horizontal(self, value: Color) -> Self {
         self.apply(|element, elements| {
-            element.outline_color_horizontal(elements, value);
+            element.set_outline_color_horizontal(elements, value);
         })
     }
 
     pub fn outline_width(self, top: Unit, right: Unit, bottom: Unit, left: Unit) -> Self {
         self.apply(|element, elements| {
-            element.outline_width(elements, top, right, bottom, left);
+            element.set_outline_width(elements, top, right, bottom, left);
         })
     }
 
     pub fn outline_width_all(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.outline_width_all(elements, value);
+            element.set_outline_width_all(elements, value);
         })
     }
 
     pub fn outline_width_vertical(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.outline_width_vertical(elements, value);
+            element.set_outline_width_vertical(elements, value);
         })
     }
 
     pub fn outline_width_horizontal(self, value: Unit) -> Self {
         self.apply(|element, elements| {
-            element.outline_width_horizontal(elements, value);
+            element.set_outline_width_horizontal(elements, value);
         })
     }
 
     pub fn border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
         self.apply(|element, elements| {
-            element.border_radius(elements, top, right, bottom, left);
+            element.set_border_radius(elements, top, right, bottom, left);
         })
     }
 
     pub fn border_radius_all(self, value: (f32, f32)) -> Self {
         self.apply(|element, elements| {
-            element.border_radius_all(elements, value);
+            element.set_border_radius_all(elements, value);
         })
     }
 
     pub fn border_radius_vertical(self, value: (f32, f32)) -> Self {
         self.apply(|element, elements| {
-            element.border_radius_vertical(elements, value);
+            element.set_border_radius_vertical(elements, value);
         })
     }
 
     pub fn border_radius_horizontal(self, value: (f32, f32)) -> Self {
         self.apply(|element, elements| {
-            element.border_radius_horizontal(elements, value);
+            element.set_border_radius_horizontal(elements, value);
         })
     }
 
     pub fn scrollbar_color(self, value: ScrollbarColor) -> Self {
         self.apply(|element, elements| {
-            element.scrollbar_color(elements, value);
+            element.set_scrollbar_color(elements, value);
         })
     }
 
     pub fn scrollbar_thumb_margin(self, top: f32, right: f32, bottom: f32, left: f32) -> Self {
         self.apply(|element, elements| {
-            element.scrollbar_thumb_margin(elements, top, right, bottom, left);
+            element.set_scrollbar_thumb_margin(elements, top, right, bottom, left);
         })
     }
 
@@ -661,25 +661,25 @@ impl<'a, E: Element> ElementEditor<'a, E> {
         left: (f32, f32),
     ) -> Self {
         self.apply(|element, elements| {
-            element.scrollbar_thumb_radius(elements, top, right, bottom, left);
+            element.set_scrollbar_thumb_radius(elements, top, right, bottom, left);
         })
     }
 
     pub fn scrollbar_width(self, value: f32) -> Self {
         self.apply(|element, elements| {
-            element.scrollbar_width(elements, value);
+            element.set_scrollbar_width(elements, value);
         })
     }
 
     pub fn animations(self, value: Vec<Animation>) -> Self {
         self.apply(|element, elements| {
-            element.animations(elements, value);
+            element.set_animations(elements, value);
         })
     }
 
     pub fn box_shadows(self, value: Vec<BoxShadow>) -> Self {
         self.apply(|element, elements| {
-            element.box_shadows(elements, value);
+            element.set_box_shadows(elements, value);
         })
     }
 
@@ -699,13 +699,13 @@ impl<'a, E: Element> ElementEditor<'a, E> {
 impl ElementEditor<'_, Text> {
     pub fn selectable(self, value: bool) -> Self {
         self.apply(|element, elements| {
-            element.selectable(elements, value);
+            element.set_selectable(elements, value);
         })
     }
 
     pub fn text(self, value: &str) -> Self {
         self.apply(|element, elements| {
-            element.text(elements, value);
+            element.set_text(elements, value);
         })
     }
 
@@ -719,25 +719,25 @@ impl ElementEditor<'_, Text> {
 impl ElementEditor<'_, TextInput> {
     pub fn disabled(self, value: bool) -> Self {
         self.apply(|element, elements| {
-            element.disabled(elements, value);
+            element.set_disabled(elements, value);
         })
     }
 
     pub fn multiline(self, value: bool) -> Self {
         self.apply(|element, elements| {
-            element.multiline(elements, value);
+            element.set_multiline(elements, value);
         })
     }
 
     pub fn text(self, value: &str) -> Self {
         self.apply(|element, elements| {
-            element.text(elements, value);
+            element.set_text(elements, value);
         })
     }
 
     pub fn ranged_styles(self, value: RangedStyles) -> Self {
         self.apply(|element, elements| {
-            element.ranged_styles(elements, value);
+            element.set_ranged_styles(elements, value);
         })
     }
 }
@@ -745,67 +745,67 @@ impl ElementEditor<'_, TextInput> {
 impl ElementEditor<'_, Slider> {
     pub fn value(self, value: f64) -> Self {
         self.apply(|element, elements| {
-            element.value(elements, value);
+            element.set_value(elements, value);
         })
     }
 
     pub fn step(self, value: f64) -> Self {
         self.apply(|element, elements| {
-            element.step(elements, value);
+            element.set_step(elements, value);
         })
     }
 
     pub fn min(self, value: f64) -> Self {
         self.apply(|element, elements| {
-            element.min(elements, value);
+            element.set_min(elements, value);
         })
     }
 
     pub fn max(self, value: f64) -> Self {
         self.apply(|element, elements| {
-            element.max(elements, value);
+            element.set_max(elements, value);
         })
     }
 
     pub fn direction(self, value: SliderDirection) -> Self {
         self.apply(|element, elements| {
-            element.direction(elements, value);
+            element.set_direction(elements, value);
         })
     }
 
     pub fn thumb_size(self, value: f64) -> Self {
         self.apply(|element, elements| {
-            element.thumb_size(elements, value);
+            element.set_thumb_size(elements, value);
         })
     }
 
     pub fn thumb_color(self, value: Brush) -> Self {
         self.apply(|element, elements| {
-            element.thumb_color(elements, value);
+            element.set_thumb_color(elements, value);
         })
     }
 
     pub fn thumb_border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
         self.apply(|element, elements| {
-            element.thumb_border_radius(elements, top, right, bottom, left);
+            element.set_thumb_border_radius(elements, top, right, bottom, left);
         })
     }
 
     pub fn track_color(self, value: Color) -> Self {
         self.apply(|element, elements| {
-            element.track_color(elements, value);
+            element.set_track_color(elements, value);
         })
     }
 
     pub fn track_gradient(self, value: Gradient) -> Self {
         self.apply(|element, elements| {
-            element.track_gradient(elements, value);
+            element.set_track_gradient(elements, value);
         })
     }
 
     pub fn track_border_radius(self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) -> Self {
         self.apply(|element, elements| {
-            element.track_border_radius(elements, top, right, bottom, left);
+            element.set_track_border_radius(elements, top, right, bottom, left);
         })
     }
 }
@@ -813,7 +813,7 @@ impl ElementEditor<'_, Slider> {
 impl ElementEditor<'_, Image> {
     pub fn resource_id(self, value: ResourceId) -> Self {
         self.apply(|element, elements| {
-            element.resource_id(elements, value);
+            element.set_resource_id(elements, value);
         })
     }
 }
@@ -821,7 +821,7 @@ impl ElementEditor<'_, Image> {
 impl ElementEditor<'_, TinyVg> {
     pub fn resource_id(self, value: ResourceId) -> Self {
         self.apply(|element, elements| {
-            element.resource_id(elements, value);
+            element.set_resource_id(elements, value);
         })
     }
 }
@@ -829,7 +829,7 @@ impl ElementEditor<'_, TinyVg> {
 impl ElementEditor<'_, Dropdown> {
     pub fn selected_item(self, index: usize) -> Self {
         self.apply(|element, elements| {
-            element.selected_item(elements, index);
+            element.set_selected_item(elements, index);
         })
     }
 }
@@ -837,13 +837,13 @@ impl ElementEditor<'_, Dropdown> {
 impl ElementEditor<'_, Calendar> {
     pub fn start_year(self, year: i32) -> Self {
         self.apply(|element, elements| {
-            element.start_year(elements, year);
+            element.set_start_year(elements, year);
         })
     }
 
     pub fn end_year(self, year: i32) -> Self {
         self.apply(|element, elements| {
-            element.end_year(elements, year);
+            element.set_end_year(elements, year);
         })
     }
 }
@@ -860,7 +860,7 @@ impl ElementEditor<'_, Radio> {
 impl ElementEditor<'_, Audio> {
     pub fn controls(self, value: bool) -> Self {
         self.apply(|element, elements| {
-            element.controls(elements, value);
+            element.set_controls(elements, value);
         })
     }
 
