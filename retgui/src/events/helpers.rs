@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 
 use retgui_primitives::geometry::Point;
-use retgui_renderer::TargetItem;
 use retgui_renderer::renderer::Renderer;
 
 use crate::elements::{DynElement, Elements};
@@ -55,8 +54,7 @@ pub(super) fn find_target(
         Point::new(point.x * scale, point.y * scale)
     });
 
-    let targets = &mut renderer.render_list_mut().targets;
-    TargetItem::sort_items_by_overlay_depth(targets);
+    let targets = &renderer.render_list().targets;
     target_scratch.extend(targets.iter().rev().filter_map(|item| {
         physical_mouse_position
             .is_some_and(|point| item.rectangle.contains(&point))

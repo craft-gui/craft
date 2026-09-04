@@ -27,7 +27,9 @@ pub trait Renderer: Any {
     fn render_list_mut(&mut self) -> &mut RenderList;
 
     fn sort_render_list(&mut self) {
-        sort_render_list_internal(self.render_list_mut());
+        let render_list = self.render_list_mut();
+        TargetItem::sort_items_by_overlay_depth(&mut render_list.targets);
+        sort_render_list_internal(render_list);
     }
     fn prepare(&mut self, resource_manager: Arc<ResourceManager>, window: Rectangle);
 
