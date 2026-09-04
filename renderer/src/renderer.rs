@@ -195,7 +195,7 @@ pub trait Renderer: Any {
     ) {
         self.draw_text_ref(&data, rect, text_scroll, show_cursor);
     }
-    
+
     #[inline(always)]
     fn draw_text_ref(
         &mut self,
