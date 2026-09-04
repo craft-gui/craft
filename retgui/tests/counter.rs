@@ -28,7 +28,7 @@ fn create_button(
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(JustifyContent::Center)
         .background_color(base_color)
-        .on_pointer_button_up(move |event, elements| {
+        .add_pointer_button_up_listener(move |event, elements| {
             if event.button == Some(PointerButton::Left) {
                 let count = state.update(elements, |count| {
                     *count += delta;

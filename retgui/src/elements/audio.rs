@@ -172,7 +172,7 @@ impl Audio {
         elements.create_layout_node(inner, None);
 
         play_button.push(elements, play_button_icon);
-        play_button.on_click(elements, move |_event, elements| {
+        play_button.add_click_listener(elements, move |_event, elements| {
             elements.dispatch_mut(inner, |audio, elements| {
                 (audio as &mut dyn std::any::Any)
                     .downcast_mut::<AudioNode>()
@@ -181,7 +181,7 @@ impl Audio {
             });
         });
         let play_control = play_button;
-        track.on_slider_value_changed(elements, move |event, elements| {
+        track.add_slider_value_changed_listener(elements, move |event, elements| {
             elements.dispatch_mut(inner, |audio, elements| {
                 (audio as &mut dyn std::any::Any)
                     .downcast_mut::<AudioNode>()
@@ -190,7 +190,7 @@ impl Audio {
             });
         });
         let track_control = track;
-        volume_track.on_slider_value_changed(elements, move |event, elements| {
+        volume_track.add_slider_value_changed_listener(elements, move |event, elements| {
             elements.dispatch_mut(inner, |audio, elements| {
                 (audio as &mut dyn std::any::Any)
                     .downcast_mut::<AudioNode>()

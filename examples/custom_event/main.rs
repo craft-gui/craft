@@ -13,7 +13,7 @@ pub fn custom_event(elements: &mut Elements) -> Container {
 
     let receiver = Container::new(elements)
         .edit(elements)
-        .on_custom_event(move |event, elements| {
+        .add_custom_event_listener(move |event, elements| {
             if let Some(greeting) = event.data::<Greeting>() {
                 message
                     .edit(elements)
@@ -32,7 +32,7 @@ pub fn custom_event(elements: &mut Elements) -> Container {
         .edit(elements)
         .padding(px(12), px(20), px(12), px(20))
         .background_color(rgb(59, 130, 246))
-        .on_click(move |_event, elements| {
+        .add_click_listener(move |_event, elements| {
             receiver.emit_custom_event(
                 elements,
                 Greeting {

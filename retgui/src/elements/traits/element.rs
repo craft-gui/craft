@@ -2,19 +2,17 @@ use std::any::Any;
 use std::rc::Rc;
 
 use retgui_primitives::Color;
-use retgui_primitives::geometry::ElementBox;
-use smol_str::SmolStr;
-
 use retgui_primitives::brush::Brush;
+use retgui_primitives::geometry::ElementBox;
 use retgui_primitives::gradient::Gradient;
 
-use crate::events::PointerId;
+use smol_str::SmolStr;
 
 use crate::RetGuiError;
 use crate::elements::internal_helpers::push_child_to_element;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
 use crate::elements::{DynElement, ElementEditor, ElementNode, Elements};
-use crate::events::{CheckboxToggledEvent, ClickEvent, CustomEvent, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, KeyboardEvent, PointerButtonEvent, PointerCaptureEvent, PointerEnterEvent, PointerLeaveEvent, PointerMovedEvent, RadioValueChangedEvent, ScrollEvent, SliderValueChangedEvent, TextInputChangedEvent, UnfocusEvent};
+use crate::events::{CheckboxToggledEvent, ClickEvent, CustomEvent, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, KeyboardEvent, PointerButtonEvent, PointerCaptureEvent, PointerEnterEvent, PointerId, PointerLeaveEvent, PointerMovedEvent, RadioValueChangedEvent, ScrollEvent, SliderValueChangedEvent, TextInputChangedEvent, UnfocusEvent};
 use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 
 fn with_element<E: Element, R>(
@@ -140,7 +138,7 @@ pub trait Element: Copy {
     }
 
     /// Adds a pointer enter listener.
-    fn on_pointer_enter(
+    fn add_pointer_enter_listener(
         &self,
         elements: &mut Elements,
         on_pointer_enter: impl Fn(&mut PointerEnterEvent, &mut Elements) + 'static,
@@ -151,7 +149,7 @@ pub trait Element: Copy {
     }
 
     /// Adds a pointer leave listener.
-    fn on_pointer_leave(
+    fn add_pointer_leave_listener(
         &self,
         elements: &mut Elements,
         on_pointer_leave: impl Fn(&mut PointerLeaveEvent, &mut Elements) + 'static,
@@ -162,7 +160,7 @@ pub trait Element: Copy {
     }
 
     /// Adds a radio value changed listener.
-    fn on_radio_value_changed(
+    fn add_radio_value_changed_listener(
         &self,
         elements: &mut Elements,
         on_radio_value_changed: impl Fn(&mut RadioValueChangedEvent, &mut Elements) + 'static,
@@ -173,7 +171,7 @@ pub trait Element: Copy {
     }
 
     /// Adds a checkbox toggled listener.
-    fn on_checkbox_toggled(
+    fn add_checkbox_toggled_listener(
         &self,
         elements: &mut Elements,
         on_checkbox_toggled: impl Fn(&mut CheckboxToggledEvent, &mut Elements) + 'static,
@@ -183,8 +181,8 @@ pub trait Element: Copy {
         });
     }
 
-    /// Adds a text intput changed listener.
-    fn on_text_input_changed(
+    /// Adds a text input changed listener.
+    fn add_text_input_changed_listener(
         &self,
         elements: &mut Elements,
         on_text_input_changed: impl Fn(&mut TextInputChangedEvent, &mut Elements) + 'static,
@@ -212,7 +210,7 @@ pub trait Element: Copy {
     }
 
     /// Adds a pointer button down listener.
-    fn on_pointer_button_down(
+    fn add_pointer_button_down_listener(
         &self,
         elements: &mut Elements,
         on_pointer_button_down: impl Fn(&mut PointerButtonEvent, &mut Elements) + 'static,
@@ -223,7 +221,7 @@ pub trait Element: Copy {
     }
 
     /// Adds a pointer button moved listener.
-    fn on_pointer_moved(
+    fn add_pointer_moved_listener(
         &self,
         elements: &mut Elements,
         on_pointer_moved: impl Fn(&mut PointerMovedEvent, &mut Elements) + 'static,
@@ -234,7 +232,7 @@ pub trait Element: Copy {
     }
 
     /// Adds a pointer button up listener.
-    fn on_pointer_button_up(
+    fn add_pointer_button_up_listener(
         &self,
         elements: &mut Elements,
         on_pointer_button_up: impl Fn(&mut PointerButtonEvent, &mut Elements) + 'static,
@@ -245,14 +243,14 @@ pub trait Element: Copy {
     }
 
     /// Adds a click listener.
-    fn on_click(&self, elements: &mut Elements, on_click: impl Fn(&mut ClickEvent, &mut Elements) + 'static) {
+    fn add_click_listener(&self, elements: &mut Elements, on_click: impl Fn(&mut ClickEvent, &mut Elements) + 'static) {
         with_element_mut(*self, elements, |element, _elements| {
             element.on_click(Rc::new(on_click))
         });
     }
 
     /// Adds a custom event listener.
-    fn on_custom_event(
+    fn add_custom_event_listener(
         &self,
         elements: &mut Elements,
         on_custom_event: impl Fn(&mut CustomEvent, &mut Elements) + 'static,
@@ -271,21 +269,25 @@ pub trait Element: Copy {
     }
 
     /// Adds a focus event listener.
-    fn on_focus(&self, elements: &mut Elements, on_focus: impl Fn(&mut FocusEvent, &mut Elements) + 'static) {
+    fn add_focus_listener(&self, elements: &mut Elements, on_focus: impl Fn(&mut FocusEvent, &mut Elements) + 'static) {
         with_element_mut(*self, elements, |element, _elements| {
             element.on_focus(Rc::new(on_focus))
         });
     }
 
     /// Adds an unfocus event listener.
-    fn on_unfocus(&self, elements: &mut Elements, on_unfocus: impl Fn(&mut UnfocusEvent, &mut Elements) + 'static) {
+    fn add_unfocus_listener(
+        &self,
+        elements: &mut Elements,
+        on_unfocus: impl Fn(&mut UnfocusEvent, &mut Elements) + 'static,
+    ) {
         with_element_mut(*self, elements, |element, _elements| {
             element.on_unfocus(Rc::new(on_unfocus))
         });
     }
 
     /// Adds a lost pointer capture event listener.
-    fn on_lost_pointer_capture(
+    fn add_lost_pointer_capture_listener(
         &self,
         elements: &mut Elements,
         on_lost_pointer_capture: impl Fn(&mut PointerCaptureEvent, &mut Elements) + 'static,
@@ -296,7 +298,7 @@ pub trait Element: Copy {
     }
 
     /// Adds a got pointer capture event listener.
-    fn on_got_pointer_capture(
+    fn add_got_pointer_capture_listener(
         &self,
         elements: &mut Elements,
         on_got_pointer_capture: impl Fn(&mut PointerCaptureEvent, &mut Elements) + 'static,
@@ -307,7 +309,7 @@ pub trait Element: Copy {
     }
 
     /// Adds a keyboard input event listener.
-    fn on_keyboard_input(
+    fn add_keyboard_input_listener(
         &self,
         elements: &mut Elements,
         on_keyboard_input: impl Fn(&mut KeyboardEvent, &mut Elements) + 'static,
@@ -318,7 +320,7 @@ pub trait Element: Copy {
     }
 
     /// Adds a slider value changed event listener.
-    fn on_slider_value_changed(
+    fn add_slider_value_changed_listener(
         &self,
         elements: &mut Elements,
         on_slider_value_changed: impl Fn(&mut SliderValueChangedEvent, &mut Elements) + 'static,
@@ -329,7 +331,11 @@ pub trait Element: Copy {
     }
 
     /// Adds a scroll event listener.
-    fn on_scroll(&self, elements: &mut Elements, on_scroll: impl Fn(&mut ScrollEvent, &mut Elements) + 'static) {
+    fn add_scroll_listener(
+        &self,
+        elements: &mut Elements,
+        on_scroll: impl Fn(&mut ScrollEvent, &mut Elements) + 'static,
+    ) {
         with_element_mut(*self, elements, |element, _elements| {
             element.on_scroll(Rc::new(on_scroll))
         });

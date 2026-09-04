@@ -43,7 +43,7 @@ fn create_button(
         .justify_content(JustifyContent::Center)
         .align_items(AlignItems::Center)
         .background_color(base_color)
-        .on_click(move |event, elements| {
+        .add_click_listener(move |event, elements| {
             let (create_window, count) = state.update(elements, |state| {
                 let create_window = state.change(delta);
                 (create_window, state.count())

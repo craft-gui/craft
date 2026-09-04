@@ -12,7 +12,7 @@ where
 
     Container::new(elements)
         .edit(elements)
-        .on_pointer_button_up(move |event, elements| {
+        .add_pointer_button_up_listener(move |event, elements| {
             if event.button == Some(PointerButton::Left) {
                 on_click(elements);
             }

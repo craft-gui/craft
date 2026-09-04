@@ -978,7 +978,7 @@ mod tests {
         let mut elements = Elements::new();
         let parent = Container::new(&mut elements);
         let child = Container::new(&mut elements);
-        child.on_click(&mut elements, move |_event, elements| {
+        child.add_click_listener(&mut elements, move |_event, elements| {
             parent.delete_all_children(elements);
         });
         parent.push(&mut elements, child);

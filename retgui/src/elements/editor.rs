@@ -91,66 +91,87 @@ impl<'a, E: Element> ElementEditor<'a, E> {
         })
     }
 
-    pub fn on_pointer_enter(self, callback: impl Fn(&mut PointerEnterEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_pointer_enter_listener(
+        self,
+        callback: impl Fn(&mut PointerEnterEvent, &mut Elements) + 'static,
+    ) -> Self {
         self.apply(|element, elements| {
-            element.on_pointer_enter(elements, callback);
+            element.add_pointer_enter_listener(elements, callback);
         })
     }
 
-    pub fn on_pointer_leave(self, callback: impl Fn(&mut PointerLeaveEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_pointer_leave_listener(
+        self,
+        callback: impl Fn(&mut PointerLeaveEvent, &mut Elements) + 'static,
+    ) -> Self {
         self.apply(|element, elements| {
-            element.on_pointer_leave(elements, callback);
+            element.add_pointer_leave_listener(elements, callback);
         })
     }
 
-    pub fn on_radio_value_changed(
+    pub fn add_radio_value_changed_listener(
         self,
         callback: impl Fn(&mut RadioValueChangedEvent, &mut Elements) + 'static,
     ) -> Self {
         self.apply(|element, elements| {
-            element.on_radio_value_changed(elements, callback);
+            element.add_radio_value_changed_listener(elements, callback);
         })
     }
 
-    pub fn on_checkbox_toggled(self, callback: impl Fn(&mut CheckboxToggledEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_checkbox_toggled_listener(
+        self,
+        callback: impl Fn(&mut CheckboxToggledEvent, &mut Elements) + 'static,
+    ) -> Self {
         self.apply(|element, elements| {
-            element.on_checkbox_toggled(elements, callback);
+            element.add_checkbox_toggled_listener(elements, callback);
         })
     }
 
-    pub fn on_text_input_changed(self, callback: impl Fn(&mut TextInputChangedEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_text_input_changed_listener(
+        self,
+        callback: impl Fn(&mut TextInputChangedEvent, &mut Elements) + 'static,
+    ) -> Self {
         self.apply(|element, elements| {
-            element.on_text_input_changed(elements, callback);
+            element.add_text_input_changed_listener(elements, callback);
         })
     }
 
-    pub fn on_pointer_button_down(self, callback: impl Fn(&mut PointerButtonEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_pointer_button_down_listener(
+        self,
+        callback: impl Fn(&mut PointerButtonEvent, &mut Elements) + 'static,
+    ) -> Self {
         self.apply(|element, elements| {
-            element.on_pointer_button_down(elements, callback);
+            element.add_pointer_button_down_listener(elements, callback);
         })
     }
 
-    pub fn on_pointer_moved(self, callback: impl Fn(&mut PointerMovedEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_pointer_moved_listener(
+        self,
+        callback: impl Fn(&mut PointerMovedEvent, &mut Elements) + 'static,
+    ) -> Self {
         self.apply(|element, elements| {
-            element.on_pointer_moved(elements, callback);
+            element.add_pointer_moved_listener(elements, callback);
         })
     }
 
-    pub fn on_pointer_button_up(self, callback: impl Fn(&mut PointerButtonEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_pointer_button_up_listener(
+        self,
+        callback: impl Fn(&mut PointerButtonEvent, &mut Elements) + 'static,
+    ) -> Self {
         self.apply(|element, elements| {
-            element.on_pointer_button_up(elements, callback);
+            element.add_pointer_button_up_listener(elements, callback);
         })
     }
 
-    pub fn on_click(self, callback: impl Fn(&mut ClickEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_click_listener(self, callback: impl Fn(&mut ClickEvent, &mut Elements) + 'static) -> Self {
         self.apply(|element, elements| {
-            element.on_click(elements, callback);
+            element.add_click_listener(elements, callback);
         })
     }
 
-    pub fn on_custom_event(self, callback: impl Fn(&mut CustomEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_custom_event_listener(self, callback: impl Fn(&mut CustomEvent, &mut Elements) + 'static) -> Self {
         self.apply(|element, elements| {
-            element.on_custom_event(elements, callback);
+            element.add_custom_event_listener(elements, callback);
         })
     }
 
@@ -158,48 +179,54 @@ impl<'a, E: Element> ElementEditor<'a, E> {
         self.apply(|element, elements| element.emit_custom_event(elements, detail))
     }
 
-    pub fn on_focus(self, callback: impl Fn(&mut FocusEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_focus_listener(self, callback: impl Fn(&mut FocusEvent, &mut Elements) + 'static) -> Self {
         self.apply(|element, elements| {
-            element.on_focus(elements, callback);
+            element.add_focus_listener(elements, callback);
         })
     }
 
-    pub fn on_unfocus(self, callback: impl Fn(&mut UnfocusEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_unfocus_listener(self, callback: impl Fn(&mut UnfocusEvent, &mut Elements) + 'static) -> Self {
         self.apply(|element, elements| {
-            element.on_unfocus(elements, callback);
+            element.add_unfocus_listener(elements, callback);
         })
     }
 
-    pub fn on_lost_pointer_capture(self, callback: impl Fn(&mut PointerCaptureEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_lost_pointer_capture_listener(
+        self,
+        callback: impl Fn(&mut PointerCaptureEvent, &mut Elements) + 'static,
+    ) -> Self {
         self.apply(|element, elements| {
-            element.on_lost_pointer_capture(elements, callback);
+            element.add_lost_pointer_capture_listener(elements, callback);
         })
     }
 
-    pub fn on_got_pointer_capture(self, callback: impl Fn(&mut PointerCaptureEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_got_pointer_capture_listener(
+        self,
+        callback: impl Fn(&mut PointerCaptureEvent, &mut Elements) + 'static,
+    ) -> Self {
         self.apply(|element, elements| {
-            element.on_got_pointer_capture(elements, callback);
+            element.add_got_pointer_capture_listener(elements, callback);
         })
     }
 
-    pub fn on_keyboard_input(self, callback: impl Fn(&mut KeyboardEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_keyboard_input_listener(self, callback: impl Fn(&mut KeyboardEvent, &mut Elements) + 'static) -> Self {
         self.apply(|element, elements| {
-            element.on_keyboard_input(elements, callback);
+            element.add_keyboard_input_listener(elements, callback);
         })
     }
 
-    pub fn on_slider_value_changed(
+    pub fn add_slider_value_changed_listener(
         self,
         callback: impl Fn(&mut SliderValueChangedEvent, &mut Elements) + 'static,
     ) -> Self {
         self.apply(|element, elements| {
-            element.on_slider_value_changed(elements, callback);
+            element.add_slider_value_changed_listener(elements, callback);
         })
     }
 
-    pub fn on_scroll(self, callback: impl Fn(&mut ScrollEvent, &mut Elements) + 'static) -> Self {
+    pub fn add_scroll_listener(self, callback: impl Fn(&mut ScrollEvent, &mut Elements) + 'static) -> Self {
         self.apply(|element, elements| {
-            element.on_scroll(elements, callback);
+            element.add_scroll_listener(elements, callback);
         })
     }
 

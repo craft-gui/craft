@@ -224,7 +224,7 @@ pub fn async_weather(elements: &mut Elements) -> Container {
         .border_radius_all((4.0, 4.0))
         .background_color(Color::from_rgb8(35, 127, 183))
         .push(label)
-        .on_click(move |event, elements| {
+        .add_click_listener(move |event, elements| {
             status.edit(elements).text("Loading...").finish();
             elements.spawn_local(fetch_amsterdam_weather(), move |weather, elements| {
                 let message = match weather {
@@ -371,7 +371,7 @@ pub fn overlay(elements: &mut Elements) -> Container {
         .padding_all(px(10.0))
         .background_color(Color::from_rgb8(76, 175, 80))
         .push(overlay_label)
-        .on_click(move |event, elements| {
+        .add_click_listener(move |event, elements| {
             status.edit(elements).text("The overlay received the click").finish();
             event.stop_propagation();
         })
@@ -390,7 +390,7 @@ pub fn overlay(elements: &mut Elements) -> Container {
         .padding_all(px(10.0))
         .background_color(Color::from_rgb8(33, 150, 243))
         .push(normal_label)
-        .on_click(move |event, elements| {
+        .add_click_listener(move |event, elements| {
             status
                 .edit(elements)
                 .text("The normal sibling received the click")
@@ -434,7 +434,7 @@ pub fn multiple_windows(elements: &mut Elements) -> Container {
         .border_radius(radius, radius, radius, radius)
         .border_color(border, border, border, border)
         .border_width(width, width, width, width)
-        .on_click(|_event, elements| {
+        .add_click_listener(|_event, elements| {
             let greeting = Text::new(elements, "Hi!")
                 .edit(elements)
                 .font_size(32.0)
@@ -526,7 +526,7 @@ pub fn scrollable(elements: &mut Elements) -> Container {
         .edit(elements)
         .width(px(120.0))
         .background_color(Color::from_rgb8(35, 127, 183))
-        .on_click(move |_event, elements| {
+        .add_click_listener(move |_event, elements| {
             scrollable.scroll_to_top(elements);
         })
         .push(label)
@@ -574,7 +574,7 @@ pub fn radio_buttons(elements: &mut Elements) -> Container {
         .push(red)
         .push(green_radio)
         .push(blue)
-        .on_radio_value_changed(move |event, elements| {
+        .add_radio_value_changed_listener(move |event, elements| {
             green
                 .edit(elements)
                 .border_color_all(if event.value.as_str() == "green" {
@@ -621,7 +621,7 @@ pub fn checkbox(elements: &mut Elements) -> Container {
         .finish();
     let group = CheckboxGroup::new(elements, "Select your favorite foods")
         .edit(elements)
-        .on_checkbox_toggled(move |event, _elements| {
+        .add_checkbox_toggled_listener(move |event, _elements| {
             println!("checkbox toggled: {} - {}", event.label, event.status);
         })
         .flex_direction(FlexDirection::Column)
@@ -851,7 +851,7 @@ fn gallery(elements: &mut Elements) -> Container {
         let examples = examples.clone();
         let button = button
             .edit(elements)
-            .on_click(move |event, elements| {
+            .add_click_listener(move |event, elements| {
                 select_example(elements, &examples, index);
                 selection.select(elements, event.current_target());
                 event.stop_propagation();

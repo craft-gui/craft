@@ -33,7 +33,7 @@ fn create_button(
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(JustifyContent::Center)
         .background_color(base_color)
-        .on_click(move |event, elements| {
+        .add_click_listener(move |event, elements| {
             let count = state.update(elements, |count| {
                 *count += delta;
                 *count

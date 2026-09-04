@@ -426,6 +426,6 @@ where
         .color(WHITE)
         .border_radius_all((4.0, 4.0))
         .push(label)
-        .on_click(callback)
+        .add_click_listener(callback)
         .finish()
 }

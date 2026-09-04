@@ -46,7 +46,7 @@ fn event_log(elements: &mut Elements) -> EventLog {
         .border_radius_all((6.0, 6.0))
         .padding(Unit::Px(10.0), Unit::Px(25.0), Unit::Px(10.0), Unit::Px(25.0))
         .width(Unit::Px(90.0))
-        .on_click(move |_event, elements| {
+        .add_click_listener(move |_event, elements| {
             entries.delete_all_children(elements);
         })
         .finish();
@@ -78,12 +78,12 @@ fn pointer_capture_example(elements: &mut Elements) -> Container {
         .width(Unit::Px(100.0))
         .color(Color::WHITE)
         .background_color(Color::from_rgba8(40, 40, 255, 100))
-        .on_pointer_button_down(|event, elements| {
+        .add_pointer_button_down_listener(|event, elements| {
             event
                 .target()
                 .set_pointer_capture(elements, event.pointer.pointer_id.unwrap());
         })
-        .on_pointer_moved(move |event, elements| {
+        .add_pointer_moved_listener(move |event, elements| {
             let mouse_x = event.current.logical_position().x as f32;
             let half_width = draggable_text.computed_box_transformed(elements).size.width / 2.0;
             if draggable_text.has_pointer_capture(elements, event.pointer.pointer_id.unwrap()) {
@@ -100,10 +100,10 @@ fn pointer_capture_example(elements: &mut Elements) -> Container {
             }
             event.prevent_default();
         })
-        .on_lost_pointer_capture(move |_event, elements| {
+        .add_lost_pointer_capture_listener(move |_event, elements| {
             event_log.push(elements, "Lost Pointer Capture");
         })
-        .on_got_pointer_capture(move |_event, elements| {
+        .add_got_pointer_capture_listener(move |_event, elements| {
             event_log.push(elements, "Got Pointer Capture");
         })
         .finish();
@@ -143,8 +143,8 @@ fn pointer_enter_leave_example(elements: &mut Elements) -> Container {
         .width(Unit::Px(250.0))
         .height(Unit::Px(250.0))
         .background_color(Color::from_rgba8(10, 10, 255, 150))
-        .on_pointer_enter(pointer_enter_log("Parent"))
-        .on_pointer_leave(pointer_leave_log("Parent"))
+        .add_pointer_enter_listener(pointer_enter_log("Parent"))
+        .add_pointer_leave_listener(pointer_leave_log("Parent"))
         .finish();
 
     let child_container = Container::new(elements)
@@ -152,8 +152,8 @@ fn pointer_enter_leave_example(elements: &mut Elements) -> Container {
         .width(Unit::Px(125.0))
         .height(Unit::Px(125.0))
         .background_color(Color::from_rgba8(255, 10, 10, 150))
-        .on_pointer_enter(pointer_enter_log("Child"))
-        .on_pointer_leave(pointer_leave_log("Child"))
+        .add_pointer_enter_listener(pointer_enter_log("Child"))
+        .add_pointer_leave_listener(pointer_leave_log("Child"))
         .finish();
 
     parent.push(elements, child_container);

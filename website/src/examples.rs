@@ -54,7 +54,7 @@ fn example_link(
         .edit(elements)
         .color(color)
         .selectable(false)
-        .on_pointer_button_up(move |event, elements| {
+        .add_pointer_button_up_listener(move |event, elements| {
             if event.button == Some(PointerButton::Left) {
                 *selected.write(elements) = index;
                 show_example(elements, &examples, index);
