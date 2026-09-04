@@ -129,6 +129,12 @@ impl WindowManager {
         }
     }
 
+    pub(crate) fn any_perf_stats_enabled(&self, elements: &Elements) -> bool {
+        self.windows
+            .iter()
+            .any(|window| elements.get_as::<WindowNode>(window.inner).perf_stats_enabled())
+    }
+
     pub fn close_window(&mut self, elements: &mut Elements, window: &Window) {
         self.scheduled_animations.retain(|scheduled| {
             elements.contains(scheduled.element)

@@ -264,14 +264,13 @@ impl Window {
         elements: &mut Elements,
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
-        has_scheduled_animation_update: bool,
     ) {
         elements.sync_layout_dirtiness();
         elements.dispatch_mut(self.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
                 .downcast_mut::<WindowNode>()
                 .unwrap()
-                .on_redraw(elements, text_context, resource_manager, has_scheduled_animation_update)
+                .on_redraw(elements, text_context, resource_manager)
         })
     }
 
@@ -422,7 +421,6 @@ impl WindowNode {
             elements,
             &mut retgui_app.text_context,
             retgui_app.resource_manager.clone(),
-            false,
         );
     }
 
@@ -528,6 +526,10 @@ impl WindowNode {
         true
     }
 
+    pub(crate) fn perf_stats_enabled(&self) -> bool {
+        self.perf_stats.is_enabled()
+    }
+
     pub(crate) fn update_modifiers(&mut self, modifiers: ModifiersState) {
         self.modifiers = modifiers;
     }
@@ -578,11 +580,8 @@ impl WindowNode {
         elements: &mut Elements,
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
-        has_scheduled_animation_update: bool,
     ) {
         self.redraw_requested.store(false, Ordering::Relaxed);
-        self.perf_stats
-            .set_animation_update_scheduled(elements, has_scheduled_animation_update);
 
         let frame_start = Instant::now();
         self.renderer.surface_set_clear_color(Color::WHITE);
@@ -804,6 +803,9 @@ impl WindowNode {
             (sort, prepare, submit)
         };
 
+        if self.perf_stats.is_enabled() {
+            self.request_redraw();
+        }
         self.renderer = renderer;
 
         RenderStats::new(total_start.elapsed(), build_list, debug_overlay, sort, prepare, submit)

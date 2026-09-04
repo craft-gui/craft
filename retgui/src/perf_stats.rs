@@ -42,7 +42,6 @@ pub(crate) struct RenderStats {
 pub(crate) struct PerfStats {
     enabled: bool,
     text: Text,
-    animation_update_scheduled: bool,
     frames_since_sample: u32,
     sample_start: Instant,
     frame_total: Duration,
@@ -117,7 +116,6 @@ impl PerfStats {
         let mut stats = Self {
             enabled: false,
             text,
-            animation_update_scheduled: false,
             frames_since_sample: 0,
             sample_start: Instant::now(),
             frame_total: Duration::from_secs(0),
@@ -127,6 +125,10 @@ impl PerfStats {
         };
         stats.reset(elements);
         stats
+    }
+
+    pub(crate) fn is_enabled(&self) -> bool {
+        self.enabled
     }
 
     pub(crate) fn toggle(&mut self, elements: &mut Elements, renderer: &mut dyn Renderer) {
@@ -139,19 +141,6 @@ impl PerfStats {
         self.frame_total = total;
         self.layout = layout;
         self.render = render;
-    }
-
-    pub(crate) fn set_animation_update_scheduled(&mut self, elements: &mut Elements, scheduled: bool) {
-        if self.animation_update_scheduled == scheduled {
-            return;
-        }
-        self.animation_update_scheduled = scheduled;
-        self.frames_since_sample = 0;
-        self.sample_start = Instant::now();
-        if !scheduled {
-            let debug_text = self.debug_text(0.0);
-            elements.get_as_mut::<TextNode>(self.text.inner).set_text(&debug_text);
-        }
     }
 
     pub(crate) fn draw(

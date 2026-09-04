@@ -420,7 +420,6 @@ impl App {
             &mut self.elements,
             &mut self.text_context,
             self.resource_manager.clone(),
-            animation_schedule != AnimationSchedule::None,
         );
 
         if animation_schedule == AnimationSchedule::NextFrame && window.winit_window(&self.elements).is_some() {
