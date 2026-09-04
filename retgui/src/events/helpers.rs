@@ -25,16 +25,27 @@ pub(super) fn nearest_common_ancestor(a: DynElement, b: DynElement, elements: &E
         .find(|candidate| a_targets.contains(candidate))
 }
 
+pub(super) struct TargetSearchContext<'a> {
+    pub renderer: &'a mut dyn Renderer,
+    pub target_scratch: &'a mut Vec<DynElement>,
+    pub pointer_capture: &'a PointerCapture,
+    pub elements: &'a Elements,
+}
+
 pub(super) fn find_target(
     root: DynElement,
     mouse_position: Option<Point>,
     message: &EventKind,
-    renderer: &mut dyn Renderer,
-    target_scratch: &mut Vec<DynElement>,
-    pointer_capture: &PointerCapture,
     pointer_id: &PointerId,
-    elements: &Elements,
+    context: TargetSearchContext<'_>,
 ) -> DynElement {
+    let TargetSearchContext {
+        renderer,
+        target_scratch,
+        pointer_capture,
+        elements,
+    } = context;
+
     if let Some(target) = pointer_capture.find_pointer_capture_target(message, pointer_id) {
         return target;
     }

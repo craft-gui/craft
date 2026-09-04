@@ -349,8 +349,7 @@ impl App {
         delta: winit::event::MouseScrollDelta,
         state: PointerState,
     ) {
-        let pointer_scroll_update =
-            PointerScrollEvent::new(DynElement::new(window.inner.clone()), pointer, delta, state);
+        let pointer_scroll_update = PointerScrollEvent::new(DynElement::new(window.inner), pointer, delta, state);
         let zoomed = self.elements.dispatch_mut(window.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
                 .downcast_mut::<WindowNode>()
@@ -376,7 +375,7 @@ impl App {
         }
 
         let cursor_position = state.logical_point();
-        let pointer_event = PointerButtonEvent::new(DynElement::new(window.inner.clone()), button, pointer, state);
+        let pointer_event = PointerButtonEvent::new(DynElement::new(window.inner), button, pointer, state);
 
         let event = if is_up {
             EventKind::PointerUp(pointer_event)
@@ -388,13 +387,13 @@ impl App {
             Some(Point::new(cursor_position.x, cursor_position.y)),
         );
 
-        self.dispatch_event(window.clone(), event);
+        self.dispatch_event(window, event);
     }
 
     pub fn on_pointer_moved(&mut self, window: Window, pointer: PointerInfo, state: PointerState) {
         window.set_mouse_position(&mut self.elements, Some(state.logical_point()));
-        let event = PointerMovedEvent::new(DynElement::new(window.inner.clone()), pointer, state);
-        self.dispatch_event(window.clone(), EventKind::PointerMoved(event));
+        let event = PointerMovedEvent::new(DynElement::new(window.inner), pointer, state);
+        self.dispatch_event(window, EventKind::PointerMoved(event));
     }
 
     pub fn on_ime(&mut self, window: Window, ime: Ime) {
@@ -405,8 +404,8 @@ impl App {
         } {
             self.elements.get_as_mut::<WindowNode>(window.inner).ime_composing = is_composing;
         }
-        let event = ImeEvent::new(DynElement::new(window.inner.clone()), ime);
-        self.dispatch_event(window.clone(), EventKind::Ime(event));
+        let event = ImeEvent::new(DynElement::new(window.inner), ime);
+        self.dispatch_event(window, EventKind::Ime(event));
     }
 
     pub fn on_keyboard_input(&mut self, window: Window, keyboard_input: KeyEvent) {
@@ -418,12 +417,7 @@ impl App {
         if state == ElementState::Pressed && !modifiers.control_key() && !modifiers.alt_key() && !modifiers.meta_key() {
             set_focus_outline_visible(&mut self.elements, true);
         }
-        let event = KeyboardEvent::new(
-            DynElement::new(window.inner.clone()),
-            keyboard_input,
-            modifiers,
-            is_composing,
-        );
+        let event = KeyboardEvent::new(DynElement::new(window.inner), keyboard_input, modifiers, is_composing);
         let toggled = self.elements.dispatch_mut(window.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
                 .downcast_mut::<WindowNode>()
@@ -450,7 +444,7 @@ impl App {
             ElementState::Pressed => EventKind::KeyDown(event),
             ElementState::Released => EventKind::KeyUp(event),
         };
-        let prevent_defaults = self.dispatch_event(window.clone(), event);
+        let prevent_defaults = self.dispatch_event(window, event);
         if !prevent_defaults && let Some(target) = navigation_target {
             self.elements.dispatch_mut(target, |target, elements| {
                 target.focus(elements);

@@ -58,7 +58,7 @@ impl TextInput {
     /// Creates a single line editable text input.
     pub fn new(elements: &mut Elements, text: &str) -> Self {
         Self {
-            inner: TextInputNode::new(elements, text),
+            inner: TextInputNode::create(elements, text),
         }
     }
 
@@ -532,7 +532,7 @@ impl TextInputNode {
         ));
         if should_schedule {
             elements.with_window_manager(|window_manager, _| {
-                window_manager.schedule_element_animations(self.element_data.me.clone());
+                window_manager.schedule_element_animations(self.element_data.me);
             });
         }
         self.request_window_redraw();
@@ -554,7 +554,7 @@ impl TextInputNode {
         self.request_window_redraw();
     }
 
-    pub fn new(elements: &mut Elements, text: &str) -> DynElement {
+    pub fn create(elements: &mut Elements, text: &str) -> DynElement {
         let default_style = TextInputNode::get_default_style();
 
         let text_input_state = TextInputState::default();

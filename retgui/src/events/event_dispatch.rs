@@ -4,7 +4,7 @@ use retgui_primitives::geometry::Point;
 use retgui_renderer::renderer::Renderer;
 
 use crate::elements::{DynElement, Elements, WindowNode};
-use crate::events::helpers::{call_user_event_handlers, find_target, freeze_target_list, nearest_common_ancestor};
+use crate::events::helpers::{TargetSearchContext, call_user_event_handlers, find_target, freeze_target_list, nearest_common_ancestor};
 use crate::events::{ClickEvent, ClickTrigger, Event, EventKind, PointerButton, PointerEnterEvent, PointerId, PointerLeaveEvent};
 use crate::text::text_context::TextContext;
 
@@ -176,11 +176,13 @@ impl EventDispatcher {
                 root,
                 mouse_position,
                 event_kind,
-                renderer,
-                target_scratch,
-                &capture,
                 &pointer_id,
-                elements,
+                TargetSearchContext {
+                    renderer,
+                    target_scratch,
+                    pointer_capture: capture,
+                    elements,
+                },
             );
             targets = freeze_target_list(target, elements);
         } else if event_kind.is_keyboard_event()
@@ -221,11 +223,13 @@ impl EventDispatcher {
                     root,
                     mouse_position,
                     event_kind,
-                    renderer,
-                    target_scratch,
-                    &capture,
                     &pointer_id,
-                    elements,
+                    TargetSearchContext {
+                        renderer,
+                        target_scratch,
+                        pointer_capture: capture,
+                        elements,
+                    },
                 );
                 targets = freeze_target_list(target, elements);
                 self.maybe_dispatch_pointer_leave(text_context, &targets, elements);

@@ -562,7 +562,7 @@ fn scroll_into_view(elements: &mut Elements, element: &mut dyn ElementNode) -> b
         let (next_ancestor, current, target_scroll) = {
             let ancestor = elements.get(ancestor_handle);
             let data = ancestor.element_data();
-            let next_ancestor = data.parent.clone();
+            let next_ancestor = data.parent;
 
             if !data.is_scrollable() {
                 (next_ancestor, 0.0, None)

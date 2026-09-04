@@ -122,7 +122,7 @@ pub struct BaseEvent {
 impl BaseEvent {
     pub fn new(target: DynElement) -> Self {
         Self {
-            target: target.clone(),
+            target,
             current_target: target,
             propagation_stopped: false,
             default_prevented: false,
@@ -130,7 +130,7 @@ impl BaseEvent {
     }
 
     fn retarget(&mut self, target: DynElement) {
-        self.target = target.clone();
+        self.target = target;
         self.current_target = target;
     }
 }
@@ -147,12 +147,12 @@ pub trait Event {
 
     /// Returns the element at which the event was originally dispatched.
     fn target(&self) -> DynElement {
-        self.base().target.clone()
+        self.base().target
     }
 
     /// Returns the element whose handlers are currently being invoked.
     fn current_target(&self) -> DynElement {
-        self.base().current_target.clone()
+        self.base().current_target
     }
 
     /// Stops the event from reaching any remaining elements.
@@ -945,7 +945,7 @@ mod tests {
     fn event_controls_track_dispatch_state() {
         let mut elements = Elements::new();
         let target = event_target(&mut elements);
-        let mut event = FocusEvent::new(target.clone());
+        let mut event = FocusEvent::new(target);
 
         assert!(event.target() == target);
         assert!(event.current_target() == target);
@@ -967,7 +967,7 @@ mod tests {
         assert!(original != replacement);
         let mut event = EventKind::Focus(FocusEvent::new(original));
 
-        event.retarget(replacement.clone());
+        event.retarget(replacement);
 
         assert!(event.target() == replacement);
         assert!(event.current_target() == replacement);

@@ -77,13 +77,13 @@ impl ElementNode for ContainerNode {
 impl Container {
     pub fn new(elements: &mut Elements) -> Self {
         Self {
-            inner: ContainerNode::new(elements),
+            inner: ContainerNode::create(elements),
         }
     }
 }
 
 impl ContainerNode {
-    fn new(elements: &mut Elements) -> DynElement {
+    fn create(elements: &mut Elements) -> DynElement {
         let inner = elements.insert_with(|me, access_tree| {
             Box::new(ContainerNode {
                 element_data: ElementData::new(me, true, access_tree),

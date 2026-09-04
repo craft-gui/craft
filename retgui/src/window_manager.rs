@@ -44,7 +44,7 @@ impl WindowManager {
             if let Some(winit_window) = window.winit_window(elements)
                 && winit_window.id() == window_id
             {
-                return Some(window.clone());
+                return Some(*window);
             }
         }
         None

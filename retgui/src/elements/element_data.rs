@@ -89,14 +89,14 @@ impl ElementData {
     ) -> Self {
         let (access_key, access_root) = if create_accessibility_node {
             let mut node = issho::AccessNode::new();
-            node.set_context(me.clone());
+            node.set_context(me);
             let key = access_tree.insert_node(node, None);
             (Some(key), Some(key))
         } else {
             (None, None)
         };
 
-        let default = Self {
+        Self {
             animations: Vec::new(),
             me,
             parent: None,
@@ -119,9 +119,7 @@ impl ElementData {
             event_callbacks: SmallVec::new(),
             unfocused_outline_color: None,
             unfocused_outline_width: None,
-        };
-
-        default
+        }
     }
 
     /// Creates a new gummy node for this element with optional layout context.

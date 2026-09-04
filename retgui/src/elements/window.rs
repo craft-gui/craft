@@ -150,13 +150,13 @@ impl Window {
     where
         F: FnMut(&dyn ActiveEventLoop) -> Box<dyn WinitWindow> + 'static,
     {
-        let inner = WindowNode::new(elements, Some(window_fn), None, renderer_type);
+        let inner = WindowNode::insert(elements, Some(window_fn), None, renderer_type);
 
         Window { inner }
     }
 
     pub fn new(elements: &mut Elements, title: &str) -> Self {
-        let inner = WindowNode::new(
+        let inner = WindowNode::insert(
             elements,
             None::<fn(&dyn ActiveEventLoop) -> Box<dyn WinitWindow>>,
             Some(title),
@@ -167,7 +167,7 @@ impl Window {
     }
 
     pub fn new_with_renderer(elements: &mut Elements, title: &str, renderer_type: RendererType) -> Self {
-        let inner = WindowNode::new(
+        let inner = WindowNode::insert(
             elements,
             None::<fn(&dyn ActiveEventLoop) -> Box<dyn WinitWindow>>,
             Some(title),
@@ -318,7 +318,12 @@ impl Window {
 }
 
 impl WindowNode {
-    pub fn new<F>(elements: &mut Elements, f: Option<F>, title: Option<&str>, renderer_type: RendererType) -> DynElement
+    pub fn insert<F>(
+        elements: &mut Elements,
+        f: Option<F>,
+        title: Option<&str>,
+        renderer_type: RendererType,
+    ) -> DynElement
     where
         F: FnMut(&dyn ActiveEventLoop) -> Box<dyn WinitWindow> + 'static,
     {

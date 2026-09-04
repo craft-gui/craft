@@ -1195,7 +1195,7 @@ pub trait ElementNode: ElementNodeData + Any {
         let has_animations = !animations.is_empty();
         if !had_animations && has_animations {
             elements.with_window_manager(|window_manager, _| {
-                window_manager.schedule_element_animations(element_data.me.clone());
+                window_manager.schedule_element_animations(element_data.me);
             })
         } else if had_animations && !has_animations {
             elements.with_window_manager(|window_manager, _| {

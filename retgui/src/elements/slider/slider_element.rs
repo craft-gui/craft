@@ -57,7 +57,7 @@ pub(crate) struct SliderNode {
 impl Slider {
     pub fn new(elements: &mut Elements, thumb_size: f32) -> Self {
         Self {
-            inner: SliderNode::new(elements, thumb_size),
+            inner: SliderNode::create(elements, thumb_size),
         }
     }
 
@@ -203,7 +203,7 @@ impl Slider {
 }
 
 impl SliderNode {
-    pub fn new(elements: &mut Elements, thumb_size: f32) -> DynElement {
+    pub fn create(elements: &mut Elements, thumb_size: f32) -> DynElement {
         let me = elements.insert_with(|me, access_tree| {
             Box::new(Self {
                 element_data: ElementData::new(me, false, access_tree),

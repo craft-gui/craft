@@ -85,10 +85,7 @@ impl<'a, 'elements> MarkdownRenderer<'a, 'elements> {
     }
 
     pub fn current_element(&mut self) -> DynElement {
-        self.element_stack
-            .last()
-            .expect("Element stack should not be empty")
-            .clone()
+        *self.element_stack.last().expect("Element stack should not be empty")
     }
 
     pub fn push_text(&mut self, text: &str) {

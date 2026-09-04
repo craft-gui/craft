@@ -64,7 +64,7 @@ impl PointerCapture {
 
         // 1. If the pointer capture target override for this pointer is set and is not equal to the pending pointer capture target override,
         // then fire a pointer event named lostpointercapture at the pointer capture target override node.
-        if let Some(pointer_capture_val) = pointer_capture_val.clone()
+        if let Some(pointer_capture_val) = pointer_capture_val
             && Some(pointer_capture_val) != pending_pointer_capture_val
         {
             let targets = crate::events::helpers::freeze_target_list(pointer_capture_val, elements);
@@ -76,7 +76,7 @@ impl PointerCapture {
 
         // 2. If the pending pointer capture target override for this pointer is set and is not equal to the pointer capture target override,
         // then fire a pointer event named gotpointercapture at the pending pointer capture target override.
-        if let Some(pending_pointer_capture_val) = pending_pointer_capture_val.clone()
+        if let Some(pending_pointer_capture_val) = pending_pointer_capture_val
             && Some(pending_pointer_capture_val) != pointer_capture_val
         {
             let targets = crate::events::helpers::freeze_target_list(pending_pointer_capture_val, elements);

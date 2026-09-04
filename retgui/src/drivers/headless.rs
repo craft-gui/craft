@@ -116,18 +116,16 @@ impl HeadlessApp {
 
     pub fn open(&mut self, window: &Window, size: Size<f32>) {
         if !self.windows.iter().any(|registered| registered.inner == window.inner) {
-            self.windows.push(window.clone());
+            self.windows.push(*window);
         }
 
-        self.driver.app.on_resize(window.clone(), size);
+        self.driver.app.on_resize(*window, size);
         self.drive();
     }
 
     pub fn resize(&mut self, window: &Window, width: u32, height: u32) {
-        self.driver.send_event(
-            window.clone(),
-            WindowEvent::SurfaceResized(PhysicalSize::new(width, height)),
-        );
+        self.driver
+            .send_event(*window, WindowEvent::SurfaceResized(PhysicalSize::new(width, height)));
         self.drive();
     }
 
@@ -169,22 +167,22 @@ impl HeadlessApp {
 
     pub fn type_text(&mut self, window: &Window, text: impl Into<String>) {
         self.driver
-            .send_event(window.clone(), WindowEvent::Ime(Ime::Commit(text.into())));
+            .send_event(*window, WindowEvent::Ime(Ime::Commit(text.into())));
         self.drive();
     }
 
     pub fn ime(&mut self, window: &Window, event: Ime) {
-        self.driver.send_event(window.clone(), WindowEvent::Ime(event));
+        self.driver.send_event(*window, WindowEvent::Ime(event));
         self.drive();
     }
 
     pub fn keyboard_input(&mut self, window: &Window, event: KeyEvent) {
-        self.driver.app.on_keyboard_input(window.clone(), event);
+        self.driver.app.on_keyboard_input(*window, event);
         self.drive();
     }
 
     pub fn frame(&mut self, window: &Window) {
-        self.driver.send_event(window.clone(), WindowEvent::RedrawRequested);
+        self.driver.send_event(*window, WindowEvent::RedrawRequested);
         self.driver.tick();
     }
 
@@ -201,7 +199,7 @@ impl HeadlessApp {
                 .windows
                 .iter()
                 .filter(|window| window.redraw_requested(&self.driver.app.elements))
-                .cloned()
+                .copied()
                 .collect();
 
             if dirty_windows.is_empty() && events_processed == 0 {
@@ -228,7 +226,7 @@ impl HeadlessApp {
     fn enqueue_pointer_move(&self, window: &Window, point: Point) {
         let scale_factor = window.effective_scale_factor(&self.driver.app.elements);
         self.driver.send_event(
-            window.clone(),
+            *window,
             WindowEvent::PointerMoved {
                 device_id: None,
                 position: PhysicalPosition::new(point.x * scale_factor, point.y * scale_factor),
@@ -240,7 +238,7 @@ impl HeadlessApp {
 
     fn enqueue_pointer_button(&self, window: &Window, state: ElementState) {
         self.driver.send_event(
-            window.clone(),
+            *window,
             WindowEvent::PointerButton {
                 device_id: None,
                 state,
