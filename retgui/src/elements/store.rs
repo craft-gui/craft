@@ -33,6 +33,7 @@ pub struct Elements {
     pub(crate) window_manager: WindowManager,
     pub(crate) pending_resources: VecDeque<(ResourceId, ResourceType)>,
     pub(crate) event_queue: VecDeque<EventKind>,
+    pending_animation_updates: Vec<(DynElement, bool)>,
     pub(crate) focus: Option<DynElement>,
     pub(crate) focus_outline_visible: bool,
     #[cfg(feature = "audio")]
@@ -58,6 +59,7 @@ impl Elements {
             window_manager: WindowManager::new(),
             pending_resources: VecDeque::new(),
             event_queue: VecDeque::with_capacity(10),
+            pending_animation_updates: Vec::new(),
             focus: None,
             focus_outline_visible: true,
             #[cfg(feature = "audio")]
@@ -243,11 +245,6 @@ impl Elements {
             }
         }
 
-        #[cfg(feature = "audio")]
-        if let Some(context) = self.audio_context.as_mut() {
-            context.sounds.retain(|element| !seen.contains(element));
-        }
-
         let layout_parent = self.get(parent).child_layout_parent();
         let layout_roots = roots
             .iter()
@@ -350,20 +347,37 @@ impl Elements {
         self.event_queue.pop_front()
     }
 
+    /// Schedules an element to recompute when it next needs an animation update.
+    pub fn schedule_animation_update(&mut self, element: DynElement) {
+        self.queue_animation_update(element, false);
+    }
+
+    pub(crate) fn restart_animation_update(&mut self, element: DynElement) {
+        self.queue_animation_update(element, true);
+    }
+
+    fn queue_animation_update(&mut self, element: DynElement, reset_clock: bool) {
+        if let Some((_, pending_reset)) = self
+            .pending_animation_updates
+            .iter_mut()
+            .find(|(pending, _)| *pending == element)
+        {
+            *pending_reset |= reset_clock;
+        } else {
+            self.pending_animation_updates.push((element, reset_clock));
+        }
+    }
+
+    pub(crate) fn take_pending_animation_updates(&mut self) -> Vec<(DynElement, bool)> {
+        std::mem::take(&mut self.pending_animation_updates)
+    }
+
     #[cfg(feature = "audio")]
     pub(crate) fn with_audio_context<R>(&mut self, callback: impl FnOnce(&mut AudioContext, &mut Elements) -> R) -> R {
         let mut context = self.audio_context.take().unwrap_or_else(AudioContext::new);
         let result = callback(&mut context, self);
         self.audio_context = Some(context);
         result
-    }
-
-    #[cfg(feature = "audio")]
-    pub(crate) fn audio_elements(&self) -> Vec<DynElement> {
-        self.audio_context
-            .as_ref()
-            .map(|context| context.sounds.iter().copied().collect())
-            .unwrap_or_default()
     }
 
     /// Mutates one element while retaining exclusive access to the rest of the

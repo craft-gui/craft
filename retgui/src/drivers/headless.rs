@@ -47,7 +47,7 @@ impl HeadlessDriver {
             self.dispatch_event(event);
         }
 
-        self.app.on_about_to_wait(None);
+        let _ = self.app.on_about_to_wait(None);
         events_processed
     }
 

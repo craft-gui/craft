@@ -1,8 +1,12 @@
 //! An audio player element with optional controls.
 
-use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
+use std::time::{Duration, Instant};
+
+#[cfg(target_arch = "wasm32")]
+use web_time::{Duration, Instant};
 
 use maudio::engine::Engine;
 use maudio::sound::Sound;
@@ -14,7 +18,7 @@ use retgui_resource_manager::{ResourceId, ResourceManager};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
-use crate::elements::{Button, DynElement, Element, ElementNode, Elements, Slider, State, Text, TinyVg, scrollable};
+use crate::elements::{AnimationSchedule, Button, DynElement, Element, ElementNode, Elements, Slider, State, Text, TinyVg, scrollable};
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::style::{AlignItems, Display, Unit};
@@ -28,7 +32,6 @@ pub(crate) struct SoundData {
 
 pub(crate) struct AudioContext {
     engine: Engine,
-    pub(crate) sounds: HashSet<DynElement>,
 }
 
 impl AudioContext {
@@ -43,10 +46,12 @@ impl AudioContext {
 
         Self {
             engine: Engine::new().expect("failed to create audio engine"),
-            sounds: HashSet::new(),
         }
     }
 }
+
+/// Update interval for the audio controls while a sound is playing.
+const AUDIO_UI_UPDATE_INTERVAL: Duration = Duration::from_millis(250);
 
 const PLAY: &[u8] = include_bytes!("../../../assets/play.tvg");
 const PAUSE: &[u8] = include_bytes!("../../../assets/pause.tvg");
@@ -70,6 +75,7 @@ pub(crate) struct AudioNode {
     volume_track: Slider,
     duration: Text,
     sound_data: Option<State<SoundData>>,
+    next_ui_update: Option<Instant>,
 }
 
 impl Element for Audio {
@@ -117,6 +123,26 @@ impl ElementNode for AudioNode {
     fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
         scrollable::handle_scroll_logic(elements, self, event);
     }
+
+    fn animation_tick(&mut self, elements: &mut Elements, delta: Duration) -> AnimationSchedule {
+        let mut schedule = self.tick_style_animations(delta);
+        let Some(next_ui_update) = self.next_ui_update else {
+            return schedule;
+        };
+        let now = Instant::now();
+        if now >= next_ui_update {
+            if self.update(elements) {
+                self.next_ui_update = None;
+            } else {
+                self.next_ui_update = Some(now + AUDIO_UI_UPDATE_INTERVAL);
+            }
+        }
+
+        if let Some(next_ui_update) = self.next_ui_update {
+            schedule = schedule.merge(AnimationSchedule::At(next_ui_update));
+        }
+        schedule
+    }
 }
 
 impl Audio {
@@ -158,6 +184,7 @@ impl Audio {
                 volume_track,
                 duration,
                 sound_data: None,
+                next_ui_update: None,
             })
         });
 
@@ -295,15 +322,11 @@ impl AudioNode {
             sound,
             end_notifier,
         }));
-        let me = self.element_data.me;
-        elements.with_audio_context(|context, _| {
-            context.sounds.insert(me);
-        });
         let volume = self.volume_track.value(elements) as f32;
         self.set_volume(elements, volume);
     }
 
-    fn play(&self, elements: &mut Elements) {
+    fn play(&mut self, elements: &mut Elements) {
         self.play_button.set_accessibility_name(elements, "pause");
         self.play_button_icon.set_resource_id(elements, self.pause_icon.clone());
         if let Some(sound_data) = self.sound_data {
@@ -312,10 +335,11 @@ impl AudioNode {
                 .sound
                 .play_sound()
                 .expect("failed to play sound");
+            self.start_progress_updates(elements);
         }
     }
 
-    fn pause(&self, elements: &mut Elements) {
+    fn pause(&mut self, elements: &mut Elements) {
         self.play_button.set_accessibility_name(elements, "play");
         self.play_button_icon.set_resource_id(elements, self.play_icon.clone());
         if let Some(sound_data) = self.sound_data {
@@ -325,6 +349,7 @@ impl AudioNode {
                 .stop_sound()
                 .expect("failed to pause sound");
         }
+        self.stop_progress_updates(elements);
     }
 
     fn set_cursor(&self, elements: &mut Elements, value: f32) {
@@ -339,9 +364,9 @@ impl AudioNode {
         }
     }
 
-    pub(crate) fn update(&self, elements: &mut Elements) {
+    fn update(&self, elements: &mut Elements) -> bool {
         let Some(sound_data) = self.sound_data else {
-            return;
+            return false;
         };
         let mut ended = false;
         let (current_time, total_time) = {
@@ -358,8 +383,22 @@ impl AudioNode {
                 .set_text(elements, &format_time(current_time as u32, total_time));
         }
         if ended {
+            self.play_button.set_accessibility_name(elements, "play");
             self.play_button_icon.set_resource_id(elements, self.play_icon.clone());
         }
+        ended
+    }
+
+    fn start_progress_updates(&mut self, elements: &mut Elements) {
+        self.next_ui_update = Some(Instant::now());
+        elements.schedule_animation_update(self.element_data.me);
+        self.request_window_redraw();
+    }
+
+    fn stop_progress_updates(&mut self, elements: &mut Elements) {
+        self.next_ui_update = None;
+        elements.schedule_animation_update(self.element_data.me);
+        self.request_window_redraw();
     }
 
     pub fn set_controls(&mut self, controls: bool) {

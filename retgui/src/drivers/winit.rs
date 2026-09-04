@@ -41,29 +41,16 @@ impl ApplicationHandler for WinitDriver {
         if event_loop.exiting() {
             return;
         }
-        self.app.on_about_to_wait(Some(event_loop));
+        let next_animation_update = self.app.on_about_to_wait(Some(event_loop));
         self.maybe_exit(event_loop);
 
-        let perf_stats_enabled = self
-            .app
-            .elements
-            .window_manager
-            .any_perf_stats_enabled(&self.app.elements);
         #[cfg(not(target_arch = "wasm32"))]
-        {
-            if perf_stats_enabled {
-                // Web redraws are paced by `requestAnimationFrame`. Do not schedule a
-                // competing timer while an animation frame is already pending.
-                //#[cfg(target_arch = "wasm32")]
-                //event_loop.set_control_flow(ControlFlow::Wait);
-                event_loop.set_control_flow(ControlFlow::Poll);
-            } else {
-                event_loop.set_control_flow(ControlFlow::WaitUntil(time::Instant::now() + WAIT_TIME));
-            }
-        }
+        event_loop.set_control_flow(ControlFlow::wait_duration(
+            next_animation_update.map_or(WAIT_TIME, |delay| delay.min(WAIT_TIME)),
+        ));
         #[cfg(target_arch = "wasm32")]
         {
-            let _ = perf_stats_enabled;
+            let _ = next_animation_update;
             event_loop.set_control_flow(ControlFlow::Wait);
         }
     }

@@ -638,7 +638,7 @@ mod animation_tests {
     use retgui_renderer::text_renderer_data::TextRender;
 
     use super::{Text, TextNode};
-    use crate::elements::{ElementNode, Elements};
+    use crate::elements::Elements;
     use crate::style::{Animation, KeyFrame, Repeat, StyleVariant, TimingFunction};
     use crate::{Brush, Color};
 
@@ -662,9 +662,9 @@ mod animation_tests {
             ];
         }
 
-        elements
-            .get_as_mut::<TextNode>(text.inner)
-            .animation_tick(Duration::from_millis(500));
+        elements.dispatch_mut(text.inner, |text, elements| {
+            text.animation_tick(elements, Duration::from_millis(500));
+        });
 
         let text = elements.get_as::<TextNode>(text.inner);
         let snapshot = text.state.text_snapshot.as_ref().unwrap();

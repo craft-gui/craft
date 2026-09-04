@@ -3,6 +3,12 @@ use std::any::Any;
 use std::sync::Arc;
 use std::time::Duration;
 
+#[cfg(not(target_arch = "wasm32"))]
+pub type AnimationInstant = std::time::Instant;
+
+#[cfg(target_arch = "wasm32")]
+pub type AnimationInstant = web_time::Instant;
+
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Affine, ElementBox, Point, TrblRectangle};
 
@@ -20,6 +26,29 @@ use crate::layout::GummyTree;
 use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, StyleVariant, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, RetGuiError};
+
+/// When an element needs its next animation update.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum AnimationSchedule {
+    /// No further animation updates are needed.
+    #[default]
+    None,
+    /// Update again on the next rendered frame.
+    NextFrame,
+    /// Update at or after the specified instant.
+    At(AnimationInstant),
+}
+
+impl AnimationSchedule {
+    /// Returns the schedule that requests the earlier update.
+    pub fn merge(self, other: Self) -> Self {
+        match (self, other) {
+            (Self::NextFrame, _) | (_, Self::NextFrame) => Self::NextFrame,
+            (Self::At(left), Self::At(right)) => Self::At(left.min(right)),
+            (Self::None, schedule) | (schedule, Self::None) => schedule,
+        }
+    }
+}
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait ElementNode: ElementNodeData + Any {
@@ -1191,21 +1220,9 @@ pub trait ElementNode: ElementNodeData + Any {
     /// Sets the list of animations.
     fn set_animations(&mut self, elements: &mut Elements, animations: Vec<Animation>) {
         let element_data = self.element_data_mut();
-        let had_animations = !element_data.animations.is_empty();
-        let has_animations = !animations.is_empty();
-        if !had_animations && has_animations {
-            elements.with_window_manager(|window_manager, _| {
-                window_manager.schedule_element_animations(element_data.me);
-            })
-        } else if had_animations && !has_animations {
-            elements.with_window_manager(|window_manager, _| {
-                window_manager.cancel_element_animations(&element_data.me);
-            })
-        }
         element_data.animations = animations;
-        if has_animations {
-            self.request_window_redraw();
-        }
+        elements.restart_animation_update(element_data.me);
+        self.request_window_redraw();
     }
 
     /// Sets the selection color.
@@ -1306,14 +1323,29 @@ pub trait ElementNode: ElementNodeData + Any {
         Ok(())
     }
 
-    /// Animates the element.
-    fn animation_tick(&mut self, delta: Duration) {
+    /// Advances this element's animations and returns when it needs another update.
+    fn animation_tick(&mut self, _elements: &mut Elements, delta: Duration) -> AnimationSchedule {
+        self.tick_style_animations(delta)
+    }
+
+    /// Advances the style animations stored in this element's data.
+    fn tick_style_animations(&mut self, delta: Duration) -> AnimationSchedule {
         let mut animations = std::mem::take(&mut self.element_data_mut().animations);
         for animation in &mut animations {
             animation.tick(delta);
-            animation.apply_styles(&mut |style| self.set_style_variant(style));
+            if animation.key_frames.len() >= 2 {
+                animation.apply_styles(&mut |style| self.set_style_variant(style));
+            }
         }
+        let has_active_style_animation = animations
+            .iter()
+            .any(|animation| animation.key_frames.len() >= 2 && !animation.is_finished());
         self.element_data_mut().animations = animations;
+        if has_active_style_animation {
+            AnimationSchedule::NextFrame
+        } else {
+            AnimationSchedule::None
+        }
     }
 }
 

@@ -2,8 +2,7 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 #[cfg(target_arch = "wasm32")]
 use std::sync::mpsc::{Receiver, Sender};
-#[cfg(all(feature = "audio", not(target_arch = "wasm32")))]
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use issho::AccessEvent;
 
@@ -19,16 +18,11 @@ use retgui_renderer::renderer::Renderer;
 
 use retgui_runtime::RetGuiRuntime;
 
-#[cfg(all(feature = "audio", target_arch = "wasm32"))]
-use web_time::{Duration, Instant};
-
 use winit::dpi::PhysicalPosition;
 use winit::event::{ElementState, Ime, KeyEvent, PointerKind, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 
-#[cfg(feature = "audio")]
-use crate::elements::AudioNode;
-use crate::elements::{DynElement, Elements, Window, WindowNode, scrollable, set_focus_outline_visible};
+use crate::elements::{AnimationSchedule, DynElement, Elements, Window, WindowNode, scrollable, set_focus_outline_visible};
 use crate::events::{EventDispatcher, EventKind, ImeEvent, KeyboardEvent, PointerButtonEvent, PointerInfo, PointerMovedEvent, PointerScrollEvent, PointerState};
 use crate::text::text_context::TextContext;
 
@@ -37,15 +31,6 @@ pub(crate) struct CreatedRenderer {
     pub(crate) window: DynElement,
     pub(crate) renderer: Box<dyn Renderer>,
     pub(crate) size: Size<f32>,
-}
-
-/// Update interval for audio elements.
-#[cfg(feature = "audio")]
-const AUDIO_UI_UPDATE_INTERVAL: Duration = Duration::from_millis(250);
-
-#[cfg(feature = "audio")]
-fn audio_ui_update_due(last_update: Option<Instant>, now: Instant) -> bool {
-    last_update.is_none_or(|last_update| now.duration_since(last_update) >= AUDIO_UI_UPDATE_INTERVAL)
 }
 
 pub struct App {
@@ -71,9 +56,6 @@ pub struct App {
     /// True if the winit app is active.
     pub(crate) active: bool,
     pub(crate) close_requested: bool,
-
-    #[cfg(feature = "audio")]
-    pub(crate) last_audio_ui_update: Option<Instant>,
 }
 
 /// The action requested after dispatching a window event to [`App`].
@@ -108,8 +90,6 @@ impl App {
             target_scratch: Vec::new(),
             active: false,
             close_requested: false,
-            #[cfg(feature = "audio")]
-            last_audio_ui_update: None,
         }
     }
 
@@ -219,7 +199,7 @@ impl App {
         self.elements = elements;
     }
 
-    pub fn on_about_to_wait(&mut self, event_loop: Option<&dyn ActiveEventLoop>) {
+    pub fn on_about_to_wait(&mut self, event_loop: Option<&dyn ActiveEventLoop>) -> Option<Duration> {
         #[cfg(not(target_arch = "wasm32"))]
         self.runtime.maybe_block_on(async {
             retgui_runtime::task::yield_now().await;
@@ -233,14 +213,12 @@ impl App {
         self.event_dispatcher
             .dispatch_queued_events(&mut self.text_context, &mut self.elements);
 
-        #[cfg(feature = "audio")]
-        self.update_audio_ui();
-
         let mut elements = std::mem::take(&mut self.elements);
-        elements.with_window_manager(|window_manager, elements| {
+        let next_animation_update = elements.with_window_manager(|window_manager, elements| {
             window_manager.on_about_to_wait(self, elements, event_loop)
         });
         self.elements = elements;
+        next_animation_update
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -285,27 +263,6 @@ impl App {
                 window_manager.dirty_and_redraw_all_windows(elements, active)
             });
             self.elements = elements;
-        }
-    }
-
-    #[cfg(feature = "audio")]
-    fn update_audio_ui(&mut self) {
-        use std::any::Any;
-        let now = Instant::now();
-        if !audio_ui_update_due(self.last_audio_ui_update, now) {
-            return;
-        }
-        self.last_audio_ui_update = Some(now);
-
-        for audio_element in self.elements.audio_elements() {
-            if self.elements.contains(audio_element) {
-                self.elements.dispatch_mut(audio_element, |audio, elements| {
-                    let audio = (audio as &mut dyn Any)
-                        .downcast_mut::<AudioNode>()
-                        .expect("audio handle changed type");
-                    audio.update(elements);
-                });
-            }
         }
     }
 
@@ -455,18 +412,18 @@ impl App {
     }
 
     fn on_request_redraw_internal(&mut self, window: Window) {
-        let delta = window.animation_delta(&mut self.elements);
-        let has_active_animations = self
+        let animation_schedule = self
             .elements
-            .with_window_manager(|window_manager, elements| window_manager.animation_tick(elements, &window, delta));
+            .with_window_manager(|window_manager, elements| window_manager.animation_tick(elements, &window));
         self.update_resources();
         window.on_redraw(
             &mut self.elements,
             &mut self.text_context,
             self.resource_manager.clone(),
+            animation_schedule != AnimationSchedule::None,
         );
 
-        if has_active_animations && window.winit_window(&self.elements).is_some() {
+        if animation_schedule == AnimationSchedule::NextFrame && window.winit_window(&self.elements).is_some() {
             window.request_redraw(&self.elements);
         }
     }
@@ -535,24 +492,4 @@ fn create_text_context() -> TextContext {
     }
 
     text_context
-}
-
-#[cfg(all(test, feature = "audio"))]
-mod tests {
-    use super::{AUDIO_UI_UPDATE_INTERVAL, Duration, Instant, audio_ui_update_due};
-
-    #[test]
-    fn audio_ui_updates_are_throttled() {
-        let first_update = Instant::now();
-
-        assert!(audio_ui_update_due(None, first_update));
-        assert!(!audio_ui_update_due(
-            Some(first_update),
-            first_update + AUDIO_UI_UPDATE_INTERVAL - Duration::from_millis(1),
-        ));
-        assert!(audio_ui_update_due(
-            Some(first_update),
-            first_update + AUDIO_UI_UPDATE_INTERVAL,
-        ));
-    }
 }

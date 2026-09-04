@@ -337,7 +337,6 @@ impl TextInputState {
         self.start_time = None;
     }
 
-    #[allow(dead_code)]
     pub fn next_blink_time(&self) -> Option<Instant> {
         self.start_time.map(|start_time| {
             let phase = Instant::now().duration_since(start_time);

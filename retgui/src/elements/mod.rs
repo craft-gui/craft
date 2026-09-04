@@ -1,7 +1,5 @@
 #[cfg(feature = "audio")]
 pub use crate::elements::audio::Audio;
-#[cfg(feature = "audio")]
-pub(crate) use crate::elements::audio::AudioNode;
 pub use crate::elements::button::Button;
 pub use crate::elements::calendar::Calendar;
 pub use crate::elements::checkbox::Checkbox;
@@ -29,7 +27,7 @@ pub use crate::elements::text_input::TextInput;
 pub(crate) use crate::elements::text_input::TextInputNode;
 pub use crate::elements::tinyvg::TinyVg;
 pub(crate) use crate::elements::traits::set_focus_outline_visible;
-pub use crate::elements::traits::{Element, ElementNode, ElementNodeData, clone_element};
+pub use crate::elements::traits::{AnimationInstant, AnimationSchedule, Element, ElementNode, ElementNodeData, clone_element};
 pub use crate::elements::window::Window;
 pub(crate) use crate::elements::window::WindowNode;
 

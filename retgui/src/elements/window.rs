@@ -79,9 +79,6 @@ pub(crate) struct WindowNode {
     element_data: ElementData,
     pub(crate) modifiers: ModifiersState,
     pub(crate) ime_composing: bool,
-
-    /// The last time a frame was drawn.
-    last_frame_time: Instant,
 }
 
 impl Clone for WindowNode {
@@ -232,18 +229,6 @@ impl Window {
         elements.get_as::<WindowNode>(self.inner).redraw_requested()
     }
 
-    pub(crate) fn animation_delta(&self, elements: &mut Elements) -> Duration {
-        let now = Instant::now();
-        let inner = elements.get_as_mut::<WindowNode>(self.inner);
-        let delta = now - inner.last_frame_time;
-        inner.last_frame_time = now;
-        delta
-    }
-
-    pub(crate) fn reset_animation_clock(&self, elements: &mut Elements) {
-        elements.get_as_mut::<WindowNode>(self.inner).last_frame_time = Instant::now();
-    }
-
     pub fn zoom_in(&self, elements: &mut Elements) {
         elements.dispatch_mut(self.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
@@ -279,13 +264,14 @@ impl Window {
         elements: &mut Elements,
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
+        has_scheduled_animation_update: bool,
     ) {
         elements.sync_layout_dirtiness();
         elements.dispatch_mut(self.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
                 .downcast_mut::<WindowNode>()
                 .unwrap()
-                .on_redraw(elements, text_context, resource_manager)
+                .on_redraw(elements, text_context, resource_manager, has_scheduled_animation_update)
         })
     }
 
@@ -347,7 +333,6 @@ impl WindowNode {
                 pointer_capture: Default::default(),
                 modifiers: Default::default(),
                 ime_composing: false,
-                last_frame_time: Instant::now(),
             })
         });
 
@@ -437,6 +422,7 @@ impl WindowNode {
             elements,
             &mut retgui_app.text_context,
             retgui_app.resource_manager.clone(),
+            false,
         );
     }
 
@@ -542,10 +528,6 @@ impl WindowNode {
         true
     }
 
-    pub(crate) fn perf_stats_enabled(&self) -> bool {
-        self.perf_stats.is_enabled()
-    }
-
     pub(crate) fn update_modifiers(&mut self, modifiers: ModifiersState) {
         self.modifiers = modifiers;
     }
@@ -596,8 +578,11 @@ impl WindowNode {
         elements: &mut Elements,
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
+        has_scheduled_animation_update: bool,
     ) {
         self.redraw_requested.store(false, Ordering::Relaxed);
+        self.perf_stats
+            .set_animation_update_scheduled(elements, has_scheduled_animation_update);
 
         let frame_start = Instant::now();
         self.renderer.surface_set_clear_color(Color::WHITE);
@@ -819,9 +804,6 @@ impl WindowNode {
             (sort, prepare, submit)
         };
 
-        if self.perf_stats.is_enabled() {
-            self.request_redraw();
-        }
         self.renderer = renderer;
 
         RenderStats::new(total_start.elapsed(), build_list, debug_overlay, sort, prepare, submit)

@@ -94,7 +94,7 @@ pub fn retgui_main(elements: Elements, options: RetGuiOptions) {
 ///     fn run(mut self) {
 ///         self.app.on_resume(None);
 ///         while !self.app.close_requested() {
-///             self.app.on_about_to_wait(None);
+///             let _ = self.app.on_about_to_wait(None);
 ///             // Wait for and forward native events here.
 ///             break;
 ///         }

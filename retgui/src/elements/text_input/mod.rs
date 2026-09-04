@@ -21,11 +21,11 @@ use winit::window::{ImeCapabilities, ImeEnableRequest, ImeHint, ImePurpose, ImeR
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementNode, Elements, WindowNode, scrollable};
+use crate::elements::{AnimationSchedule, DynElement, Element, ElementNode, Elements, WindowNode, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{GummyTextInputContext, LayoutContext, TextHashKey};
-use crate::style::{Animation, Display, Repeat, Style, TimingFunction, Unit};
+use crate::style::{Display, Style, Unit};
 use crate::text::RangedStyles;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
@@ -428,24 +428,20 @@ impl ElementNode for TextInputNode {
         self.state.set_style(&style);
     }
 
-    fn animation_tick(&mut self, delta: Duration) {
-        let mut animations = std::mem::take(&mut self.element_data.animations);
-        for animation in &mut animations {
-            animation.tick(delta);
-            if animation.key_frames.len() >= 2 {
-                animation.apply_styles(&mut |style| self.set_style_variant(style));
-            }
-        }
-        self.element_data.animations = animations;
-
+    fn animation_tick(&mut self, _elements: &mut Elements, delta: Duration) -> AnimationSchedule {
+        let mut schedule = self.tick_style_animations(delta);
         if self.is_focused() && self.state.editor().raw_selection().is_collapsed() {
             if !self.state.is_blinking() {
                 self.state.reset_blink();
             }
             self.state.cursor_blink();
+            if let Some(next_blink) = self.state.next_blink_time() {
+                schedule = schedule.merge(AnimationSchedule::At(next_blink));
+            }
         } else {
             self.state.disable_blink();
         }
+        schedule
     }
 }
 
@@ -514,43 +510,14 @@ impl TextInputNode {
     /// Starts the cursor blink animation.
     fn start_cursor_blink(&mut self, elements: &mut Elements) {
         self.state.reset_blink();
-
-        if self
-            .element_data
-            .animations
-            .iter()
-            .any(|animation| animation.key_frames.is_empty())
-        {
-            return;
-        }
-
-        let should_schedule = self.element_data.animations.is_empty();
-        self.element_data.animations.push(Animation::new(
-            Duration::from_millis(500),
-            Repeat::Forever,
-            TimingFunction::Linear,
-        ));
-        if should_schedule {
-            elements.with_window_manager(|window_manager, _| {
-                window_manager.schedule_element_animations(self.element_data.me);
-            });
-        }
+        elements.schedule_animation_update(self.element_data.me);
         self.request_window_redraw();
     }
 
     /// Stops the cursor blink animation.
     fn stop_cursor_blink(&mut self, elements: &mut Elements) {
         self.state.disable_blink();
-
-        let had_animations = !self.element_data.animations.is_empty();
-        self.element_data
-            .animations
-            .retain(|animation| !animation.key_frames.is_empty());
-        if had_animations && self.element_data.animations.is_empty() {
-            elements.with_window_manager(|window_manager, _| {
-                window_manager.cancel_element_animations(&self.element_data.me);
-            });
-        }
+        elements.schedule_animation_update(self.element_data.me);
         self.request_window_redraw();
     }
 
