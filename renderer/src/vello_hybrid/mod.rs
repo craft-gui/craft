@@ -291,6 +291,7 @@ impl Renderer for VelloHybridRenderer {
                 &mut encoder,
                 &render_size,
                 &texture_view,
+                None,
                 &self.texture_bindings,
             )
             .unwrap();

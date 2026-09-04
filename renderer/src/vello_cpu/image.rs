@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use kurbo::Affine;
 
-use vello_common::color::PremulRgba8;
 use vello_common::kurbo;
 use vello_common::paint::{ImageId, ImageSource, PaintType};
-use vello_common::pixmap::Pixmap;
+use vello_common::peniko::ImageAlphaType;
+use vello_common::pixmap::{PixelMetadata, Pixmap};
 use vello_cpu::{RenderContext, Resources};
 
 use crate::render_command::DrawImageCmd;
@@ -28,23 +28,12 @@ pub(crate) fn upload_image(
     let resource_id = if let Some(resource_id) = resource_mapper.get(&cmd.resource_id) {
         resource_id
     } else {
-        let premul_data: Vec<PremulRgba8> = image
-            .image
-            .as_chunks::<4>()
-            .0
-            .iter()
-            .map(|rgba| {
-                let alpha = u16::from(rgba[3]);
-                let premultiply = |component| (alpha * (u16::from(component)) / 255) as u8;
-                PremulRgba8 {
-                    r: premultiply(rgba[0]),
-                    g: premultiply(rgba[1]),
-                    b: premultiply(rgba[2]),
-                    a: alpha as u8,
-                }
-            })
-            .collect();
-        let pixmap = Pixmap::from_parts(premul_data, image.get_width() as u16, image.get_height() as u16);
+        let pixmap = Pixmap::from_parts(
+            image.image.as_raw().clone(),
+            image.get_width() as u16,
+            image.get_height() as u16,
+            PixelMetadata::new(ImageAlphaType::Alpha, true),
+        );
         let image_id = resources.register_image(Arc::new(pixmap));
         let renderer_resource_id = RendererResourceId(image_id.as_u32() as u64);
 
