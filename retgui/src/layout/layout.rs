@@ -259,7 +259,7 @@ impl Layout {
             has_border,
             uniform_border_color: border_color.are_edges_uniform(),
             outline_width,
-            box_shadows: box_shadows.to_vec(),
+            box_shadows,
         };
 
         if Some(&border_spec) == self.cache_border_spec.as_ref() {

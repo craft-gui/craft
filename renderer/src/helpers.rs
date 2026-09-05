@@ -82,7 +82,7 @@ pub(crate) fn brush_to_paint(rect: Rectangle, brush: &Brush) -> PaintType {
                 HueDirection::Decreasing => peniko::color::HueDirection::Decreasing,
             };
 
-            let stops: Vec<peniko::ColorStop> = gradient
+            let stops = gradient
                 .color_stops
                 .iter()
                 .map(|c| peniko::ColorStop {
@@ -97,7 +97,7 @@ pub(crate) fn brush_to_paint(rect: Rectangle, brush: &Brush) -> PaintType {
                 interpolation_cs: ColorSpaceTag::Srgb,
                 hue_direction,
                 interpolation_alpha_space: InterpolationAlphaSpace::Premultiplied,
-                stops: peniko::ColorStops(stops.into()),
+                stops: peniko::ColorStops(stops),
             })
         }
     }

@@ -452,7 +452,10 @@ impl App {
             if self.resource_manager.contains(&resource)
                 || self
                     .in_progress_resources
-                    .contains(&(resource.clone(), resource_type.clone()))
+                    .iter()
+                    .any(|(pending_resource, pending_type)| {
+                        pending_resource == &resource && pending_type == &resource_type
+                    })
             {
                 continue;
             }

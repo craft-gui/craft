@@ -44,13 +44,6 @@ impl Generation {
 #[derive(Debug, Clone, Copy)]
 pub struct SplitString<'source>([&'source str; 2]);
 
-impl<'source> SplitString<'source> {
-    /// Get the characters of this string.
-    pub fn chars(self) -> impl Iterator<Item = char> + 'source {
-        self.into_iter().flat_map(str::chars)
-    }
-}
-
 impl PartialEq<&'_ str> for SplitString<'_> {
     fn eq(&self, other: &&'_ str) -> bool {
         let [a, b] = self.0;

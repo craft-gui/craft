@@ -95,7 +95,7 @@ impl TextInput {
     pub fn text(&self, elements: &Elements) -> String {
         elements
             .try_get_as::<TextInputElement>(self.inner)
-            .map_or_else(String::new, |input| input.state.editor().text().chars().collect())
+            .map_or_else(String::new, |input| input.state.editor().text().into_iter().collect())
     }
 
     /// Set the text.
@@ -428,8 +428,7 @@ impl ElementInternals for TextInputElement {
     }
 
     fn on_text_style_changed(&mut self) {
-        let style = self.element_data.style.clone();
-        self.state.set_style(&style);
+        self.state.set_style(&self.element_data.style);
     }
 
     fn animation_tick(&mut self, elements: &mut Elements, delta: Duration) -> AnimationSchedule {

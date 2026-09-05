@@ -362,8 +362,7 @@ impl FontFamily {
             font_family_name: [0; 64],
         };
 
-        let chars = font_family.chars().collect::<Vec<char>>();
-        font_family_res.font_family_length = chars.len() as u8;
+        font_family_res.font_family_length = font_family.len() as u8;
         font_family_res.font_family_name[..font_family.len()].copy_from_slice(font_family.as_bytes());
 
         font_family_res

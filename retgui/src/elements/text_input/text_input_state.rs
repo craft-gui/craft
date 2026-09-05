@@ -10,7 +10,6 @@ use gummy::{AvailableSpace, NodeId};
 
 use parley::{Affinity, ContentWidths, Cursor, Selection};
 
-use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Point, Rectangle};
 
 use retgui_renderer::text_renderer_data::{TextData, TextRender, TextSnapshot};
@@ -840,38 +839,19 @@ impl TextInputState {
     }
 
     pub fn render_text(&mut self, style: &Style) {
-        let backgrounds: Vec<(Range<usize>, Brush)> = self
-            .editor()
-            .ranged_styles
-            .styles
-            .iter()
-            .filter_map(|(range, style)| {
-                if let TextStyleProperty::BackgroundBrush(color) = style {
-                    Some((range.clone(), color.clone()))
-                } else {
-                    None
-                }
-            })
-            .collect();
-
         let layout = self.editor.try_layout().unwrap();
-        let backgrounds: Vec<(Selection, Brush)> = backgrounds
-            .iter()
-            .map(|(range, color)| {
-                (
-                    Selection::new(
-                        Cursor::from_byte_index(layout, range.start, Affinity::Downstream),
-                        Cursor::from_byte_index(layout, range.end, Affinity::Downstream),
-                    ),
-                    color.clone(),
-                )
-            })
-            .collect();
         let text_renderer = self.text_render.as_mut().unwrap();
         for line in text_renderer.lines.iter_mut() {
             line.backgrounds.clear();
         }
-        for (selection, color) in backgrounds.iter() {
+        for (range, ranged_style) in &self.editor.ranged_styles.styles {
+            let TextStyleProperty::BackgroundBrush(color) = ranged_style else {
+                continue;
+            };
+            let selection = Selection::new(
+                Cursor::from_byte_index(layout, range.start, Affinity::Downstream),
+                Cursor::from_byte_index(layout, range.end, Affinity::Downstream),
+            );
             selection.geometry_with(layout, |rect, line| {
                 text_renderer.lines[line].backgrounds.push((
                     Rectangle::new(
@@ -894,7 +874,7 @@ impl TextInputState {
                 .push((parley_box_to_rect(rect), style.get_selection_brush()));
         });
 
-        let color = style.get_cursor_brush().unwrap_or(style.get_text_brush());
+        let color = style.get_cursor_brush().unwrap_or_else(|| style.get_text_brush());
         text_renderer.cursor = self.editor.cursor_geometry(1.0).map(|r| (parley_box_to_rect(r), color));
         self.text_snapshot = self
             .text_render
