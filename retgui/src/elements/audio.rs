@@ -5,15 +5,18 @@ use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
 
-#[cfg(target_arch = "wasm32")]
-use web_time::{Duration, Instant};
-
 use maudio::engine::Engine;
 use maudio::sound::Sound;
 use maudio::sound::notifier::EndNotifier;
+
 use retgui_primitives::brush::Brush;
+
 use retgui_renderer::renderer::Renderer;
+
 use retgui_resource_manager::{ResourceId, ResourceManager};
+
+#[cfg(target_arch = "wasm32")]
+use web_time::{Duration, Instant};
 
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
@@ -39,6 +42,7 @@ impl AudioContext {
         #[cfg(target_os = "windows")]
         {
             use windows::Win32::System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx};
+
             unsafe {
                 CoInitializeEx(None, COINIT_APARTMENTTHREADED).unwrap();
             }

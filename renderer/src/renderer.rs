@@ -1,3 +1,5 @@
+pub use crate::screenshot::Screenshot;
+
 use std::any::Any;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -5,13 +7,13 @@ use std::sync::Arc;
 use retgui_primitives::Color;
 use retgui_primitives::geometry::{Affine, BezPath, Circle, Rectangle, Shape};
 
+use retgui_resource_manager::{ResourceId, ResourceManager};
+
 use crate::render_command::{BoxShadowCmd, DrawBoxShadow, DrawCircleCmd, DrawCircleOutlineCmd, DrawImageCmd, DrawRectCmd, DrawRectOutlineCmd, DrawTextCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
 use crate::render_list::RenderList;
-pub use crate::screenshot::Screenshot;
 use crate::sort_commands::sort_render_list_internal;
 use crate::text_renderer_data::{TextData, TextScroll};
 use crate::{Brush, RenderCommand, TargetItem};
-use retgui_resource_manager::{ResourceId, ResourceManager};
 
 pub trait Renderer: Any {
     // Surface Functions

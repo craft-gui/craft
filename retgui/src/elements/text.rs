@@ -3,21 +3,9 @@ use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
 
-use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
-
-use rustc_hash::FxHashMap;
-
-use smol_str::{SmolStr, ToSmolStr};
-
 use gummy::{AvailableSpace, Size};
 
-use time::{Duration, Instant};
-#[cfg(target_arch = "wasm32")]
-use web_time as time;
-
-use crate::events::PointerButton;
-
-use winit::dpi;
+use parley::{Alignment, AlignmentOptions, ContentWidths, Selection};
 
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Point, Rectangle, Vec2};
@@ -27,6 +15,18 @@ use retgui_renderer::text_renderer_data::{TextData, TextSnapshot};
 
 use retgui_resource_manager::ResourceManager;
 
+use rustc_hash::FxHashMap;
+
+use smol_str::{SmolStr, ToSmolStr};
+
+use time::{Duration, Instant};
+
+#[cfg(target_arch = "wasm32")]
+use web_time as time;
+
+use winit::dpi;
+
+use crate::events::PointerButton;
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::clone_element;
 use crate::elements::{DynElement, Element, ElementInternals, Elements};
@@ -639,10 +639,10 @@ mod animation_tests {
 
     use retgui_renderer::text_renderer_data::TextRender;
 
-    use super::{Text, TextElement};
     use crate::elements::Elements;
     use crate::style::{Animation, KeyFrame, Repeat, StyleVariant, TimingFunction};
     use crate::{Brush, Color};
+    use super::{Text, TextElement};
 
     #[test]
     fn animated_brush_refreshes_snapshot_without_cloning_glyph_data() {

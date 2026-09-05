@@ -10,11 +10,11 @@ use retgui_logging::info;
 
 use retgui_primitives::geometry::{Point, Size};
 
-use retgui_resource_manager::resource_type::ResourceType;
-use retgui_resource_manager::{ResourceId, ResourceManager};
-
 #[cfg(target_arch = "wasm32")]
 use retgui_renderer::renderer::Renderer;
+
+use retgui_resource_manager::resource_type::ResourceType;
+use retgui_resource_manager::{ResourceId, ResourceManager};
 
 use retgui_runtime::RetGuiRuntime;
 

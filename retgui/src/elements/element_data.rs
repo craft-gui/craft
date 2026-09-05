@@ -1,9 +1,10 @@
-use smol_str::SmolStr;
 use std::cell::Cell;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 use smallvec::SmallVec;
+
+use smol_str::SmolStr;
 
 use crate::Color;
 use crate::accessibility::RetGuiAccessTree;

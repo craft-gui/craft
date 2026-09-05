@@ -1,7 +1,8 @@
-use smallvec::SmallVec;
-
 use kurbo::Point;
+
 use peniko::Color;
+
+use smallvec::SmallVec;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Gradient {

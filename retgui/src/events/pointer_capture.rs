@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use crate::events::PointerId;
-
 use crate::elements::{DynElement, Elements};
 use crate::events::event_dispatch::dispatch_event;
 use crate::events::{EventKind, PointerCaptureEvent};

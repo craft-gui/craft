@@ -1,8 +1,11 @@
+pub(crate) use retgui_renderer::text_renderer_data::{TextRender, TextRenderGlyph, TextRenderLine};
+
 use parley::{Layout, PositionedLayoutItem};
+
 use peniko::kurbo::{Affine, Line};
 
 use retgui_primitives::brush::Brush;
-pub(crate) use retgui_renderer::text_renderer_data::{TextRender, TextRenderGlyph, TextRenderLine};
+
 use retgui_renderer::text_renderer_data::{TextRenderItem, TextRenderItemLine};
 
 pub fn from_editor(layout: &Layout<Brush>) -> TextRender {

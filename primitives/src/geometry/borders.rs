@@ -2,6 +2,7 @@ use std::f64::consts::{FRAC_PI_2, PI};
 use std::ops::Add;
 
 use kurbo::{Arc, BezPath, PathEl, Point, Rect, Shape, Vec2};
+
 pub const TOP_LEFT: usize = 0;
 pub const TOP_RIGHT: usize = 1;
 pub const BOTTOM_RIGHT: usize = 2;

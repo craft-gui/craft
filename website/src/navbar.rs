@@ -1,9 +1,10 @@
-use crate::link::Link;
-use crate::router::NavigateFn;
-use crate::theme::{NAVBAR_BACKGROUND_COLOR, NAVBAR_TEXT_COLOR, wrapper};
 use retgui::elements::{Container, Element, Elements, Text};
 use retgui::style::{AlignItems, Display, FontWeight, JustifyContent, Unit};
 use retgui::{pct, px, rgb};
+
+use crate::link::Link;
+use crate::router::NavigateFn;
+use crate::theme::{NAVBAR_BACKGROUND_COLOR, NAVBAR_TEXT_COLOR, wrapper};
 
 pub const NAVBAR_HEIGHT: f32 = 60.0;
 

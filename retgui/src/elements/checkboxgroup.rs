@@ -1,5 +1,11 @@
 //! Stores one or more elements.
 
+use std::sync::Arc;
+
+use retgui_renderer::renderer::Renderer;
+
+use retgui_resource_manager::ResourceManager;
+
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container};
 use crate::elements::traits::clone_element;
@@ -7,10 +13,6 @@ use crate::elements::{DynElement, Element, ElementInternals, Elements, scrollabl
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
-use retgui_renderer::renderer::Renderer;
-use retgui_resource_manager::ResourceManager;
-
-use std::sync::Arc;
 
 #[derive(Clone, Copy)]
 pub struct CheckboxGroup {

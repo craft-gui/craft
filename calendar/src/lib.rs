@@ -1,3 +1,16 @@
+pub use icu_calendar::options::DateAddOptions;
+pub use icu_calendar::types::{DateDuration, EraYear, Month, Weekday, YearInfo};
+
+pub use icu_locale_core::Locale;
+
+use icu_calendar::preferences::FirstDay;
+use icu_calendar::week::WeekPreferences;
+use icu_calendar::{Date, Gregorian};
+
+use icu_datetime::{FixedCalendarDateTimeFormatter, fieldsets};
+
+use jiff::Zoned;
+
 pub mod sys_locale;
 
 #[cfg(target_vendor = "apple")]
@@ -5,17 +18,6 @@ mod apple;
 
 #[cfg(windows)]
 mod windows;
-
-use jiff::Zoned;
-
-use icu_calendar::preferences::FirstDay;
-use icu_calendar::week::WeekPreferences;
-use icu_calendar::{Date, Gregorian};
-use icu_datetime::{FixedCalendarDateTimeFormatter, fieldsets};
-
-pub use icu_calendar::options::DateAddOptions;
-pub use icu_calendar::types::{DateDuration, EraYear, Month, Weekday, YearInfo};
-pub use icu_locale_core::Locale;
 
 /// Returns the first day of the week for the current system user.
 ///

@@ -1,14 +1,18 @@
+use glifo::Glyph;
+
 use kurbo::{Affine, Stroke};
+
 use peniko::kurbo::Shape;
 
-use glifo::Glyph;
+use retgui_primitives::geometry::Rectangle;
+
 use vello_common::{kurbo, peniko};
+
 use vello_cpu::{RenderContext, Resources};
 
 use crate::helpers::{brush_to_paint, text_bounds};
 use crate::render_command::{DrawRectCmd, DrawTextCmd};
 use crate::vello_cpu::draw_rect;
-use retgui_primitives::geometry::Rectangle;
 
 pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut RenderContext, resources: &mut Resources, window: &Rectangle) {
     let text_container = Rectangle::from_kurbo(cmd.transform.transform_rect_bbox(cmd.rect.to_kurbo()));

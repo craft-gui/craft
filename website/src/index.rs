@@ -1,10 +1,11 @@
+use retgui::elements::{Container, Element, Elements, Text};
+use retgui::style::{Display, FlexDirection, FlexWrap, FontWeight, Overflow, Unit};
+use retgui::{Color, palette, pct, px, rgb};
+
 use crate::link::Link;
 use crate::router::NavigateFn;
 use crate::theme::{WRAPPER_PADDING_LEFT, WRAPPER_PADDING_RIGHT, wrapper};
 use crate::web_link::WebLink;
-use retgui::elements::{Container, Element, Elements, Text};
-use retgui::style::{Display, FlexDirection, FlexWrap, FontWeight, Overflow, Unit};
-use retgui::{Color, palette, pct, px, rgb};
 
 fn hero_intro(elements: &mut Elements, navigate: NavigateFn) -> Container {
     let heading = Text::new(elements, "A Reactive GUI Framework for Rust")

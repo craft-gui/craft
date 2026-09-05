@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use retgui_primitives::Color;
 use retgui_primitives::geometry::Rectangle;
+
 use retgui_resource_manager::ResourceManager;
 
 use crate::render_list::RenderList;

@@ -1,14 +1,17 @@
 //! An element to select a single item from a collapsable vertical list of options.
 
-use retgui_primitives::geometry::{BezPath, Rectangle, TrblRectangle};
 use std::any::Any;
 use std::sync::Arc;
 
-use retgui_renderer::Brush;
+use peniko::Color;
 
+use retgui_primitives::geometry::{BezPath, Rectangle, TrblRectangle};
 use retgui_primitives::geometry::{Affine, Point, Vec2};
 
-use peniko::Color;
+use retgui_renderer::Brush;
+use retgui_renderer::renderer::Renderer;
+
+use retgui_resource_manager::ResourceManager;
 
 use winit::keyboard::KeyCode;
 
@@ -22,8 +25,6 @@ use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, Overflow, Position, Style, Unit};
 use crate::text::text_context::TextContext;
 use crate::{auto, px, rgba};
-use retgui_renderer::renderer::Renderer;
-use retgui_resource_manager::ResourceManager;
 
 /// An element to select a single item from a collapsable vertical list of options.
 ///

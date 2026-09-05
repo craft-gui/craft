@@ -103,8 +103,8 @@ impl SliderElement {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::elements::{Elements, Slider};
+    use super::*;
 
     #[test]
     fn steps_one() {

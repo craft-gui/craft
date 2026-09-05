@@ -1,7 +1,3 @@
-pub mod image;
-mod render_context;
-pub mod text;
-
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -22,9 +18,9 @@ use vello_common::{kurbo, peniko};
 
 use vello_hybrid::{RenderSize, Renderer as VelloRenderer, Resources, Scene, TextureBindings};
 
-use winit::window::Window;
-
 use wgpu::{CommandEncoder, CurrentSurfaceTexture, TextureFormat};
+
+use winit::window::Window;
 
 use crate::RenderCommand;
 use crate::helpers::brush_to_paint;
@@ -36,6 +32,10 @@ use crate::sort_commands::SortedCommands;
 use crate::vello_hybrid::image::{draw_image, upload_image};
 use crate::vello_hybrid::render_context::{RenderContext, RenderSurface, create_vello_renderer};
 use crate::vello_hybrid::text::draw_text;
+
+pub mod image;
+mod render_context;
+pub mod text;
 
 pub struct ActiveRenderState {
     // The fields MUST be in this order, so that the surface is dropped before the window

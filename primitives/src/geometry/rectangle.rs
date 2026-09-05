@@ -1,6 +1,8 @@
-use crate::geometry::Point;
 use dpi;
+
 use kurbo::Affine;
+
+use crate::geometry::Point;
 
 /// A structure representing a rectangle in 2D space.
 #[derive(Debug, Clone, Copy, Default, PartialEq)]

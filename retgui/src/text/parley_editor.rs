@@ -1,24 +1,26 @@
 //! A simple plain text editor and related types.
-use parley::layout::{Affinity, Alignment, AlignmentOptions, ContentWidths, Layout};
-use parley::{BoundingBox, Cursor, FontContext, LayoutContext, Selection, StyleProperty, StyleSet};
-
-use crate::text::text_commands::{Backspace, Delete, TextInsertion, TextReplace};
-
-extern crate alloc;
 use alloc::borrow::ToOwned;
 use alloc::string::String;
 use alloc::vec::Vec;
+
 use core::cmp::PartialEq;
 use core::default::Default;
 use core::fmt::{Debug, Display};
 use core::num::NonZeroUsize;
 use core::ops::Range;
 
+use parley::layout::{Affinity, Alignment, AlignmentOptions, ContentWidths, Layout};
+use parley::{BoundingBox, Cursor, FontContext, LayoutContext, Selection, StyleProperty, StyleSet};
+
 use retgui_primitives::brush::Brush;
+
 use retgui_undo::UndoManager;
 
+use crate::text::text_commands::{Backspace, Delete, TextInsertion, TextReplace};
 use crate::text::RangedStyles;
 use crate::text::text_commands::TextCommand;
+
+extern crate alloc;
 
 /// Opaque representation of a generation.
 ///

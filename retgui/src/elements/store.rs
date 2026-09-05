@@ -2,8 +2,13 @@ use std::any::Any;
 use std::future::Future;
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::collections::VecDeque;
+
+use retgui_resource_manager::ResourceId;
+use retgui_resource_manager::resource_type::ResourceType;
 
 use rustc_hash::{FxHashMap, FxHashSet};
+
 use slotmap::{DefaultKey, Key, SlotMap};
 
 use crate::accessibility::RetGuiAccessTree;
@@ -16,9 +21,6 @@ use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::layout::layout_context::LayoutContext;
 use crate::window_manager::WindowManager;
-use retgui_resource_manager::ResourceId;
-use retgui_resource_manager::resource_type::ResourceType;
-use std::collections::VecDeque;
 
 static NEXT_STORE_ID: AtomicU64 = AtomicU64::new(1);
 

@@ -1,6 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use retgui_primitives::geometry::Point;
+
 use retgui_renderer::renderer::Renderer;
 
 use crate::elements::{DynElement, Elements, WindowElement};

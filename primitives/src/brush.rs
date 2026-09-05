@@ -1,5 +1,6 @@
-use crate::gradient::Gradient;
 use peniko::Color;
+
+use crate::gradient::Gradient;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Brush {

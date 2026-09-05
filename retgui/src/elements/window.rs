@@ -18,11 +18,13 @@ use retgui_renderer::renderer::{Renderer, Screenshot};
 use retgui_resource_manager::ResourceManager;
 
 #[cfg(target_arch = "wasm32")]
-use {wasm_bindgen::JsCast, winit::platform::web::WindowAttributesWeb};
+use wasm_bindgen::JsCast;
 
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 
+#[cfg(target_arch = "wasm32")]
+use winit::platform::web::WindowAttributesWeb;
 use winit::event::MouseScrollDelta;
 use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::{Key, ModifiersState, NamedKey};

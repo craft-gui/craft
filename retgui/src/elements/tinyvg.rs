@@ -6,11 +6,6 @@ use peniko::Color;
 use peniko::color::AlphaColor;
 use peniko::kurbo::{self, Stroke, StrokeOpts};
 
-use tinyvg_rs::TinyVg as TinyVgData;
-use tinyvg_rs::color_table::{ColorTable, RgbaF32};
-use tinyvg_rs::commands::{DrawCommand, Path, PathCommand, Point as TinyVgPoint, Style};
-use tinyvg_rs::common::Unit;
-
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Affine, BezPath, Point, Rectangle, Shape, TOLERANCE};
 use retgui_primitives::gradient::{ColorStop, Gradient};
@@ -19,6 +14,11 @@ use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::resource_type::ResourceType;
 use retgui_resource_manager::{ResourceId, ResourceManager};
+
+use tinyvg_rs::TinyVg as TinyVgData;
+use tinyvg_rs::color_table::{ColorTable, RgbaF32};
+use tinyvg_rs::commands::{DrawCommand, Path, PathCommand, Point as TinyVgPoint, Style};
+use tinyvg_rs::common::Unit;
 
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;

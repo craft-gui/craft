@@ -92,6 +92,7 @@ fn main() {
     let mut elements = Elements::new();
     let _counter1 = counter(&mut elements);
     use retgui::RetGuiOptions;
+
     util::setup_logging();
     retgui::retgui_main(elements, RetGuiOptions::basic("Counter"));
 }

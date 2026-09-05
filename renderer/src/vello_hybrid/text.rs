@@ -1,6 +1,6 @@
-use kurbo::{Affine, Stroke};
-
 use glifo::Glyph;
+
+use kurbo::{Affine, Stroke};
 
 use peniko::kurbo::Shape;
 

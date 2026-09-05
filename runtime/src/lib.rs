@@ -1,7 +1,7 @@
-use std::future::Future;
-
 pub use tokio::sync::mpsc::{Receiver, Sender, channel};
 pub use tokio::*;
+
+use std::future::Future;
 
 thread_local! {
     #[cfg(not(target_arch = "wasm32"))]

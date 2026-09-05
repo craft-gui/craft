@@ -14,12 +14,11 @@ use retgui_primitives::geometry::{Point, Rectangle};
 
 use retgui_renderer::text_renderer_data::{TextData, TextRender, TextSnapshot};
 
-use winit::keyboard::{Key, ModifiersState, NamedKey};
-use winit::window::ImeSurroundingText;
-
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 
+use winit::keyboard::{Key, ModifiersState, NamedKey};
+use winit::window::ImeSurroundingText;
 use winit::dpi;
 
 use crate::elements::element_data::ElementData;
@@ -940,6 +939,7 @@ fn logical_scroll_to_cursor(
 ))]
 fn copy(drv: &mut PlainEditorDriver) {
     use clipboard_rs::{Clipboard, ClipboardContext};
+
     if let Some(text) = drv.editor.selected_text() {
         let cb = ClipboardContext::new().unwrap();
         cb.set_text(text.to_owned()).ok();
@@ -958,6 +958,7 @@ fn copy(_drv: &mut PlainEditorDriver) {}
 ))]
 fn paste(drv: &mut PlainEditorDriver) {
     use clipboard_rs::{Clipboard, ClipboardContext};
+
     let cb = ClipboardContext::new().unwrap();
     let text = cb.get_text().unwrap_or_default();
     drv.insert_or_replace_selection(&text, true);
@@ -975,6 +976,7 @@ fn paste(_drv: &mut PlainEditorDriver) {}
 ))]
 fn cut(drv: &mut PlainEditorDriver) {
     use clipboard_rs::{Clipboard, ClipboardContext};
+
     if let Some(text) = drv.editor.selected_text() {
         let cb = ClipboardContext::new().unwrap();
         cb.set_text(text.to_owned()).ok();

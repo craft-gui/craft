@@ -1,3 +1,11 @@
+pub use retgui_primitives::brush::Brush;
+
+pub use render_command::RenderCommand;
+pub use render_list::RenderList;
+pub use renderer_type::RendererType;
+pub use screenshot::Screenshot;
+pub use target_item::TargetItem;
+
 #[allow(clippy::module_inception)]
 pub mod renderer;
 
@@ -17,10 +25,3 @@ mod target_item;
 pub mod text_renderer_data;
 #[cfg(feature = "vello_hybrid_renderer")]
 pub mod vello_hybrid;
-
-pub use render_command::RenderCommand;
-pub use render_list::RenderList;
-pub use renderer_type::RendererType;
-pub use retgui_primitives::brush::Brush;
-pub use screenshot::Screenshot;
-pub use target_item::TargetItem;

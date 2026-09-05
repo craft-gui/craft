@@ -1,8 +1,9 @@
 //! Integration with the winit event loop.
 
-use retgui_logging::info;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time;
+
+use retgui_logging::info;
 
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;

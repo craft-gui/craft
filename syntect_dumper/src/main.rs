@@ -3,6 +3,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use reqwest::blocking::get;
+
 use syntect::dumps::dump_to_file;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::{SyntaxDefinition, SyntaxSetBuilder};

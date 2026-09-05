@@ -1,3 +1,9 @@
+pub use animations::animation::{Animation, Repeat};
+pub use animations::keyframe::KeyFrame;
+pub use animations::timing_function::TimingFunction;
+pub use box_shadow::BoxShadow;
+pub use styles::*;
+
 use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Debug;
@@ -5,12 +11,6 @@ use std::fmt::Debug;
 use parley::GenericFamily;
 
 use retgui_primitives::brush::Brush;
-
-pub use animations::animation::{Animation, Repeat};
-pub use animations::keyframe::KeyFrame;
-pub use animations::timing_function::TimingFunction;
-pub use box_shadow::BoxShadow;
-pub use styles::*;
 
 mod animations;
 mod box_shadow;

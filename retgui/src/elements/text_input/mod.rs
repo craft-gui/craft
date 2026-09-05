@@ -1,19 +1,17 @@
-mod text_input_state;
-
-use retgui_primitives::Color;
-use retgui_primitives::geometry::{Rectangle, TrblRectangle};
-use retgui_renderer::text_renderer_data::{TextData, TextScroll};
 use std::sync::Arc;
 use std::time::Duration;
 
 use parley::BoundingBox;
 
-use winit::keyboard::{Key, NamedKey};
+use retgui_primitives::Color;
+use retgui_primitives::geometry::{Rectangle, TrblRectangle};
 
+use retgui_renderer::text_renderer_data::{TextData, TextScroll};
 use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::ResourceManager;
 
+use winit::keyboard::{Key, NamedKey};
 use winit::dpi::{LogicalPosition, LogicalSize};
 use winit::event::{Ime, MouseButton as PointerButton};
 use winit::window::{ImeCapabilities, ImeEnableRequest, ImeHint, ImePurpose, ImeRequest, ImeRequestData};
@@ -29,6 +27,8 @@ use crate::style::{Display, Style, Unit};
 use crate::text::RangedStyles;
 use crate::text::text_context::TextContext;
 use crate::text::text_render_data::TextRender;
+
+mod text_input_state;
 
 /// Editable text area.
 #[derive(Clone, Copy)]

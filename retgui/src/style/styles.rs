@@ -1,11 +1,12 @@
 use std::borrow::Cow;
 use std::fmt::Debug;
 
-use crate::style::box_shadow::BoxShadow;
-use crate::style::*;
 use retgui_primitives::Color;
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::TrblRectangle;
+
+use crate::style::box_shadow::BoxShadow;
+use crate::style::*;
 
 /// An enum of all styles.
 #[derive(Clone, Debug)]

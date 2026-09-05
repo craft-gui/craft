@@ -1,6 +1,9 @@
+pub use syntect;
+
 use std::rc::Rc;
 
-pub use syntect;
+use retgui_primitives::brush::Brush;
+
 use syntect::dumps::from_reader;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
@@ -11,7 +14,6 @@ use crate::Color;
 use crate::style::TextStyleProperty::{FontStyle as PropFontStyle, UnderlineSize};
 use crate::style::{FontStyle, FontWeight, TextStyleProperty};
 use crate::text::RangedStyles;
-use retgui_primitives::brush::Brush;
 
 const DEFAULT_SYNTAX_PACK: &[u8] = include_bytes!("../../../../syntect_dumper/pack.dump");
 const DEFAULT_THEME_PACK: &[u8] = include_bytes!("../../../../syntect_dumper/theme_pack.dump");

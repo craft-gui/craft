@@ -1,6 +1,7 @@
-use retgui_resource_manager::{ResourceId as RetGuiResourceId, ResourceId};
 use std::collections::HashMap;
 use std::collections::hash_map::Values;
+
+use retgui_resource_manager::{ResourceId as RetGuiResourceId, ResourceId};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct RendererResourceId(pub u64);

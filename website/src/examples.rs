@@ -1,13 +1,3 @@
-#[allow(dead_code)]
-#[path = "../../examples/counter/main.rs"]
-pub mod counter;
-#[allow(dead_code)]
-#[path = "../../examples/pointer_events/main.rs"]
-mod pointer_events;
-#[allow(dead_code)]
-#[path = "../../examples/text/main.rs"]
-mod text;
-
 use std::rc::Rc;
 
 use retgui::elements::{Container, Element, Elements, State, Text};
@@ -18,6 +8,16 @@ use retgui::{palette, pct, px};
 use crate::WebsiteGlobalState;
 use crate::router::NavigateFn;
 use crate::theme::{ACTIVE_LINK_COLOR, DEFAULT_LINK_COLOR, wrapper};
+
+#[allow(dead_code)]
+#[path = "../../examples/counter/main.rs"]
+pub mod counter;
+#[allow(dead_code)]
+#[path = "../../examples/pointer_events/main.rs"]
+mod pointer_events;
+#[allow(dead_code)]
+#[path = "../../examples/text/main.rs"]
+mod text;
 
 const COUNTER: &str = "/examples/counter";
 const POINTER_EVENTS: &str = "/examples/pointer-events";

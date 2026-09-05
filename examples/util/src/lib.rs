@@ -17,10 +17,12 @@ pub fn setup_logging() {
         std::panic::set_hook(Box::new(console_error_panic_hook::hook));
 
         use tracing::level_filters::LevelFilter;
+
         use tracing_subscriber::Layer;
         use tracing_subscriber::fmt::format::Pretty;
         use tracing_subscriber::layer::SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
+
         use tracing_web::{MakeWebConsoleWriter, performance_layer};
 
         let fmt_layer = tracing_subscriber::fmt::layer()
@@ -36,6 +38,7 @@ pub fn setup_logging() {
     #[cfg(not(target_arch = "wasm32"))]
     {
         use tracing_subscriber::fmt::format::FmtSpan;
+
         tracing_subscriber::fmt()
             .with_max_level(tracing::Level::INFO)
             .with_span_events(FmtSpan::CLOSE)

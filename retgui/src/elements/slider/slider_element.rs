@@ -1,7 +1,8 @@
-use peniko::Color;
-use retgui_primitives::geometry::{Point, Rectangle};
 use std::sync::Arc;
 
+use peniko::Color;
+
+use retgui_primitives::geometry::{Point, Rectangle};
 use retgui_primitives::brush::Brush;
 use retgui_primitives::gradient::Gradient;
 

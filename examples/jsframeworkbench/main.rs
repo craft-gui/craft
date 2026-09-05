@@ -304,6 +304,7 @@ fn main() {
         .finish();
 
     use retgui::RetGuiOptions;
+
     retgui::retgui_main(elements, RetGuiOptions::basic("jsframeworkbench"));
 }
 

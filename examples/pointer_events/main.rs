@@ -200,6 +200,7 @@ fn main() {
         .finish();
 
     use retgui::RetGuiOptions;
+
     //util::setup_logging();
     retgui::retgui_main(elements, RetGuiOptions::basic("Pointer Events"));
 }

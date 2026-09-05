@@ -5,7 +5,9 @@ use std::path::Path;
 use std::process::Command;
 
 use clap::Parser;
+
 use kompari::DirDiffConfig;
+
 use kompari_tasks::{Actions, Args, Task};
 
 struct ActionsImpl();

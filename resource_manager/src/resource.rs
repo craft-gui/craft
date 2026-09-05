@@ -1,6 +1,8 @@
-use crate::resource_type::ResourceType;
-use jiff::Timestamp;
 use std::any::Any;
+
+use jiff::Timestamp;
+
+use crate::resource_type::ResourceType;
 
 #[derive(Debug)]
 pub struct Resource {

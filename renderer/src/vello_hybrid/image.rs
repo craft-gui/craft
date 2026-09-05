@@ -2,10 +2,16 @@ use std::sync::Arc;
 
 use kurbo::Affine;
 
+use retgui_resource_manager::ResourceManager;
+use retgui_resource_manager::image::ImageResource;
+use retgui_resource_manager::resource::Resource;
+use retgui_resource_manager::resource_type::ResourceType;
+
 use vello_common::kurbo;
 use vello_common::paint::{ImageId, ImageSource, PaintType};
 use vello_common::peniko::ImageAlphaType;
 use vello_common::pixmap::{PixelMetadata, Pixmap};
+
 use vello_hybrid::{Renderer as VelloRenderer, Resources, Scene};
 
 use wgpu::CommandEncoder;
@@ -13,10 +19,6 @@ use wgpu::CommandEncoder;
 use crate::render_command::DrawImageCmd;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use crate::vello_hybrid::render_context::DeviceHandle;
-use retgui_resource_manager::ResourceManager;
-use retgui_resource_manager::image::ImageResource;
-use retgui_resource_manager::resource::Resource;
-use retgui_resource_manager::resource_type::ResourceType;
 
 pub(crate) fn upload_image(
     cmd: &DrawImageCmd,

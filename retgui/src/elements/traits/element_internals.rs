@@ -1,13 +1,8 @@
-use issho::{AccessEvent, IsshoError};
 use std::any::Any;
 use std::sync::Arc;
 use std::time::Duration;
 
-#[cfg(not(target_arch = "wasm32"))]
-pub type AnimationInstant = std::time::Instant;
-
-#[cfg(target_arch = "wasm32")]
-pub type AnimationInstant = web_time::Instant;
+use issho::{AccessEvent, IsshoError};
 
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Affine, ElementBox, Point, TrblRectangle};
@@ -17,7 +12,6 @@ use retgui_renderer::renderer::Renderer;
 use retgui_resource_manager::ResourceManager;
 
 use crate::events::PointerId;
-
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
 use crate::elements::{DynElement, Elements, HasElementData, ScrollOptions, WindowElement};
 use crate::events::pointer_capture::PointerCapture;
@@ -26,6 +20,12 @@ use crate::layout::GummyTree;
 use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, StyleVariant, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
 use crate::{Color, RetGuiError};
+
+#[cfg(not(target_arch = "wasm32"))]
+pub type AnimationInstant = std::time::Instant;
+
+#[cfg(target_arch = "wasm32")]
+pub type AnimationInstant = web_time::Instant;
 
 /// When an element needs its next animation update.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -1408,8 +1408,8 @@ fn restore_unfocused_outline(data: &mut crate::elements::element_data::ElementDa
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::elements::{Button, Element, Elements};
+    use super::*;
 
     #[test]
     fn outline_changes_while_focused_are_restored_on_unfocus() {

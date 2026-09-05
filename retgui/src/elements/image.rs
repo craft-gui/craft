@@ -2,10 +2,9 @@
 
 use std::sync::Arc;
 
-use retgui_resource_manager::{ResourceId, ResourceManager};
-
 use retgui_renderer::renderer::Renderer;
 
+use retgui_resource_manager::{ResourceId, ResourceManager};
 use retgui_resource_manager::resource_type::ResourceType;
 
 use crate::elements::element_data::ElementData;

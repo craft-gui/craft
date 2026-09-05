@@ -3,9 +3,9 @@ use std::str::FromStr;
 
 use pulldown_cmark::{Event, HeadingLevel, Tag, TagEnd};
 
-use retgui_resource_manager::ResourceId;
-
 use retgui_primitives::brush::Brush;
+
+use retgui_resource_manager::ResourceId;
 
 use crate::elements::{CodeEditor, Container, DynElement, Element, Elements, Image, Text, TextInput};
 use crate::style::{Display, FlexDirection, FontStyle, FontWeight, TextStyleProperty, Unit};

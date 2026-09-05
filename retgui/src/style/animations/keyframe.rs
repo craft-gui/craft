@@ -1,5 +1,6 @@
-use crate::style::StyleVariant;
 use smallvec::SmallVec;
+
+use crate::style::StyleVariant;
 
 /// A fixed point in an Animation that will be used to interpolate all other values.
 #[derive(Clone, Debug)]

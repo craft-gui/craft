@@ -10,7 +10,9 @@ use retgui::events::Event;
 use retgui::geometry::Point;
 use retgui::style::{AlignItems, Animation, BoxShadow, Display, FlexDirection, FontStyle, FontWeight, JustifyContent, KeyFrame, Overflow, Position, Repeat, StyleVariant, TextAlign, TimingFunction};
 use retgui::{Brush, Color, ColorStop, Gradient, ResourceId, RetGuiOptions, auto, pct, px, retgui_main, rgb, rgba};
+
 use serde::Deserialize;
+
 use util::setup_logging;
 
 pub fn title(elements: &mut Elements, value: &str) -> Text {
