@@ -8,7 +8,7 @@ sys-locale = "0.3.2"
 
 icu_calendar = { version = "2.2", features = ["alloc"] }
 icu_datetime = "2.2"
-icu_locale = "2.2"
+icu_locale_core = { version = "2.2", default-features = false, features = ["alloc"] }
 
 jiff.workspace = true
 

@@ -15,7 +15,7 @@ use icu_datetime::{FixedCalendarDateTimeFormatter, fieldsets};
 
 pub use icu_calendar::options::DateAddOptions;
 pub use icu_calendar::types::{DateDuration, EraYear, Month, Weekday, YearInfo};
-pub use icu_locale::Locale;
+pub use icu_locale_core::Locale;
 
 /// Returns the first day of the week for the current system user.
 ///

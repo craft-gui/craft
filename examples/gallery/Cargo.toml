@@ -18,7 +18,7 @@ util = { path = "../util" }
 [dependencies.reqwest]
 workspace = true
 default-features = false
-features = ["json", "rustls"]
+features = ["json"]
 
 [dependencies.retgui]
 path = "../../retgui"

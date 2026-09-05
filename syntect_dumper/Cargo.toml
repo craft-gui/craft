@@ -9,9 +9,17 @@ edition.workspace = true
 workspace = true
 features = ["blocking"]
 
+[target.'cfg(not(target_os = "android"))'.dependencies.reqwest]
+workspace = true
+features = ["native-tls"]
+
+[target.'cfg(target_os = "android")'.dependencies.reqwest]
+workspace = true
+features = ["rustls"]
+
 [dependencies.syntect]
 workspace = true
-features = ["dump-create"]
+features = ["dump-create", "yaml-load", "plist-load", "regex-fancy"]
 
 [[bin]]
 name = "syntect-dumper"

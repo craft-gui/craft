@@ -1,4 +1,4 @@
-use icu_locale::Locale;
+use icu_locale_core::Locale;
 
 pub fn get_locale_string() -> Option<String> {
     sys_locale::get_locale()
