@@ -296,39 +296,6 @@ impl Elements {
         });
     }
 
-    pub(crate) fn sync_layout_dirtiness(&mut self) {
-        let mut changes = Vec::new();
-        for (_, element) in self.elements.iter_mut() {
-            let Some(element) = element.as_deref_mut() else {
-                continue;
-            };
-            let data = element.element_data_mut();
-            if let Some(node) = data.layout.gummy_node_id
-                && (data.layout_dirty || data.layout_style_dirty || data.apply_layout_dirty)
-            {
-                changes.push((
-                    node,
-                    data.layout_dirty,
-                    data.layout_style_dirty.then(|| data.style.to_gummy_style()),
-                    data.apply_layout_dirty,
-                ));
-                data.layout_dirty = false;
-                data.layout_style_dirty = false;
-                data.apply_layout_dirty = false;
-            }
-        }
-        for (node, dirty, style, apply_dirty) in changes {
-            if let Some(style) = style {
-                self.gummy_tree.set_style(node, style);
-            } else if dirty {
-                self.gummy_tree.mark_dirty(node);
-            }
-            if apply_dirty {
-                self.gummy_tree.request_apply_layout(node);
-            }
-        }
-    }
-
     pub(crate) fn with_window_manager<R>(
         &mut self,
         callback: impl FnOnce(&mut WindowManager, &mut Elements) -> R,

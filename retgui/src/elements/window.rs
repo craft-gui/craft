@@ -252,7 +252,11 @@ impl Window {
     }
 
     pub(crate) fn on_resize(&self, elements: &mut Elements, new_size: Size<f32>) {
-        elements.get_as_mut::<WindowNode>(self.inner).on_resize(new_size)
+        elements.with_gummy_tree(|gummy_tree, elements| {
+            elements
+                .get_as_mut::<WindowNode>(self.inner)
+                .on_resize(gummy_tree, new_size)
+        })
     }
 
     pub(crate) fn set_mouse_position(&self, elements: &mut Elements, point: Option<Point>) {
@@ -265,7 +269,6 @@ impl Window {
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
     ) {
-        elements.sync_layout_dirtiness();
         elements.dispatch_mut(self.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
                 .downcast_mut::<WindowNode>()
@@ -542,11 +545,11 @@ impl WindowNode {
         self.mouse_positon
     }
 
-    pub(crate) fn on_resize(&mut self, new_size: Size<f32>) {
+    pub(crate) fn on_resize(&mut self, gummy_tree: &mut GummyTree, new_size: Size<f32>) {
         if self.window_size.width == new_size.width && self.window_size.height == new_size.height {
             return;
         }
-        self.mark_dirty();
+        self.mark_dirty(gummy_tree);
 
         self.window_size = new_size;
         self.resize_renderer_surface();
@@ -554,10 +557,15 @@ impl WindowNode {
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub(crate) fn on_renderer_created(&mut self, renderer: Box<dyn Renderer>, new_size: Size<f32>) {
+    pub(crate) fn on_renderer_created(
+        &mut self,
+        gummy_tree: &mut GummyTree,
+        renderer: Box<dyn Renderer>,
+        new_size: Size<f32>,
+    ) {
         self.renderer = renderer;
         if self.window_size.width != new_size.width || self.window_size.height != new_size.height {
-            self.mark_dirty();
+            self.mark_dirty(gummy_tree);
             self.window_size = new_size;
         }
         self.resize_renderer_surface();

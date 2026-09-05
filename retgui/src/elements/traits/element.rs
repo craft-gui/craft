@@ -384,19 +384,25 @@ pub trait Element: Copy {
 
     /// Sets the layout algorith e.g. block, flex, etc.
     fn set_display(&self, elements: &mut Elements, display: Display) {
-        with_element_mut(*self, elements, |element, _elements| element.set_display(display));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_display(&mut elements.gummy_tree, display)
+        });
     }
 
     /// Sets the box sizing e.g. content box/border box.
     fn set_box_sizing(&self, elements: &mut Elements, box_sizing: BoxSizing) {
-        with_element_mut(*self, elements, |element, _elements| element.set_box_sizing(box_sizing));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_box_sizing(&mut elements.gummy_tree, box_sizing)
+        });
     }
 
     /// Sets the position of the element.
     ///
     /// Unlike HTML, this has no effect on the visual order of the element.
     fn set_position(&self, elements: &mut Elements, position: Position) {
-        with_element_mut(*self, elements, |element, _elements| element.set_position(position));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_position(&mut elements.gummy_tree, position)
+        });
     }
 
     /// Puts the element on top of other elements.
@@ -411,176 +417,208 @@ pub trait Element: Copy {
 
     /// Sets the non interactable/visual space surrounding the element.
     fn set_margin(&self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_margin(top, right, bottom, left)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_margin(&mut elements.gummy_tree, top, right, bottom, left)
         });
     }
 
     /// Sets the non interactable/visual space surrounding the element.
     fn set_margin_all(&self, elements: &mut Elements, value: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_margin_all(value));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_margin_all(&mut elements.gummy_tree, value)
+        });
     }
 
     /// Sets the non interactable/visual space surrounding the element.
     fn set_margin_vertical(&self, elements: &mut Elements, value: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_margin_vertical(value));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_margin_vertical(&mut elements.gummy_tree, value)
+        });
     }
 
     /// Sets the non interactable/visual space surrounding the element.
     fn set_margin_horizontal(&self, elements: &mut Elements, value: Unit) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_margin_horizontal(value)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_margin_horizontal(&mut elements.gummy_tree, value)
         });
     }
 
     /// Sets the interactable/visual space surrounding the element's content.
     fn set_padding(&self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_padding(top, right, bottom, left)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_padding(&mut elements.gummy_tree, top, right, bottom, left)
         });
     }
 
     /// Sets the interactable/visual space surrounding the element's content.
     fn set_padding_all(&self, elements: &mut Elements, value: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_padding_all(value));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_padding_all(&mut elements.gummy_tree, value)
+        });
     }
 
     /// Sets the interactable/visual space surrounding the element's content.
     fn set_padding_vertical(&self, elements: &mut Elements, value: Unit) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_padding_vertical(value)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_padding_vertical(&mut elements.gummy_tree, value)
         });
     }
 
     /// Sets the interactable/visual space surrounding the element's content.
     fn set_padding_horizontal(&self, elements: &mut Elements, value: Unit) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_padding_horizontal(value)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_padding_horizontal(&mut elements.gummy_tree, value)
         });
     }
 
     /// Sets the gap between children for flex/grid containers.
     fn set_gap(&self, elements: &mut Elements, row_gap: Unit, column_gap: Unit) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_gap(row_gap, column_gap)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_gap(&mut elements.gummy_tree, row_gap, column_gap)
         });
     }
 
     /// Sets the row gap between children for flex/grid containers.
     fn set_row_gap(&self, elements: &mut Elements, value: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_row_gap(value));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_row_gap(&mut elements.gummy_tree, value)
+        });
     }
 
     /// Sets the column gap between children for flex/grid containers.
     fn set_column_gap(&self, elements: &mut Elements, value: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_column_gap(value));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_column_gap(&mut elements.gummy_tree, value)
+        });
     }
 
     /// Align the element relative to its sides. Only applies to positioned elements.
     fn set_inset(&self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_inset(top, right, bottom, left)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_inset(&mut elements.gummy_tree, top, right, bottom, left)
         });
     }
 
     /// Sets the minium width of the element.
     fn set_min_width(&self, elements: &mut Elements, min_width: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_min_width(min_width));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_min_width(&mut elements.gummy_tree, min_width)
+        });
     }
 
     /// Sets the minium height of the element.
     fn set_min_height(&self, elements: &mut Elements, min_height: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_min_height(min_height));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_min_height(&mut elements.gummy_tree, min_height)
+        });
     }
 
     /// Sets the width of the element.
     fn set_width(&self, elements: &mut Elements, width: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_width(width));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_width(&mut elements.gummy_tree, width)
+        });
     }
 
     /// Sets the height of the element.
     fn set_height(&self, elements: &mut Elements, height: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_height(height));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_height(&mut elements.gummy_tree, height)
+        });
     }
 
     /// Sets the max width of the element.
     fn set_max_width(&self, elements: &mut Elements, max_width: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_max_width(max_width));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_max_width(&mut elements.gummy_tree, max_width)
+        });
     }
 
     /// Sets the max height of the element.
     fn set_max_height(&self, elements: &mut Elements, max_height: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_max_height(max_height));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_max_height(&mut elements.gummy_tree, max_height)
+        });
     }
 
     /// Sets the wrapping behavior for flex elements.
     fn set_wrap(&self, elements: &mut Elements, wrap: FlexWrap) {
-        with_element_mut(*self, elements, |element, _elements| element.set_wrap(wrap));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_wrap(&mut elements.gummy_tree, wrap)
+        });
     }
 
     /// Determines how flex/grid children are laid out on the cross axis.
     fn set_align_items(&self, elements: &mut Elements, align_items: AlignItems) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_align_items(align_items)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_align_items(&mut elements.gummy_tree, align_items)
         });
     }
 
     /// Overrides a parent's align_items.
     fn set_align_self(&self, elements: &mut Elements, align_self: AlignSelf) {
-        with_element_mut(*self, elements, |element, _elements| element.set_align_self(align_self));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_align_self(&mut elements.gummy_tree, align_self)
+        });
     }
 
     fn set_align_content(&self, elements: &mut Elements, align_content: AlignContent) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_align_content(align_content)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_align_content(&mut elements.gummy_tree, align_content)
         });
     }
 
     fn set_justify_content(&self, elements: &mut Elements, justify_content: JustifyContent) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_justify_content(justify_content)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_justify_content(&mut elements.gummy_tree, justify_content)
         });
     }
 
     fn set_flex_direction(&self, elements: &mut Elements, flex_direction: FlexDirection) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_flex_direction(flex_direction)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_flex_direction(&mut elements.gummy_tree, flex_direction)
         });
     }
 
     fn set_flex_grow(&self, elements: &mut Elements, flex_grow: f32) {
-        with_element_mut(*self, elements, |element, _elements| element.set_flex_grow(flex_grow));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_flex_grow(&mut elements.gummy_tree, flex_grow)
+        });
     }
 
     fn set_flex_shrink(&self, elements: &mut Elements, flex_shrink: f32) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_flex_shrink(flex_shrink)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_flex_shrink(&mut elements.gummy_tree, flex_shrink)
         });
     }
 
     fn set_flex_basis(&self, elements: &mut Elements, flex_basis: Unit) {
-        with_element_mut(*self, elements, |element, _elements| element.set_flex_basis(flex_basis));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_flex_basis(&mut elements.gummy_tree, flex_basis)
+        });
     }
 
     fn set_order(&self, elements: &mut Elements, order: i32) {
-        with_element_mut(*self, elements, |element, _elements| element.set_order(order));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_order(&mut elements.gummy_tree, order)
+        });
     }
 
     fn set_font_family(&self, elements: &mut Elements, font_family: FontFamily) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_font_family(font_family)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_font_family(&mut elements.gummy_tree, font_family)
         });
     }
 
     fn set_color(&self, elements: &mut Elements, color: Color) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_text_brush(Brush::Color(color))
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_text_brush(&mut elements.gummy_tree, Brush::Color(color))
         });
     }
 
     fn set_text_gradient(&self, elements: &mut Elements, gradient: Gradient) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_text_brush(Brush::Gradient(gradient))
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_text_brush(&mut elements.gummy_tree, Brush::Gradient(gradient))
         });
     }
 
@@ -597,36 +635,45 @@ pub trait Element: Copy {
     }
 
     fn set_font_size(&self, elements: &mut Elements, font_size: f32) {
-        with_element_mut(*self, elements, |element, _elements| element.set_font_size(font_size));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_font_size(&mut elements.gummy_tree, font_size)
+        });
     }
 
     fn set_line_height(&self, elements: &mut Elements, line_height: f32) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_line_height(line_height)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_line_height(&mut elements.gummy_tree, line_height)
         });
     }
 
     fn set_font_weight(&self, elements: &mut Elements, font_weight: FontWeight) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_font_weight(font_weight)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_font_weight(&mut elements.gummy_tree, font_weight)
         });
     }
 
     fn set_font_style(&self, elements: &mut Elements, font_style: FontStyle) {
-        with_element_mut(*self, elements, |element, _elements| element.set_font_style(font_style));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_font_style(&mut elements.gummy_tree, font_style)
+        });
     }
 
     fn set_text_align(&self, elements: &mut Elements, text_align: TextAlign) {
-        with_element_mut(*self, elements, |element, _elements| element.set_text_align(text_align));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_text_align(&mut elements.gummy_tree, text_align)
+        });
     }
 
     fn set_underline(&self, elements: &mut Elements, thickness: Option<f32>, color: Color, offset: Option<f32>) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_underline(Some(Underline {
-                thickness,
-                brush: Brush::Color(color),
-                offset,
-            }))
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_underline(
+                &mut elements.gummy_tree,
+                Some(Underline {
+                    thickness,
+                    brush: Brush::Color(color),
+                    offset,
+                }),
+            )
         });
     }
 
@@ -637,27 +684,34 @@ pub trait Element: Copy {
         gradient: Gradient,
         offset: Option<f32>,
     ) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_underline(Some(Underline {
-                thickness,
-                brush: Brush::Gradient(gradient),
-                offset,
-            }))
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_underline(
+                &mut elements.gummy_tree,
+                Some(Underline {
+                    thickness,
+                    brush: Brush::Gradient(gradient),
+                    offset,
+                }),
+            )
         });
     }
 
     fn set_overflow(&self, elements: &mut Elements, overflow_x: Overflow, overflow_y: Overflow) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_overflow(overflow_x, overflow_y)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_overflow(&mut elements.gummy_tree, overflow_x, overflow_y)
         });
     }
 
     fn set_overflow_x(&self, elements: &mut Elements, overflow_x: Overflow) {
-        with_element_mut(*self, elements, |element, _elements| element.set_overflow_x(overflow_x));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_overflow_x(&mut elements.gummy_tree, overflow_x)
+        });
     }
 
     fn set_overflow_y(&self, elements: &mut Elements, overflow_y: Overflow) {
-        with_element_mut(*self, elements, |element, _elements| element.set_overflow_y(overflow_y));
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_overflow_y(&mut elements.gummy_tree, overflow_y)
+        });
     }
 
     fn set_border_color(&self, elements: &mut Elements, top: Color, right: Color, bottom: Color, left: Color) {
@@ -685,26 +739,26 @@ pub trait Element: Copy {
     }
 
     fn set_border_width(&self, elements: &mut Elements, top: Unit, right: Unit, bottom: Unit, left: Unit) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_border_width(top, right, bottom, left)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_border_width(&mut elements.gummy_tree, top, right, bottom, left)
         });
     }
 
     fn set_border_width_all(&self, elements: &mut Elements, value: Unit) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_border_width_all(value)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_border_width_all(&mut elements.gummy_tree, value)
         });
     }
 
     fn set_border_width_vertical(&self, elements: &mut Elements, value: Unit) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_border_width_vertical(value)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_border_width_vertical(&mut elements.gummy_tree, value)
         });
     }
 
     fn set_border_width_horizontal(&self, elements: &mut Elements, value: Unit) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_border_width_horizontal(value)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_border_width_horizontal(&mut elements.gummy_tree, value)
         });
     }
 
@@ -794,8 +848,8 @@ pub trait Element: Copy {
     }
 
     fn set_scrollbar_thumb_margin(&self, elements: &mut Elements, top: f32, right: f32, bottom: f32, left: f32) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_scrollbar_thumb_margin(top, right, bottom, left)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_scrollbar_thumb_margin(&mut elements.gummy_tree, top, right, bottom, left)
         });
     }
 
@@ -807,14 +861,14 @@ pub trait Element: Copy {
         bottom: (f32, f32),
         left: (f32, f32),
     ) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_scrollbar_thumb_radius(top, right, bottom, left)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_scrollbar_thumb_radius(&mut elements.gummy_tree, top, right, bottom, left)
         });
     }
 
     fn set_scrollbar_width(&self, elements: &mut Elements, scrollbar_width: f32) {
-        with_element_mut(*self, elements, |element, _elements| {
-            element.set_scrollbar_width(scrollbar_width)
+        with_element_mut(*self, elements, |element, elements| {
+            element.set_scrollbar_width(&mut elements.gummy_tree, scrollbar_width)
         });
     }
 

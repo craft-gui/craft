@@ -222,24 +222,25 @@ impl SliderNode {
         });
 
         elements.create_layout_node(me, None);
-        let element = elements.get_as_mut::<Self>(me);
-        element.element_data.set_accessibility_role(issho::Role::Slider);
-        element.set_background_brush(Brush::Color(palette::css::LIGHT_GRAY));
-        let border_radius = 25.0;
-        element.set_border_radius(
-            (border_radius, border_radius),
-            (border_radius, border_radius),
-            (border_radius, border_radius),
-            (border_radius, border_radius),
-        );
-        if element.direction == SliderDirection::Horizontal {
-            element.set_width(Unit::Px(140.0));
-            element.set_height(Unit::Px(10.0));
-        } else {
-            element.set_height(Unit::Px(140.0));
-            element.set_width(Unit::Px(10.0));
-        }
-
+        elements.with_gummy_tree(|gummy_tree, elements| {
+            let element = elements.get_as_mut::<Self>(me);
+            element.element_data.set_accessibility_role(issho::Role::Slider);
+            element.set_background_brush(Brush::Color(palette::css::LIGHT_GRAY));
+            let border_radius = 25.0;
+            element.set_border_radius(
+                (border_radius, border_radius),
+                (border_radius, border_radius),
+                (border_radius, border_radius),
+                (border_radius, border_radius),
+            );
+            if element.direction == SliderDirection::Horizontal {
+                element.set_width(gummy_tree, Unit::Px(140.0));
+                element.set_height(gummy_tree, Unit::Px(10.0));
+            } else {
+                element.set_height(gummy_tree, Unit::Px(140.0));
+                element.set_width(gummy_tree, Unit::Px(10.0));
+            }
+        });
         me
     }
 

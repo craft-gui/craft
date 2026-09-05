@@ -174,8 +174,8 @@ impl Calendar {
                 inner.week_grid.push(elements, week);
             }
             inner.update_calendar(elements);
-            inner.set_display(Display::Flex);
-            inner.set_flex_direction(FlexDirection::Column);
+            inner.set_display(&mut elements.gummy_tree, Display::Flex);
+            inner.set_flex_direction(&mut elements.gummy_tree, FlexDirection::Column);
             inner.nav.set_display(elements, Display::Flex);
             inner.nav.set_justify_content(elements, JustifyContent::SpaceAround);
             inner.nav.set_align_items(elements, AlignItems::Center);

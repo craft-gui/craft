@@ -40,8 +40,7 @@ where
         let node_id = data.layout.gummy_node_id_mut();
         *node_id = tree.clone_node(*node_id);
         tree.register_owner(*node_id, data.internal_id, new_element);
-        data.layout_dirty = true;
-        data.apply_layout_dirty = true;
+        tree.mark_dirty(*node_id);
         (
             data.access_tree.clone(),
             data.access_key.unwrap(),
@@ -73,6 +72,6 @@ where
         children.push(cloned_child);
     }
     elements.get_mut(new_element).element_data_mut().children = children;
-    elements.get_mut(new_element).element_data_mut().apply_layout_dirty = true;
+    elements.gummy_tree.request_apply_layout(node_id);
     new_element
 }

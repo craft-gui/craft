@@ -14,7 +14,7 @@ use retgui_renderer::text_renderer_data::{TextData, TextSnapshot};
 use web_time::{Duration, Instant};
 
 use crate::Color;
-use crate::elements::{ElementNode, ElementNodeData as _, Elements, Text, TextNode};
+use crate::elements::{Element, ElementNode, ElementNodeData as _, Elements, Text, TextNode};
 use crate::text::text_context::TextContext;
 
 const FPS_SAMPLE_INTERVAL: Duration = Duration::from_millis(250);
@@ -107,11 +107,8 @@ impl PerfStats {
     pub(crate) fn new(elements: &mut Elements) -> Self {
         let text = Text::new(elements, "");
         text.set_selectable(elements, false);
-        {
-            let text_inner = elements.get_as_mut::<TextNode>(text.inner);
-            text_inner.set_font_size(16.0);
-            text_inner.set_text_brush(Brush::Color(Color::WHITE));
-        }
+        text.set_font_size(elements, 16.0);
+        text.set_color(elements, Color::WHITE);
 
         let mut stats = Self {
             enabled: false,
@@ -191,7 +188,7 @@ impl PerfStats {
         self.layout = LayoutStats::default();
         self.render = RenderStats::default();
         let debug_text = self.debug_text(0.0);
-        elements.get_as_mut::<TextNode>(self.text.inner).set_text(&debug_text);
+        self.text.set_text(elements, &debug_text);
     }
 
     fn update_debug_text(&mut self, elements: &mut Elements) {
@@ -205,7 +202,7 @@ impl PerfStats {
         self.frames_since_sample = 0;
         self.sample_start = Instant::now();
         let debug_text = self.debug_text(fps);
-        elements.get_as_mut::<TextNode>(self.text.inner).set_text(&debug_text);
+        self.text.set_text(elements, &debug_text);
     }
 
     fn debug_text(&self, fps: f64) -> String {

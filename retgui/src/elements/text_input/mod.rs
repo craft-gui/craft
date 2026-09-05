@@ -103,16 +103,20 @@ impl TextInput {
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
     pub fn set_text(&self, elements: &mut Elements, text: &str) {
-        if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
-            input.set_text(text);
-        }
+        elements.with_gummy_tree(|gummy_tree, elements| {
+            if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
+                input.set_text(gummy_tree, text);
+            }
+        });
     }
 
     /// Styles the text along ranges.
     pub fn set_ranged_styles(&self, elements: &mut Elements, ranged_styles: RangedStyles) {
-        if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
-            input.set_ranged_styles(ranged_styles);
-        }
+        elements.with_gummy_tree(|gummy_tree, elements| {
+            if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
+                input.set_ranged_styles(gummy_tree, ranged_styles);
+            }
+        });
     }
 
     /// Returns the ranged styles.
@@ -303,7 +307,7 @@ impl ElementNode for TextInputNode {
                         return;
                     }
                     self.state.paste(text_context);
-                    self.mark_dirty();
+                    self.mark_dirty(&mut elements.gummy_tree);
                     //generate_text_changed_event(&mut self.state.editor);
                 }
                 TextInputMessage::Cut => {
@@ -311,7 +315,7 @@ impl ElementNode for TextInputNode {
                         return;
                     }
                     self.state.cut(text_context);
-                    self.mark_dirty();
+                    self.mark_dirty(&mut elements.gummy_tree);
                 }
             }
         }
@@ -383,9 +387,11 @@ impl ElementNode for TextInputNode {
         }
 
         if self.state.is_layout_dirty {
-            self.mark_dirty();
+            self.mark_dirty(&mut elements.gummy_tree);
         } else if self.state.editor().generation() != editor_generation {
-            self.element_data.apply_layout_dirty = true;
+            if let Some(node) = self.element_data.layout.gummy_node_id {
+                elements.gummy_tree.request_apply_layout(node);
+            }
             self.request_window_redraw();
         }
         {
@@ -416,11 +422,11 @@ impl ElementNode for TextInputNode {
         style
     }
 
-    fn set_scale_factor(&mut self, _elements: &mut Elements, scale_factor: f64) {
+    fn set_scale_factor(&mut self, elements: &mut Elements, scale_factor: f64) {
         self.element_data.applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         self.state.set_scale_factor(scale_factor);
-        self.mark_dirty();
+        self.mark_dirty(&mut elements.gummy_tree);
     }
 
     fn on_text_style_changed(&mut self) {
@@ -428,8 +434,8 @@ impl ElementNode for TextInputNode {
         self.state.set_style(&style);
     }
 
-    fn animation_tick(&mut self, _elements: &mut Elements, delta: Duration) -> AnimationSchedule {
-        let mut schedule = self.tick_style_animations(delta);
+    fn animation_tick(&mut self, elements: &mut Elements, delta: Duration) -> AnimationSchedule {
+        let mut schedule = self.tick_style_animations(&mut elements.gummy_tree, delta);
         if self.is_focused() && self.state.editor().raw_selection().is_collapsed() {
             if !self.state.is_blinking() {
                 self.state.reset_blink();
@@ -541,13 +547,13 @@ impl TextInputNode {
             inner_mut.element_data.set_accessibility_role(issho::Role::TextInput);
             inner_mut.element_data.set_accessibility_enabled(true);
         }
-        inner_mut.set_text(text);
 
         let context = Some(LayoutContext::TextInput(GummyTextInputContext {
             element: inner_mut.element_data.me,
         }));
         let _ = inner_mut;
         elements.create_layout_node(inner, context);
+        TextInput { inner }.set_text(elements, text);
 
         let inner_mut = elements.get_as_mut::<TextInputNode>(inner);
         let gummy_id = inner_mut.element_data.layout.gummy_node_id;
@@ -572,16 +578,16 @@ impl TextInputNode {
     ///
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
-    pub fn set_text(&mut self, text: &str) -> &mut Self {
+    pub fn set_text(&mut self, gummy_tree: &mut GummyTree, text: &str) -> &mut Self {
         self.state.set_text(text);
-        self.mark_dirty();
+        self.mark_dirty(gummy_tree);
         self.element_data.set_accessibility_value(text.to_owned());
         self
     }
 
-    pub fn set_ranged_styles(&mut self, ranged_styles: RangedStyles) -> &mut Self {
+    pub fn set_ranged_styles(&mut self, gummy_tree: &mut GummyTree, ranged_styles: RangedStyles) -> &mut Self {
         self.state.set_ranged_styles(ranged_styles);
-        self.mark_dirty();
+        self.mark_dirty(gummy_tree);
         self
     }
 }

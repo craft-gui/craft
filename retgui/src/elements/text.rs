@@ -300,16 +300,16 @@ impl ElementNode for TextNode {
         }
     }
 
-    fn set_scale_factor(&mut self, _elements: &mut Elements, scale_factor: f64) {
+    fn set_scale_factor(&mut self, elements: &mut Elements, scale_factor: f64) {
         self.element_data.applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
-        self.mark_dirty();
+        self.mark_dirty(&mut elements.gummy_tree);
         self.state.scale_factor = scale_factor;
     }
 
-    fn set_text_brush(&mut self, brush: Brush) {
+    fn set_text_brush(&mut self, _gummy_tree: &mut GummyTree, brush: Brush) {
         self.style_mut().set_text_brush(brush.clone());
         self.state.override_brush = Some(brush);
         self.state.refresh_text_snapshot();
@@ -321,7 +321,7 @@ impl ElementNode for TextNode {
         self.state.is_render_dirty = true;
     }
 
-    fn set_selection_brush(&mut self, selection_brush: Brush) {
+    fn set_selection_brush(&mut self, _gummy_tree: &mut GummyTree, selection_brush: Brush) {
         self.style_mut().set_selection_brush(selection_brush.clone());
         self.state.update_text_selection(selection_brush);
         self.request_window_redraw();
@@ -348,7 +348,7 @@ impl Text {
         }));
         let _ = inner_mut;
         elements.create_layout_node(inner, text_context);
-        elements.get_as_mut::<TextNode>(inner).set_text(text);
+        Text { inner }.set_text(elements, text);
 
         Text { inner }
     }
@@ -373,15 +373,19 @@ impl Text {
     }
 
     pub fn set_text(&self, elements: &mut Elements, text: &str) {
-        if let Some(element) = elements.try_get_as_mut::<TextNode>(self.inner) {
-            element.set_text(text);
-        }
+        elements.with_gummy_tree(|gummy_tree, elements| {
+            if let Some(element) = elements.try_get_as_mut::<TextNode>(self.inner) {
+                element.set_text(gummy_tree, text);
+            }
+        });
     }
 
     pub fn set_text_smol_str(&self, elements: &mut Elements, text: SmolStr) {
-        if let Some(element) = elements.try_get_as_mut::<TextNode>(self.inner) {
-            element.set_text_smol_str(text);
-        }
+        elements.with_gummy_tree(|gummy_tree, elements| {
+            if let Some(element) = elements.try_get_as_mut::<TextNode>(self.inner) {
+                element.set_text_smol_str(gummy_tree, text);
+            }
+        });
     }
 }
 
@@ -400,8 +404,8 @@ impl TextNode {
     ///
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
-    pub fn set_text(&mut self, text: &str) -> &mut Self {
-        self.set_text_smol_str(text.to_smolstr());
+    pub fn set_text(&mut self, gummy_tree: &mut GummyTree, text: &str) -> &mut Self {
+        self.set_text_smol_str(gummy_tree, text.to_smolstr());
         self
     }
 
@@ -409,11 +413,11 @@ impl TextNode {
     ///
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
-    pub fn set_text_smol_str(&mut self, text: SmolStr) {
+    pub fn set_text_smol_str(&mut self, gummy_tree: &mut GummyTree, text: SmolStr) {
         self.state.text = text;
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
-        self.mark_dirty();
+        self.mark_dirty(gummy_tree);
         self.element_data.set_accessibility_name(self.state.text.clone());
     }
 

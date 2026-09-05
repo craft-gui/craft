@@ -292,16 +292,19 @@ pub trait ElementNode: ElementNodeData + Any {
     }
 
     /// Mark layout node dirty.
-    fn mark_dirty(&mut self) {
-        self.element_data_mut().layout_dirty = true;
+    fn mark_dirty(&mut self, gummy_tree: &mut GummyTree) {
+        if let Some(node) = self.element_data().layout.gummy_node_id {
+            gummy_tree.mark_dirty(node);
+        }
         self.request_window_redraw();
     }
 
     /// Updates gummy's style to reflect retgui's style struct.
-    fn update_gummy_style(&mut self) {
-        let data = self.element_data_mut();
-        data.layout_dirty = true;
-        data.layout_style_dirty = true;
+    fn update_gummy_style(&mut self, gummy_tree: &mut GummyTree) {
+        let data = self.element_data();
+        if let Some(node) = data.layout.gummy_node_id {
+            gummy_tree.set_style(node, data.style.to_gummy_style());
+        }
         self.request_window_redraw();
     }
 
@@ -312,7 +315,7 @@ pub trait ElementNode: ElementNodeData + Any {
         for child in self.element_data().children.clone() {
             elements.dispatch_mut(child, |child, elements| child.set_scale_factor(elements, scale_factor));
         }
-        self.mark_dirty();
+        self.mark_dirty(&mut elements.gummy_tree);
     }
 
     fn get_first_child(&self) -> Result<DynElement, RetGuiError> {
@@ -775,43 +778,49 @@ pub trait ElementNode: ElementNodeData + Any {
         }
     }
 
-    fn set_style_variant(&mut self, style: StyleVariant) {
+    fn set_style_variant(&mut self, gummy_tree: &mut GummyTree, style: StyleVariant) {
         match style {
-            StyleVariant::BoxSizing(value) => self.set_box_sizing(value),
-            StyleVariant::Position(value) => self.set_position(value),
-            StyleVariant::Margin(value) => self.set_margin(value.top, value.right, value.bottom, value.left),
-            StyleVariant::Padding(value) => self.set_padding(value.top, value.right, value.bottom, value.left),
-            StyleVariant::Gap(value) => self.set_gap(value[0], value[1]),
-            StyleVariant::Inset(value) => self.set_inset(value.top, value.right, value.bottom, value.left),
-            StyleVariant::Width(value) => self.set_width(value),
-            StyleVariant::MinWidth(value) => self.set_min_width(value),
-            StyleVariant::MaxWidth(value) => self.set_max_width(value),
-            StyleVariant::Height(value) => self.set_height(value),
-            StyleVariant::MinHeight(value) => self.set_min_height(value),
-            StyleVariant::MaxHeight(value) => self.set_max_height(value),
-            StyleVariant::Display(value) => self.set_display(value),
-            StyleVariant::Wrap(value) => self.set_wrap(value),
-            StyleVariant::AlignItems(value) => self.set_align_items(value),
-            StyleVariant::AlignSelf(value) => self.set_align_self(value),
-            StyleVariant::AlignContent(value) => self.set_align_content(value),
-            StyleVariant::JustifyContent(value) => self.set_justify_content(value),
-            StyleVariant::FlexDirection(value) => self.set_flex_direction(value),
-            StyleVariant::FlexGrow(value) => self.set_flex_grow(value),
-            StyleVariant::FlexShrink(value) => self.set_flex_shrink(value),
-            StyleVariant::FlexBasis(value) => self.set_flex_basis(value),
-            StyleVariant::Order(value) => self.set_order(value),
-            StyleVariant::FontFamily(value) => self.set_font_family(value),
+            StyleVariant::BoxSizing(value) => self.set_box_sizing(gummy_tree, value),
+            StyleVariant::Position(value) => self.set_position(gummy_tree, value),
+            StyleVariant::Margin(value) => {
+                self.set_margin(gummy_tree, value.top, value.right, value.bottom, value.left)
+            }
+            StyleVariant::Padding(value) => {
+                self.set_padding(gummy_tree, value.top, value.right, value.bottom, value.left)
+            }
+            StyleVariant::Gap(value) => self.set_gap(gummy_tree, value[0], value[1]),
+            StyleVariant::Inset(value) => self.set_inset(gummy_tree, value.top, value.right, value.bottom, value.left),
+            StyleVariant::Width(value) => self.set_width(gummy_tree, value),
+            StyleVariant::MinWidth(value) => self.set_min_width(gummy_tree, value),
+            StyleVariant::MaxWidth(value) => self.set_max_width(gummy_tree, value),
+            StyleVariant::Height(value) => self.set_height(gummy_tree, value),
+            StyleVariant::MinHeight(value) => self.set_min_height(gummy_tree, value),
+            StyleVariant::MaxHeight(value) => self.set_max_height(gummy_tree, value),
+            StyleVariant::Display(value) => self.set_display(gummy_tree, value),
+            StyleVariant::Wrap(value) => self.set_wrap(gummy_tree, value),
+            StyleVariant::AlignItems(value) => self.set_align_items(gummy_tree, value),
+            StyleVariant::AlignSelf(value) => self.set_align_self(gummy_tree, value),
+            StyleVariant::AlignContent(value) => self.set_align_content(gummy_tree, value),
+            StyleVariant::JustifyContent(value) => self.set_justify_content(gummy_tree, value),
+            StyleVariant::FlexDirection(value) => self.set_flex_direction(gummy_tree, value),
+            StyleVariant::FlexGrow(value) => self.set_flex_grow(gummy_tree, value),
+            StyleVariant::FlexShrink(value) => self.set_flex_shrink(gummy_tree, value),
+            StyleVariant::FlexBasis(value) => self.set_flex_basis(gummy_tree, value),
+            StyleVariant::Order(value) => self.set_order(gummy_tree, value),
+            StyleVariant::FontFamily(value) => self.set_font_family(gummy_tree, value),
             StyleVariant::BackgroundBrush(value) => self.set_background_brush(value),
-            StyleVariant::TextBrush(value) => self.set_text_brush(value),
-            StyleVariant::LineHeight(value) => self.set_line_height(value),
-            StyleVariant::FontSize(value) => self.set_font_size(value),
-            StyleVariant::FontWeight(value) => self.set_font_weight(value),
-            StyleVariant::FontStyle(value) => self.set_font_style(value),
-            StyleVariant::TextAlign(value) => self.set_text_align(value),
-            StyleVariant::Underline(value) => self.set_underline(value),
-            StyleVariant::Overflow(value) => self.set_overflow(value[0], value[1]),
+            StyleVariant::TextBrush(value) => self.set_text_brush(gummy_tree, value),
+            StyleVariant::LineHeight(value) => self.set_line_height(gummy_tree, value),
+            StyleVariant::FontSize(value) => self.set_font_size(gummy_tree, value),
+            StyleVariant::FontWeight(value) => self.set_font_weight(gummy_tree, value),
+            StyleVariant::FontStyle(value) => self.set_font_style(gummy_tree, value),
+            StyleVariant::TextAlign(value) => self.set_text_align(gummy_tree, value),
+            StyleVariant::Underline(value) => self.set_underline(gummy_tree, value),
+            StyleVariant::Overflow(value) => self.set_overflow(gummy_tree, value[0], value[1]),
             StyleVariant::BorderColor(value) => self.set_border_color(value.top, value.right, value.bottom, value.left),
-            StyleVariant::BorderWidth(value) => self.set_border_width(value.top, value.right, value.bottom, value.left),
+            StyleVariant::BorderWidth(value) => {
+                self.set_border_width(gummy_tree, value.top, value.right, value.bottom, value.left)
+            }
             StyleVariant::BorderRadius(value) => self.set_border_radius(value[0], value[1], value[2], value[3]),
             StyleVariant::OutlineColor(value) => {
                 self.set_outline_color(value.top, value.right, value.bottom, value.left)
@@ -821,33 +830,33 @@ pub trait ElementNode: ElementNodeData + Any {
             }
             StyleVariant::ScrollbarBrush(value) => self.set_scrollbar_color(value),
             StyleVariant::ScrollbarThumbMargin(value) => {
-                self.set_scrollbar_thumb_margin(value.top, value.right, value.bottom, value.left)
+                self.set_scrollbar_thumb_margin(gummy_tree, value.top, value.right, value.bottom, value.left)
             }
             StyleVariant::ScrollbarThumbRadius(value) => {
-                self.set_scrollbar_thumb_radius(value[0], value[1], value[2], value[3])
+                self.set_scrollbar_thumb_radius(gummy_tree, value[0], value[1], value[2], value[3])
             }
-            StyleVariant::ScrollbarWidth(value) => self.set_scrollbar_width(value),
+            StyleVariant::ScrollbarWidth(value) => self.set_scrollbar_width(gummy_tree, value),
             StyleVariant::Overlay(value) => self.set_overlay(value),
             StyleVariant::Visible(value) => self.set_visible(value),
-            StyleVariant::SelectionBrush(value) => self.set_selection_brush(value),
+            StyleVariant::SelectionBrush(value) => self.set_selection_brush(gummy_tree, value),
             StyleVariant::CursorBrush(value) => self.set_cursor_brush(value),
             StyleVariant::BoxShadows(value) => self.set_box_shadows(value),
         }
     }
 
-    fn set_display(&mut self, display: Display) {
+    fn set_display(&mut self, gummy_tree: &mut GummyTree, display: Display) {
         self.style_mut().set_display(display);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_box_sizing(&mut self, box_sizing: BoxSizing) {
+    fn set_box_sizing(&mut self, gummy_tree: &mut GummyTree, box_sizing: BoxSizing) {
         self.style_mut().set_box_sizing(box_sizing);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_position(&mut self, position: Position) {
+    fn set_position(&mut self, gummy_tree: &mut GummyTree, position: Position) {
         self.style_mut().set_position(position);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
     fn set_overlay(&mut self, overlay: bool) {
@@ -859,156 +868,156 @@ pub trait ElementNode: ElementNodeData + Any {
         self.request_window_redraw();
     }
 
-    fn set_margin(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
+    fn set_margin(&mut self, gummy_tree: &mut GummyTree, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut()
             .set_margin(TrblRectangle::new(top, right, bottom, left));
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_margin_all(&mut self, value: Unit) {
-        self.set_margin(value, value, value, value);
+    fn set_margin_all(&mut self, gummy_tree: &mut GummyTree, value: Unit) {
+        self.set_margin(gummy_tree, value, value, value, value);
     }
 
-    fn set_margin_horizontal(&mut self, value: Unit) {
+    fn set_margin_horizontal(&mut self, gummy_tree: &mut GummyTree, value: Unit) {
         let margin = self.style().get_margin();
-        self.set_margin(margin.top, value, margin.bottom, value);
+        self.set_margin(gummy_tree, margin.top, value, margin.bottom, value);
     }
 
-    fn set_margin_vertical(&mut self, value: Unit) {
+    fn set_margin_vertical(&mut self, gummy_tree: &mut GummyTree, value: Unit) {
         let margin = self.style().get_margin();
-        self.set_margin(value, margin.right, value, margin.left);
+        self.set_margin(gummy_tree, value, margin.right, value, margin.left);
     }
 
-    fn set_padding(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
+    fn set_padding(&mut self, gummy_tree: &mut GummyTree, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut()
             .set_padding(TrblRectangle::new(top, right, bottom, left));
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_padding_all(&mut self, value: Unit) {
-        self.set_padding(value, value, value, value);
+    fn set_padding_all(&mut self, gummy_tree: &mut GummyTree, value: Unit) {
+        self.set_padding(gummy_tree, value, value, value, value);
     }
 
-    fn set_padding_horizontal(&mut self, value: Unit) {
+    fn set_padding_horizontal(&mut self, gummy_tree: &mut GummyTree, value: Unit) {
         let padding = self.style().get_padding();
-        self.set_padding(padding.top, value, padding.bottom, value);
+        self.set_padding(gummy_tree, padding.top, value, padding.bottom, value);
     }
 
-    fn set_padding_vertical(&mut self, value: Unit) {
+    fn set_padding_vertical(&mut self, gummy_tree: &mut GummyTree, value: Unit) {
         let padding = self.style().get_padding();
-        self.set_padding(value, padding.right, value, padding.left);
+        self.set_padding(gummy_tree, value, padding.right, value, padding.left);
     }
 
-    fn set_gap(&mut self, column_gap: Unit, row_gap: Unit) {
+    fn set_gap(&mut self, gummy_tree: &mut GummyTree, column_gap: Unit, row_gap: Unit) {
         self.style_mut().set_gap([column_gap, row_gap]);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_row_gap(&mut self, value: Unit) {
+    fn set_row_gap(&mut self, gummy_tree: &mut GummyTree, value: Unit) {
         let column_gap = self.style().get_gap()[0];
-        self.set_gap(column_gap, value);
+        self.set_gap(gummy_tree, column_gap, value);
     }
 
-    fn set_column_gap(&mut self, value: Unit) {
+    fn set_column_gap(&mut self, gummy_tree: &mut GummyTree, value: Unit) {
         let row_gap = self.style().get_gap()[1];
-        self.set_gap(value, row_gap);
+        self.set_gap(gummy_tree, value, row_gap);
     }
 
-    fn set_inset(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
+    fn set_inset(&mut self, gummy_tree: &mut GummyTree, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut().set_inset(TrblRectangle::new(top, right, bottom, left));
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_min_width(&mut self, min_width: Unit) {
+    fn set_min_width(&mut self, gummy_tree: &mut GummyTree, min_width: Unit) {
         self.style_mut().set_min_width(min_width);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_min_height(&mut self, min_height: Unit) {
+    fn set_min_height(&mut self, gummy_tree: &mut GummyTree, min_height: Unit) {
         self.style_mut().set_min_height(min_height);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_width(&mut self, width: Unit) {
+    fn set_width(&mut self, gummy_tree: &mut GummyTree, width: Unit) {
         self.style_mut().set_width(width);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_height(&mut self, height: Unit) {
+    fn set_height(&mut self, gummy_tree: &mut GummyTree, height: Unit) {
         self.style_mut().set_height(height);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_max_width(&mut self, max_width: Unit) {
+    fn set_max_width(&mut self, gummy_tree: &mut GummyTree, max_width: Unit) {
         self.style_mut().set_max_width(max_width);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_max_height(&mut self, max_height: Unit) {
+    fn set_max_height(&mut self, gummy_tree: &mut GummyTree, max_height: Unit) {
         self.style_mut().set_max_height(max_height);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_wrap(&mut self, wrap: FlexWrap) {
+    fn set_wrap(&mut self, gummy_tree: &mut GummyTree, wrap: FlexWrap) {
         self.style_mut().set_wrap(wrap);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_align_items(&mut self, align_items: AlignItems) {
+    fn set_align_items(&mut self, gummy_tree: &mut GummyTree, align_items: AlignItems) {
         self.style_mut().set_align_items(align_items);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_align_self(&mut self, align_self: AlignSelf) {
+    fn set_align_self(&mut self, gummy_tree: &mut GummyTree, align_self: AlignSelf) {
         self.style_mut().set_align_self(align_self);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_align_content(&mut self, align_content: AlignContent) {
+    fn set_align_content(&mut self, gummy_tree: &mut GummyTree, align_content: AlignContent) {
         self.style_mut().set_align_content(align_content);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_justify_content(&mut self, justify_content: JustifyContent) {
+    fn set_justify_content(&mut self, gummy_tree: &mut GummyTree, justify_content: JustifyContent) {
         self.style_mut().set_justify_content(justify_content);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_flex_direction(&mut self, flex_direction: FlexDirection) {
+    fn set_flex_direction(&mut self, gummy_tree: &mut GummyTree, flex_direction: FlexDirection) {
         self.style_mut().set_flex_direction(flex_direction);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_flex_grow(&mut self, flex_grow: f32) {
+    fn set_flex_grow(&mut self, gummy_tree: &mut GummyTree, flex_grow: f32) {
         self.style_mut().set_flex_grow(flex_grow);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_flex_shrink(&mut self, flex_shrink: f32) {
+    fn set_flex_shrink(&mut self, gummy_tree: &mut GummyTree, flex_shrink: f32) {
         self.style_mut().set_flex_shrink(flex_shrink);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_flex_basis(&mut self, flex_basis: Unit) {
+    fn set_flex_basis(&mut self, gummy_tree: &mut GummyTree, flex_basis: Unit) {
         self.style_mut().set_flex_basis(flex_basis);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_order(&mut self, order: i32) {
+    fn set_order(&mut self, gummy_tree: &mut GummyTree, order: i32) {
         self.style_mut().set_order(order);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_font_family(&mut self, font_family: FontFamily) {
+    fn set_font_family(&mut self, gummy_tree: &mut GummyTree, font_family: FontFamily) {
         self.style_mut().set_font_family(font_family);
         self.on_text_style_changed();
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_text_brush(&mut self, brush: Brush) {
+    fn set_text_brush(&mut self, gummy_tree: &mut GummyTree, brush: Brush) {
         self.style_mut().set_text_brush(brush);
         self.on_text_style_changed();
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
     fn set_background_brush(&mut self, brush: Brush) {
@@ -1016,57 +1025,57 @@ pub trait ElementNode: ElementNodeData + Any {
         self.request_window_redraw();
     }
 
-    fn set_font_size(&mut self, font_size: f32) {
+    fn set_font_size(&mut self, gummy_tree: &mut GummyTree, font_size: f32) {
         self.style_mut().set_font_size(font_size);
         self.on_text_style_changed();
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_line_height(&mut self, line_height: f32) {
+    fn set_line_height(&mut self, gummy_tree: &mut GummyTree, line_height: f32) {
         self.style_mut().set_line_height(line_height);
         self.on_text_style_changed();
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_font_weight(&mut self, font_weight: FontWeight) {
+    fn set_font_weight(&mut self, gummy_tree: &mut GummyTree, font_weight: FontWeight) {
         self.style_mut().set_font_weight(font_weight);
         self.on_text_style_changed();
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_font_style(&mut self, font_style: FontStyle) {
+    fn set_font_style(&mut self, gummy_tree: &mut GummyTree, font_style: FontStyle) {
         self.style_mut().set_font_style(font_style);
         self.on_text_style_changed();
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_text_align(&mut self, text_align: TextAlign) {
+    fn set_text_align(&mut self, gummy_tree: &mut GummyTree, text_align: TextAlign) {
         self.style_mut().set_text_align(text_align);
         self.on_text_style_changed();
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_underline(&mut self, underline: Option<Underline>) {
+    fn set_underline(&mut self, gummy_tree: &mut GummyTree, underline: Option<Underline>) {
         self.style_mut().set_underline(underline);
         self.on_text_style_changed();
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
     fn on_text_style_changed(&mut self) {}
 
-    fn set_overflow(&mut self, overflow_x: Overflow, overflow_y: Overflow) {
+    fn set_overflow(&mut self, gummy_tree: &mut GummyTree, overflow_x: Overflow, overflow_y: Overflow) {
         self.style_mut().set_overflow([overflow_x, overflow_y]);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_overflow_x(&mut self, overflow: Overflow) {
+    fn set_overflow_x(&mut self, gummy_tree: &mut GummyTree, overflow: Overflow) {
         let overflow_y = self.style().get_overflow()[1];
-        self.set_overflow(overflow, overflow_y);
+        self.set_overflow(gummy_tree, overflow, overflow_y);
     }
 
-    fn set_overflow_y(&mut self, overflow: Overflow) {
+    fn set_overflow_y(&mut self, gummy_tree: &mut GummyTree, overflow: Overflow) {
         let overflow_x = self.style().get_overflow()[0];
-        self.set_overflow(overflow_x, overflow);
+        self.set_overflow(gummy_tree, overflow_x, overflow);
     }
 
     fn set_border_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) {
@@ -1090,24 +1099,24 @@ pub trait ElementNode: ElementNodeData + Any {
         self.set_border_color(border_color.top, value, border_color.bottom, value);
     }
 
-    fn set_border_width(&mut self, top: Unit, right: Unit, bottom: Unit, left: Unit) {
+    fn set_border_width(&mut self, gummy_tree: &mut GummyTree, top: Unit, right: Unit, bottom: Unit, left: Unit) {
         self.style_mut()
             .set_border_width(TrblRectangle::new(top, right, bottom, left));
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
-    fn set_border_width_all(&mut self, value: Unit) {
-        self.set_border_width(value, value, value, value);
+    fn set_border_width_all(&mut self, gummy_tree: &mut GummyTree, value: Unit) {
+        self.set_border_width(gummy_tree, value, value, value, value);
     }
 
-    fn set_border_width_vertical(&mut self, value: Unit) {
+    fn set_border_width_vertical(&mut self, gummy_tree: &mut GummyTree, value: Unit) {
         let border_width = self.style().get_border_width();
-        self.set_border_width(value, border_width.right, value, border_width.left);
+        self.set_border_width(gummy_tree, value, border_width.right, value, border_width.left);
     }
 
-    fn set_border_width_horizontal(&mut self, value: Unit) {
+    fn set_border_width_horizontal(&mut self, gummy_tree: &mut GummyTree, value: Unit) {
         let border_width = self.style().get_border_width();
-        self.set_border_width(border_width.top, value, border_width.bottom, value);
+        self.set_border_width(gummy_tree, border_width.top, value, border_width.bottom, value);
     }
 
     fn set_outline_color(&mut self, top: Color, right: Color, bottom: Color, left: Color) {
@@ -1199,22 +1208,29 @@ pub trait ElementNode: ElementNodeData + Any {
         self.request_window_redraw();
     }
 
-    fn set_scrollbar_thumb_margin(&mut self, top: f32, right: f32, bottom: f32, left: f32) {
+    fn set_scrollbar_thumb_margin(&mut self, gummy_tree: &mut GummyTree, top: f32, right: f32, bottom: f32, left: f32) {
         self.style_mut()
             .set_scrollbar_thumb_margin(TrblRectangle::new(top, right, bottom, left));
-        self.refresh_scroll_layout();
+        self.refresh_scroll_layout(gummy_tree);
         self.request_window_redraw();
     }
 
-    fn set_scrollbar_thumb_radius(&mut self, top: (f32, f32), right: (f32, f32), bottom: (f32, f32), left: (f32, f32)) {
+    fn set_scrollbar_thumb_radius(
+        &mut self,
+        gummy_tree: &mut GummyTree,
+        top: (f32, f32),
+        right: (f32, f32),
+        bottom: (f32, f32),
+        left: (f32, f32),
+    ) {
         self.style_mut().set_scrollbar_thumb_radius([top, right, bottom, left]);
-        self.refresh_scroll_layout();
+        self.refresh_scroll_layout(gummy_tree);
         self.request_window_redraw();
     }
 
-    fn set_scrollbar_width(&mut self, scrollbar_width: f32) {
+    fn set_scrollbar_width(&mut self, gummy_tree: &mut GummyTree, scrollbar_width: f32) {
         self.style_mut().set_scrollbar_width(scrollbar_width);
-        self.update_gummy_style();
+        self.update_gummy_style(gummy_tree);
     }
 
     /// Sets the list of animations.
@@ -1226,9 +1242,9 @@ pub trait ElementNode: ElementNodeData + Any {
     }
 
     /// Sets the selection color.
-    fn set_selection_brush(&mut self, selection_brush: Brush) {
+    fn set_selection_brush(&mut self, gummy_tree: &mut GummyTree, selection_brush: Brush) {
         self.style_mut().set_selection_brush(selection_brush);
-        self.mark_dirty();
+        self.mark_dirty(gummy_tree);
     }
 
     /// Sets the text cursor color.
@@ -1244,8 +1260,8 @@ pub trait ElementNode: ElementNodeData + Any {
         self.request_window_redraw();
     }
 
-    fn refresh_scroll_layout(&mut self) {
-        self.mark_dirty();
+    fn refresh_scroll_layout(&mut self, gummy_tree: &mut GummyTree) {
+        self.mark_dirty(gummy_tree);
     }
 
     /// Sets focus on the specified element, if it can be focused.
@@ -1324,17 +1340,17 @@ pub trait ElementNode: ElementNodeData + Any {
     }
 
     /// Advances this element's animations and returns when it needs another update.
-    fn animation_tick(&mut self, _elements: &mut Elements, delta: Duration) -> AnimationSchedule {
-        self.tick_style_animations(delta)
+    fn animation_tick(&mut self, elements: &mut Elements, delta: Duration) -> AnimationSchedule {
+        self.tick_style_animations(&mut elements.gummy_tree, delta)
     }
 
     /// Advances the style animations stored in this element's data.
-    fn tick_style_animations(&mut self, delta: Duration) -> AnimationSchedule {
+    fn tick_style_animations(&mut self, gummy_tree: &mut GummyTree, delta: Duration) -> AnimationSchedule {
         let mut animations = std::mem::take(&mut self.element_data_mut().animations);
         for animation in &mut animations {
             animation.tick(delta);
             if animation.key_frames.len() >= 2 {
-                animation.apply_styles(&mut |style| self.set_style_variant(style));
+                animation.apply_styles(&mut |style| self.set_style_variant(gummy_tree, style));
             }
         }
         let has_active_style_animation = animations

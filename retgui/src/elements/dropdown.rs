@@ -152,7 +152,7 @@ impl ElementNode for DropdownNode {
                 selected.set_scale_factor(elements, scale_factor)
             });
         }
-        self.mark_dirty();
+        self.mark_dirty(&mut elements.gummy_tree);
     }
 
     fn apply_layout(

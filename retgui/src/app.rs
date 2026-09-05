@@ -225,9 +225,13 @@ impl App {
     fn process_created_renderers(&mut self) {
         while let Ok(created) = self.created_renderer_receiver.try_recv() {
             if self.elements.contains(created.window) {
-                self.elements
-                    .get_as_mut::<WindowNode>(created.window)
-                    .on_renderer_created(created.renderer, created.size);
+                self.elements.with_gummy_tree(|gummy_tree, elements| {
+                    elements.get_as_mut::<WindowNode>(created.window).on_renderer_created(
+                        gummy_tree,
+                        created.renderer,
+                        created.size,
+                    );
+                });
             }
         }
     }

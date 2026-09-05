@@ -125,7 +125,7 @@ impl ElementNode for AudioNode {
     }
 
     fn animation_tick(&mut self, elements: &mut Elements, delta: Duration) -> AnimationSchedule {
-        let mut schedule = self.tick_style_animations(delta);
+        let mut schedule = self.tick_style_animations(&mut elements.gummy_tree, delta);
         let Some(next_ui_update) = self.next_ui_update else {
             return schedule;
         };
@@ -188,14 +188,14 @@ impl Audio {
             })
         });
 
-        {
+        elements.with_gummy_tree(|gummy_tree, elements| {
             let audio = elements.get_as_mut::<AudioNode>(inner);
-            audio.set_height(Unit::Px(24.0));
-            audio.set_align_items(AlignItems::Center);
+            audio.set_height(gummy_tree, Unit::Px(24.0));
+            audio.set_align_items(gummy_tree, AlignItems::Center);
             audio.set_background_brush(Brush::Color(rgb(72, 72, 72)));
-            audio.set_padding_all(Unit::Px(6.0));
-            audio.set_column_gap(Unit::Px(12.0));
-        }
+            audio.set_padding_all(gummy_tree, Unit::Px(6.0));
+            audio.set_column_gap(gummy_tree, Unit::Px(12.0));
+        });
         elements.create_layout_node(inner, None);
 
         play_button.push(elements, play_button_icon);
@@ -252,9 +252,11 @@ impl Audio {
     }
 
     pub fn set_controls(&self, elements: &mut Elements, controls: bool) {
-        if let Some(audio) = elements.try_get_as_mut::<AudioNode>(self.inner) {
-            audio.set_controls(controls);
-        }
+        elements.with_gummy_tree(|gummy_tree, elements| {
+            if let Some(audio) = elements.try_get_as_mut::<AudioNode>(self.inner) {
+                audio.set_controls(gummy_tree, controls);
+            }
+        });
     }
 
     pub fn play(&self, elements: &mut Elements) {
@@ -401,9 +403,9 @@ impl AudioNode {
         self.request_window_redraw();
     }
 
-    pub fn set_controls(&mut self, controls: bool) {
+    pub fn set_controls(&mut self, gummy_tree: &mut GummyTree, controls: bool) {
         self.controls = controls;
-        self.set_display(if controls { Display::Flex } else { Display::None });
+        self.set_display(gummy_tree, if controls { Display::Flex } else { Display::None });
     }
 }
 
