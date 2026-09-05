@@ -742,15 +742,8 @@ impl DropdownNode {
     fn set_selected_element(&mut self, elements: &mut Elements, child_index: usize) {
         // Remove the old selected element from the layout tree.
         if let Some(old_selected_element) = &self.selected_element {
-            elements.with_gummy_tree(|gummy_tree, elements| {
-                gummy_tree.unparent_node(
-                    elements
-                        .get(*old_selected_element)
-                        .element_data()
-                        .layout
-                        .gummy_node_id(),
-                );
-            });
+            let old_node = elements.get(*old_selected_element).element_data().layout.gummy_node_id();
+            elements.gummy_tree.unparent_node(old_node);
         }
 
         let child = self
@@ -773,10 +766,8 @@ impl DropdownNode {
             .gummy_node_id();
 
         // Add the selected element to the parent's layout tree at index 1.
-        elements.with_gummy_tree(|gummy_tree, _| {
-            let parent_id = self.element_data.layout.gummy_node_id.unwrap();
-            gummy_tree.add_child_at_index(parent_id, selected_element_id, 1);
-        });
+        let parent_id = self.element_data.layout.gummy_node_id.unwrap();
+        elements.gummy_tree.add_child_at_index(parent_id, selected_element_id, 1);
         self.request_window_redraw();
     }
 

@@ -250,14 +250,12 @@ impl Elements {
             .iter()
             .filter_map(|root| self.get(*root).element_data().layout.gummy_node_id)
             .collect::<Vec<_>>();
-        self.with_gummy_tree(|tree, _elements| {
-            if let Some(parent) = layout_parent {
-                tree.set_children(parent, &[]);
-            }
-            for root in layout_roots {
-                tree.remove_subtree(root);
-            }
-        });
+        if let Some(parent) = layout_parent {
+            self.gummy_tree.set_children(parent, &[]);
+        }
+        for root in layout_roots {
+            self.gummy_tree.remove_subtree(root);
+        }
 
         let parent_data = self.get(parent).element_data();
         if let Some(parent_key) = parent_data.access_key {

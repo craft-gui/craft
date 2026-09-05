@@ -397,36 +397,35 @@ pub trait ElementNode: ElementNodeData + Any {
         self.element_data_mut().children.swap(position_1, position_2);
 
         // Swap the children's gummy nodes.
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            let parent_id = self.element_data().layout.gummy_node_id;
-            let child_1_id = elements.get(child_1).element_data().layout.gummy_node_id;
-            let child_2_id = elements.get(child_2).element_data().layout.gummy_node_id;
+        let parent_id = self.element_data().layout.gummy_node_id;
+        let child_1_id = elements.get(child_1).element_data().layout.gummy_node_id;
+        let child_2_id = elements.get(child_2).element_data().layout.gummy_node_id;
 
-            if let Some(parent_id) = parent_id
-                && let Some(child_1_id) = child_1_id
-                && let Some(child_2_id) = child_2_id
-            {
-                // There isn't a swap API in the gummy tree. Instead swap the children and call set_children.
-                let mut tchildren = gummy_tree.children(parent_id).to_vec();
+        let gummy_tree = &mut elements.gummy_tree;
+        if let Some(parent_id) = parent_id
+            && let Some(child_1_id) = child_1_id
+            && let Some(child_2_id) = child_2_id
+        {
+            // There isn't a swap API in the gummy tree. Instead swap the children and call set_children.
+            let mut tchildren = gummy_tree.children(parent_id).to_vec();
 
-                let i1 = tchildren
-                    .iter()
-                    .position(|x| *x == child_1_id)
-                    .ok_or(RetGuiError::ElementNotFound)
-                    .expect("Failed to find gummy child");
-                let i2 = tchildren
-                    .iter()
-                    .position(|x| *x == child_2_id)
-                    .ok_or(RetGuiError::ElementNotFound)
-                    .expect("Failed to find gummy child");
+            let i1 = tchildren
+                .iter()
+                .position(|x| *x == child_1_id)
+                .ok_or(RetGuiError::ElementNotFound)
+                .expect("Failed to find gummy child");
+            let i2 = tchildren
+                .iter()
+                .position(|x| *x == child_2_id)
+                .ok_or(RetGuiError::ElementNotFound)
+                .expect("Failed to find gummy child");
 
-                tchildren.swap(i1, i2);
+            tchildren.swap(i1, i2);
 
-                gummy_tree.set_children(parent_id, &tchildren);
-                gummy_tree.mark_dirty(parent_id);
-                gummy_tree.request_layout();
-            }
-        });
+            gummy_tree.set_children(parent_id, &tchildren);
+            gummy_tree.mark_dirty(parent_id);
+            gummy_tree.request_layout();
+        }
 
         // TODO: Fix. This is likely doing more work than required.
         self.sync_accessibility_children(elements);
@@ -460,16 +459,13 @@ pub trait ElementNode: ElementNodeData + Any {
         // Remove the parent reference.
         elements.get_mut(child).element_data_mut().parent = None;
 
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            let child_id = elements.get(child).element_data().layout.gummy_node_id;
+        let child_id = elements.get(child).element_data().layout.gummy_node_id;
+        if let Some(child_id) = child_id {
+            elements.gummy_tree.unparent_node(child_id);
+        }
 
-            if let Some(child_id) = child_id {
-                gummy_tree.unparent_node(child_id);
-            }
-
-            let parent_id = self.element_data().layout.gummy_node_id;
-            gummy_tree.mark_dirty(parent_id.unwrap());
-        });
+        let parent_id = self.element_data().layout.gummy_node_id;
+        elements.gummy_tree.mark_dirty(parent_id.unwrap());
 
         fn remove_element_from_document(node: DynElement, pointer_capture: &mut PointerCapture) {
             pointer_capture.remove_element(node);

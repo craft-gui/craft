@@ -180,15 +180,13 @@ impl TinyVgNode {
             .pending_resources
             .push_back((resource_id.clone(), ResourceType::TinyVg));
 
-        elements.with_gummy_tree(|gummy_tree, _| {
-            let context = LayoutContext::TinyVg(TinyVgContext::new(resource_id));
-            let node = self
-                .element_data
-                .layout
-                .gummy_node_id
-                .expect("Failed to get TinyVg node");
-            gummy_tree.set_node_context(node, Some(context));
-        });
+        let context = LayoutContext::TinyVg(TinyVgContext::new(resource_id));
+        let node = self
+            .element_data
+            .layout
+            .gummy_node_id
+            .expect("Failed to get TinyVg node");
+        elements.gummy_tree.set_node_context(node, Some(context));
         self.request_window_redraw();
     }
 

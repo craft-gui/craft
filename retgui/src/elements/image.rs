@@ -143,15 +143,13 @@ impl ImageNode {
             .pending_resources
             .push_back((self.resource_id.clone(), ResourceType::Image));
 
-        elements.with_gummy_tree(|gummy_tree, _| {
-            let context = LayoutContext::Image(ImageContext::new(resource_id));
-            let node = self
-                .element_data
-                .layout
-                .gummy_node_id
-                .expect("Failed to get Image node");
-            gummy_tree.set_node_context(node, Some(context));
-        });
+        let context = LayoutContext::Image(ImageContext::new(resource_id));
+        let node = self
+            .element_data
+            .layout
+            .gummy_node_id
+            .expect("Failed to get Image node");
+        elements.gummy_tree.set_node_context(node, Some(context));
         self.request_window_redraw();
     }
 

@@ -68,7 +68,7 @@ where
             )
         });
         let child_node = elements.get(cloned_child).element_data().layout.gummy_node_id.unwrap();
-        elements.with_gummy_tree(|tree, _| tree.add_child(child_layout_parent, child_node));
+        elements.gummy_tree.add_child(child_layout_parent, child_node);
         children.push(cloned_child);
     }
     elements.get_mut(new_element).element_data_mut().children = children;

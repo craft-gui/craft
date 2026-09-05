@@ -26,28 +26,23 @@ pub fn push_child_to_element(elements: &mut Elements, parent_handle: DynElement,
                 .map(|nodes| (data.access_tree.clone(), nodes)),
         )
     };
-    elements.dispatch_mut(child, |child, elements| {
-        child.element_data_mut().parent = Some(me);
-        child.element_data_mut().window = me_window;
-        child.element_data_mut().redraw_signal = redraw_signal;
-        child.propagate_window_down(elements);
-        child.set_scale_factor(elements, scale_factor);
-    });
-    elements.get_mut(parent_handle).element_data_mut().children.push(child);
+    elements.dispatch_mut(child, |child_node, elements| {
+        child_node.element_data_mut().parent = Some(me);
+        child_node.element_data_mut().window = me_window;
+        child_node.element_data_mut().redraw_signal = redraw_signal;
+        child_node.propagate_window_down(elements);
+        child_node.set_scale_factor(elements, scale_factor);
+        elements.get_mut(parent_handle).element_data_mut().children.push(child);
 
-    elements.with_gummy_tree(|gummy_tree, elements| {
-        let child_element = elements.get_mut(child);
-        if let Some(child_id) = child_element.element_data().layout.gummy_node_id {
-            gummy_tree.add_child(parent_id.unwrap(), child_id);
+        if let Some(child_id) = child_node.element_data().layout.gummy_node_id {
+            elements.gummy_tree.add_child(parent_id.unwrap(), child_id);
         }
-        child_element.on_post_add_layout_tree(gummy_tree);
-    });
+        child_node.on_post_add_layout_tree(&mut elements.gummy_tree);
 
-    if let Some((tree, (parent_node, root))) = access {
-        elements.dispatch_mut(child, |child, elements| {
-            crate::accessibility::reparent_subtree(elements, child, &tree, parent_node, root, scale_factor)
-        });
-    }
+        if let Some((tree, (parent_node, root))) = access {
+            crate::accessibility::reparent_subtree(elements, child_node, &tree, parent_node, root, scale_factor);
+        }
+    });
     elements.get(parent_handle).request_window_redraw();
 }
 
