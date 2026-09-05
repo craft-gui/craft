@@ -354,9 +354,7 @@ impl WindowElement {
         }
         elements.create_layout_node(inner, None);
 
-        elements.with_window_manager(|window_manager, _| {
-            window_manager.add_window(Window { inner });
-        });
+        elements.window_manager.add_window(Window { inner });
 
         inner
     }

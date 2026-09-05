@@ -47,6 +47,22 @@ pub(crate) struct RetainedElements {
 }
 
 impl RetainedElements {
+    pub(crate) fn get(&self, element: DynElement) -> &dyn ElementInternals {
+        assert_eq!(
+            element.store_id(),
+            self.id,
+            "element handle belongs to a different store"
+        );
+        self.slots
+            .get(element.key())
+            .and_then(Option::as_deref)
+            .expect("element handle no longer belongs to this store")
+    }
+
+    pub(crate) fn contains(&self, element: DynElement) -> bool {
+        element.store_id() == self.id && self.slots.get(element.key()).is_some_and(Option::is_some)
+    }
+
     pub(crate) fn get_mut(&mut self, element: DynElement) -> &mut dyn ElementInternals {
         assert_eq!(
             element.store_id(),
@@ -165,16 +181,7 @@ impl Elements {
     }
 
     pub(crate) fn get(&self, element: DynElement) -> &dyn ElementInternals {
-        assert_eq!(
-            element.store_id(),
-            self.elements.id,
-            "element handle belongs to a different store"
-        );
-        self.elements
-            .slots
-            .get(element.key())
-            .and_then(Option::as_deref)
-            .expect("element handle no longer belongs to this store")
+        self.elements.get(element)
     }
 
     /// Returns a retained element, or `None` when the handle is stale or belongs
@@ -231,7 +238,7 @@ impl Elements {
     }
 
     pub(crate) fn contains(&self, element: DynElement) -> bool {
-        element.store_id() == self.elements.id && self.elements.slots.get(element.key()).is_some_and(Option::is_some)
+        self.elements.contains(element)
     }
 
     pub(crate) fn delete_all_children(&mut self, parent: DynElement) {
@@ -315,14 +322,8 @@ impl Elements {
             .create_layout_node(tree, context);
     }
 
-    pub(crate) fn with_window_manager<R>(
-        &mut self,
-        callback: impl FnOnce(&mut WindowManager, &mut Elements) -> R,
-    ) -> R {
-        let mut manager = std::mem::replace(&mut self.window_manager, WindowManager::new());
-        let result = callback(&mut manager, self);
-        self.window_manager = manager;
-        result
+    pub(crate) fn disjoint_borrow_window_manager_and_elements(&mut self) -> (&mut WindowManager, &RetainedElements) {
+        (&mut self.window_manager, &self.elements)
     }
 
     pub(crate) fn queue_event(&mut self, event: EventKind) {

@@ -50,44 +50,55 @@ impl WindowManager {
         None
     }
 
+    pub(crate) fn any_perf_stats_enabled(&self, elements: &Elements) -> bool {
+        self.windows
+            .iter()
+            .any(|window| elements.get_as::<WindowElement>(window.inner).perf_stats_enabled())
+    }
+
+    pub fn len(&self) -> usize {
+        self.windows.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl Elements {
     /// Dirties all gummy nodes and redraws each window.
-    pub(crate) fn dirty_and_redraw_all_windows(&mut self, elements: &mut Elements, active: bool) {
+    pub(crate) fn dirty_and_redraw_all_windows(&mut self, active: bool) {
         if !active {
             return;
         }
 
-        // Create windows that were created during the program run.
-        for window_element in &self.windows {
-            let id = elements
+        for window_element in &self.window_manager.windows {
+            let id = self
                 .get(window_element.inner)
                 .element_data()
                 .layout
                 .gummy_node_id
                 .unwrap();
-            elements.gummy_tree.mark_node_and_leaves_dirty(id);
-            window_element.request_redraw(elements);
+            self.gummy_tree.mark_node_and_leaves_dirty(id);
+            window_element.request_redraw(self);
         }
     }
 
-    pub(crate) fn on_resume(
-        &mut self,
-        retgui_app: &mut App,
-        elements: &mut Elements,
-        event_loop: Option<&dyn ActiveEventLoop>,
-    ) {
+    pub(crate) fn on_resume(&mut self, retgui_app: &mut App, event_loop: Option<&dyn ActiveEventLoop>) {
         let now = Instant::now();
-        self.apply_pending_animation_updates(elements, now);
-        for scheduled in &mut self.scheduled_animations {
+        self.apply_pending_animation_updates(now);
+        for scheduled in &mut self.window_manager.scheduled_animations {
             scheduled.last_tick = now;
             scheduled.dormant = false;
         }
-        for window_element in &self.windows {
-            window_element.create(retgui_app, elements, event_loop);
+        for index in 0..self.window_manager.windows.len() {
+            let window_element = self.window_manager.windows[index];
+            window_element.create(retgui_app, self, event_loop);
         }
 
-        for scheduled in &self.scheduled_animations {
-            if elements.contains(scheduled.element) {
-                elements.get(scheduled.element).request_window_redraw();
+        for scheduled in &self.window_manager.scheduled_animations {
+            if self.contains(scheduled.element) {
+                self.get(scheduled.element).request_window_redraw();
             }
         }
     }
@@ -95,7 +106,6 @@ impl WindowManager {
     pub(crate) fn on_about_to_wait(
         &mut self,
         retgui_app: &mut App,
-        elements: &mut Elements,
         event_loop: Option<&dyn ActiveEventLoop>,
     ) -> Option<Duration> {
         if !retgui_app.active {
@@ -103,22 +113,23 @@ impl WindowManager {
         }
 
         let now = Instant::now();
-        self.apply_pending_animation_updates(elements, now);
+        self.apply_pending_animation_updates(now);
         let mut next_update = AnimationSchedule::None;
 
         // Create windows that were created during the program run.
-        for window_element in &self.windows {
-            if window_element.winit_window(elements).is_none() {
-                window_element.create(retgui_app, elements, event_loop);
+        for index in 0..self.window_manager.windows.len() {
+            let window_element = self.window_manager.windows[index];
+            if window_element.winit_window(self).is_none() {
+                window_element.create(retgui_app, self, event_loop);
             }
 
-            if window_element.redraw_requested(elements) {
-                window_element.request_redraw(elements);
+            if window_element.redraw_requested(self) {
+                window_element.request_redraw(self);
             }
 
-            match self.animation_schedule_for_window(elements, window_element, now) {
+            match self.animation_schedule_for_window(&window_element, now) {
                 AnimationSchedule::None => {}
-                AnimationSchedule::NextFrame => window_element.request_redraw(elements),
+                AnimationSchedule::NextFrame => window_element.request_redraw(self),
                 schedule @ AnimationSchedule::At(_) => next_update = next_update.merge(schedule),
             }
         }
@@ -129,107 +140,90 @@ impl WindowManager {
         }
     }
 
-    pub(crate) fn any_perf_stats_enabled(&self, elements: &Elements) -> bool {
-        self.windows
-            .iter()
-            .any(|window| elements.get_as::<WindowElement>(window.inner).perf_stats_enabled())
-    }
-
-    pub fn close_window(&mut self, elements: &mut Elements, window: &Window) {
-        self.scheduled_animations.retain(|scheduled| {
+    pub(crate) fn close_window(&mut self, window: &Window) {
+        let (manager, elements) = self.disjoint_borrow_window_manager_and_elements();
+        manager.scheduled_animations.retain(|scheduled| {
             elements.contains(scheduled.element)
                 && elements.get(scheduled.element).element_data().window != Some(window.inner)
         });
-        self.windows.retain(|w| {
-            let is_target = w.inner == window.inner;
-
-            if is_target {
-                elements.get_as_mut::<WindowElement>(w.inner).renderer = Box::new(BlankRenderer::default());
-                release_window_accessibility(elements, w.inner);
-                w.set_winit_window(elements, None);
-            }
-
-            !is_target
-        });
-    }
-
-    pub fn len(&self) -> usize {
-        self.windows.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        if self.window_manager.windows.iter().any(|w| w.inner == window.inner) {
+            self.get_as_mut::<WindowElement>(window.inner).renderer = Box::new(BlankRenderer::default());
+            release_window_accessibility(self, window.inner);
+            window.set_winit_window(self, None);
+            self.window_manager.windows.retain(|w| w.inner != window.inner);
+        }
     }
 
     /// Advances due animations belonging to the window and returns when it next
     /// needs an animation-driven redraw.
-    pub(crate) fn animation_tick(&mut self, elements: &mut Elements, window: &Window) -> AnimationSchedule {
-        self.animation_tick_at(elements, window, Instant::now())
+    pub(crate) fn animation_tick(&mut self, window: &Window) -> AnimationSchedule {
+        self.animation_tick_at(window, Instant::now())
     }
 
-    fn animation_tick_at(&mut self, elements: &mut Elements, window: &Window, now: Instant) -> AnimationSchedule {
-        self.apply_pending_animation_updates(elements, now);
-        let mut retained = Vec::with_capacity(self.scheduled_animations.len());
-        for mut scheduled in std::mem::take(&mut self.scheduled_animations) {
-            if !elements.contains(scheduled.element) {
+    fn animation_tick_at(&mut self, window: &Window, now: Instant) -> AnimationSchedule {
+        self.apply_pending_animation_updates(now);
+        let mut retained = 0;
+        for index in 0..self.window_manager.scheduled_animations.len() {
+            let mut scheduled = self.window_manager.scheduled_animations[index];
+            if !self.contains(scheduled.element) {
                 continue;
             }
-            if elements.get(scheduled.element).element_data().window != Some(window.inner) {
-                retained.push(scheduled);
-                continue;
-            }
+            if self.get(scheduled.element).element_data().window == Some(window.inner) {
+                if !animation_is_runnable(self, scheduled.element) {
+                    scheduled.dormant = true;
+                } else {
+                    if scheduled.dormant {
+                        scheduled.last_tick = now;
+                        scheduled.dormant = false;
+                    }
 
-            if !animation_is_runnable(elements, scheduled.element) {
-                scheduled.dormant = true;
-                retained.push(scheduled);
-                continue;
+                    let due = match scheduled.deadline {
+                        AnimationSchedule::NextFrame => true,
+                        AnimationSchedule::At(deadline) => deadline <= now,
+                        AnimationSchedule::None => false,
+                    };
+                    if due {
+                        let delta = now.duration_since(scheduled.last_tick);
+                        scheduled.last_tick = now;
+                        let next = self.dispatch_mut(scheduled.element, |animating, elements| {
+                            animating.animation_tick(elements, delta)
+                        });
+                        if next == AnimationSchedule::None {
+                            continue;
+                        }
+                        scheduled.deadline = next;
+                    }
+                }
             }
-            if scheduled.dormant {
-                scheduled.last_tick = now;
-                scheduled.dormant = false;
-            }
-
-            let due = match scheduled.deadline {
-                AnimationSchedule::NextFrame => true,
-                AnimationSchedule::At(deadline) => deadline <= now,
-                AnimationSchedule::None => false,
-            };
-            if !due {
-                retained.push(scheduled);
-                continue;
-            }
-
-            let delta = now.duration_since(scheduled.last_tick);
-            scheduled.last_tick = now;
-            let next = elements.dispatch_mut(scheduled.element, |animating, elements| {
-                animating.animation_tick(elements, delta)
-            });
-            if next != AnimationSchedule::None {
-                scheduled.deadline = next;
-                retained.push(scheduled);
-            }
+            self.window_manager.scheduled_animations[retained] = scheduled;
+            retained += 1;
         }
-        self.scheduled_animations = retained;
-
-        // Ticks may schedule or stop animations, including on other elements.
-        // Apply those requests after restoring the active registry so none are
-        // lost through nested element dispatch.
-        self.apply_pending_animation_updates(elements, now);
-        self.animation_schedule_for_window(elements, window, now)
+        self.window_manager.scheduled_animations.truncate(retained);
+        self.apply_pending_animation_updates(now);
+        self.animation_schedule_for_window(window, now)
     }
 
-    fn apply_pending_animation_updates(&mut self, elements: &mut Elements, now: Instant) {
-        self.scheduled_animations
+    fn apply_pending_animation_updates(&mut self, now: Instant) {
+        let (manager, elements) = self.disjoint_borrow_window_manager_and_elements();
+        manager
+            .scheduled_animations
             .retain(|scheduled| elements.contains(scheduled.element));
-        for (element, reset_clock) in elements.take_pending_animation_updates() {
-            if !elements.contains(element) {
+        for (element, reset_clock) in self.take_pending_animation_updates() {
+            if !self.contains(element) {
                 continue;
             }
-            let window = elements.get(element).element_data().window;
-            if window.is_some_and(|window| !self.windows.iter().any(|registered| registered.inner == window)) {
+            let window = self.get(element).element_data().window;
+            if window.is_some_and(|window| {
+                !self
+                    .window_manager
+                    .windows
+                    .iter()
+                    .any(|registered| registered.inner == window)
+            }) {
                 continue;
             }
             if let Some(scheduled) = self
+                .window_manager
                 .scheduled_animations
                 .iter_mut()
                 .find(|scheduled| scheduled.element == element)
@@ -239,7 +233,7 @@ impl WindowManager {
                     scheduled.last_tick = now;
                 }
             } else {
-                self.scheduled_animations.push(ScheduledAnimation {
+                self.window_manager.scheduled_animations.push(ScheduledAnimation {
                     element,
                     deadline: AnimationSchedule::NextFrame,
                     last_tick: now,
@@ -249,13 +243,14 @@ impl WindowManager {
         }
     }
 
-    fn animation_schedule_for_window(&self, elements: &Elements, window: &Window, now: Instant) -> AnimationSchedule {
-        self.scheduled_animations
+    fn animation_schedule_for_window(&self, window: &Window, now: Instant) -> AnimationSchedule {
+        self.window_manager
+            .scheduled_animations
             .iter()
             .filter(|scheduled| {
-                elements.contains(scheduled.element)
-                    && elements.get(scheduled.element).element_data().window == Some(window.inner)
-                    && animation_is_runnable(elements, scheduled.element)
+                self.contains(scheduled.element)
+                    && self.get(scheduled.element).element_data().window == Some(window.inner)
+                    && animation_is_runnable(self, scheduled.element)
             })
             .fold(AnimationSchedule::None, |schedule, scheduled| {
                 let next = match scheduled.deadline {

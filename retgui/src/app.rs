@@ -152,11 +152,8 @@ impl App {
                 );
             }
             WindowEvent::CloseRequested => {
-                let empty = self.elements.with_window_manager(|window_manager, elements| {
-                    window_manager.close_window(elements, &window);
-                    window_manager.is_empty()
-                });
-                if empty {
+                self.elements.close_window(&window);
+                if self.elements.window_manager.is_empty() {
                     self.on_close_requested();
                     self.close_requested = true;
                 }
@@ -195,7 +192,7 @@ impl App {
         self.active = true;
 
         let mut elements = std::mem::take(&mut self.elements);
-        elements.with_window_manager(|window_manager, elements| window_manager.on_resume(self, elements, event_loop));
+        elements.on_resume(self, event_loop);
         self.elements = elements;
     }
 
@@ -214,9 +211,7 @@ impl App {
             .dispatch_queued_events(&mut self.text_context, &mut self.elements);
 
         let mut elements = std::mem::take(&mut self.elements);
-        let next_animation_update = elements.with_window_manager(|window_manager, elements| {
-            window_manager.on_about_to_wait(self, elements, event_loop)
-        });
+        let next_animation_update = elements.on_about_to_wait(self, event_loop);
         self.elements = elements;
         next_animation_update
     }
@@ -258,12 +253,7 @@ impl App {
         });
 
         if resource_loaded {
-            let mut elements = std::mem::take(&mut self.elements);
-            let active = self.active;
-            elements.with_window_manager(|window_manager, elements| {
-                window_manager.dirty_and_redraw_all_windows(elements, active)
-            });
-            self.elements = elements;
+            self.elements.dirty_and_redraw_all_windows(self.active);
         }
     }
 
@@ -413,9 +403,7 @@ impl App {
     }
 
     fn on_request_redraw_internal(&mut self, window: Window) {
-        let animation_schedule = self
-            .elements
-            .with_window_manager(|window_manager, elements| window_manager.animation_tick(elements, &window));
+        let animation_schedule = self.elements.animation_tick(&window);
         self.update_resources();
         window.on_redraw(
             &mut self.elements,
