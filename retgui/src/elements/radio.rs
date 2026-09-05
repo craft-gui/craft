@@ -240,14 +240,15 @@ impl Radio {
             inner_mut.element_data.set_accessibility_name(label.to_string());
             inner_mut.set_accessibility_selection(&selected);
         }
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            let inner_mut = elements.get_as_mut::<RadioNode>(inner);
+        {
+            let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+            let inner_mut = nodes.get_as_mut::<RadioNode>(inner);
             inner_mut.element_data.create_layout_node(gummy_tree, None);
             inner_mut.circle_layout.create_layout_node(gummy_tree, None);
             let node_id = inner_mut.circle_layout.layout.gummy_node_id();
             gummy_tree.add_child(inner_mut.element_data.layout.gummy_node_id(), node_id);
             gummy_tree.register_owner(node_id, inner_mut.element_data.internal_id, inner);
-        });
+        }
 
         Self { inner }
     }

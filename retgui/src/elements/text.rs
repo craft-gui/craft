@@ -373,19 +373,17 @@ impl Text {
     }
 
     pub fn set_text(&self, elements: &mut Elements, text: &str) {
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            if let Some(element) = elements.try_get_as_mut::<TextNode>(self.inner) {
-                element.set_text(gummy_tree, text);
-            }
-        });
+        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+        if let Some(element) = nodes.try_get_as_mut::<TextNode>(self.inner) {
+            element.set_text(gummy_tree, text);
+        }
     }
 
     pub fn set_text_smol_str(&self, elements: &mut Elements, text: SmolStr) {
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            if let Some(element) = elements.try_get_as_mut::<TextNode>(self.inner) {
-                element.set_text_smol_str(gummy_tree, text);
-            }
-        });
+        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+        if let Some(element) = nodes.try_get_as_mut::<TextNode>(self.inner) {
+            element.set_text_smol_str(gummy_tree, text);
+        }
     }
 }
 

@@ -7,7 +7,7 @@ use retgui_resource_manager::{ResourceId, ResourceManager};
 
 use tinyvg_rs::TinyVg;
 
-use crate::elements::{DynElement, Elements, TextInputNode, TextNode};
+use crate::elements::{DynElement, ElementNodes, TextInputNode, TextNode};
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
@@ -145,7 +145,7 @@ pub(crate) fn measure_content(
     known_dimensions: Size<Option<f32>>,
     available_space: Size<gummy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
-    elements: &mut Elements,
+    nodes: &mut ElementNodes,
     text_context: &mut TextContext,
     resource_manager: Arc<ResourceManager>,
     style: &gummy::Style,
@@ -160,10 +160,10 @@ pub(crate) fn measure_content(
 
     match node_context {
         None => Size::ZERO,
-        Some(LayoutContext::Text(gummy_text_context)) => elements
+        Some(LayoutContext::Text(gummy_text_context)) => nodes
             .get_as_mut::<TextNode>(gummy_text_context.element)
             .measure(known_dimensions, available_space, text_context),
-        Some(LayoutContext::TextInput(gummy_text_input_context)) => elements
+        Some(LayoutContext::TextInput(gummy_text_input_context)) => nodes
             .get_as_mut::<TextInputNode>(gummy_text_input_context.element)
             .state
             .measure(known_dimensions, available_space, text_context),

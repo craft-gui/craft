@@ -34,8 +34,9 @@ where
         Box::new(clone)
     });
 
-    let (access_tree, access_key, access_scale_factor, node_id) = elements.with_gummy_tree(|tree, elements| {
-        let element = elements.get_as_mut::<T>(new_element);
+    let (access_tree, access_key, access_scale_factor, node_id) = {
+        let (tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+        let element = nodes.get_as_mut::<T>(new_element);
         let data = element.element_data_mut();
         let node_id = data.layout.gummy_node_id_mut();
         *node_id = tree.clone_node(*node_id);
@@ -47,11 +48,12 @@ where
             data.access_scale_factor.get(),
             *node_id,
         )
-    });
+    };
 
-    let child_layout_parent = elements
-        .with_gummy_tree(|tree, elements| remap(elements.get_as_mut::<T>(new_element), tree))
-        .unwrap_or(node_id);
+    let child_layout_parent = {
+        let (tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+        remap(nodes.get_as_mut::<T>(new_element), tree).unwrap_or(node_id)
+    };
 
     let mut children = Vec::with_capacity(source_children.len());
     for child in source_children {

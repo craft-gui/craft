@@ -203,14 +203,15 @@ impl Checkbox {
             inner_mut.element_data.set_accessibility_name(label.to_string());
             inner_mut.element_data.set_accessibility_checked(checked);
         }
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            let inner_mut = elements.get_as_mut::<CheckboxNode>(inner);
+        {
+            let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+            let inner_mut = nodes.get_as_mut::<CheckboxNode>(inner);
             inner_mut.element_data.create_layout_node(gummy_tree, None);
             inner_mut.box_layout.create_layout_node(gummy_tree, None);
             let box_node = inner_mut.box_layout.layout.gummy_node_id();
             gummy_tree.add_child(inner_mut.element_data.layout.gummy_node_id(), box_node);
             gummy_tree.register_owner(box_node, inner_mut.element_data.internal_id, inner);
-        });
+        }
 
         Self { inner }
     }

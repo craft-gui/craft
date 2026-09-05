@@ -222,8 +222,9 @@ impl SliderNode {
         });
 
         elements.create_layout_node(me, None);
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            let element = elements.get_as_mut::<Self>(me);
+        {
+            let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+            let element = nodes.get_as_mut::<Self>(me);
             element.element_data.set_accessibility_role(issho::Role::Slider);
             element.set_background_brush(Brush::Color(palette::css::LIGHT_GRAY));
             let border_radius = 25.0;
@@ -240,7 +241,7 @@ impl SliderNode {
                 element.set_height(gummy_tree, Unit::Px(140.0));
                 element.set_width(gummy_tree, Unit::Px(10.0));
             }
-        });
+        }
         me
     }
 

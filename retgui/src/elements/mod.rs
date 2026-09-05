@@ -20,6 +20,7 @@ pub use crate::elements::radiogroup::RadioGroup;
 pub use crate::elements::scrollable::{ScrollOptions, ScrollState, ScrollToBox};
 pub(crate) use crate::elements::slider::SliderNode;
 pub use crate::elements::slider::{Slider, SliderDirection};
+pub(crate) use crate::elements::store::ElementNodes;
 pub use crate::elements::store::{Elements, State};
 pub use crate::elements::text::Text;
 pub(crate) use crate::elements::text::TextNode;

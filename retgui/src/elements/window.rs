@@ -252,11 +252,10 @@ impl Window {
     }
 
     pub(crate) fn on_resize(&self, elements: &mut Elements, new_size: Size<f32>) {
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            elements
-                .get_as_mut::<WindowNode>(self.inner)
-                .on_resize(gummy_tree, new_size)
-        })
+        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+        nodes
+            .get_as_mut::<WindowNode>(self.inner)
+            .on_resize(gummy_tree, new_size)
     }
 
     pub(crate) fn set_mouse_position(&self, elements: &mut Elements, point: Option<Point>) {
@@ -726,40 +725,38 @@ impl WindowNode {
             height: AvailableSpace::Definite(window_size.height),
         };
 
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            let root_dirty = gummy_tree.is_layout_dirty(root_node);
+        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+        let root_dirty = gummy_tree.is_layout_dirty(root_node);
 
-            if root_dirty {
-                let compute_start = Instant::now();
-                gummy_tree.compute_layout(
-                    root_node,
-                    available_space,
-                    elements,
-                    text_context,
-                    resource_manager.clone(),
-                );
-                compute = compute_start.elapsed();
-            }
+        if root_dirty {
+            let compute_start = Instant::now();
+            gummy_tree.compute_layout_with_nodes(
+                root_node,
+                available_space,
+                nodes,
+                text_context,
+                resource_manager.clone(),
+            );
+            compute = compute_start.elapsed();
+        }
 
-            if root_dirty || gummy_tree.is_apply_layout_dirty(&root_node) {
-                let apply_start = Instant::now();
-                let sf = self.effective_scale_factor();
-                let owners = gummy_tree.take_layout_owners(root_node, root_dirty);
-                for (owner_id, owner, layout_order) in owners {
-                    let mut layout_order = layout_order;
-                    if owner_id == self.element_data.internal_id {
-                        self.apply_layout(gummy_tree, &mut layout_order, text_context, sf);
-                    } else {
-                        elements
-                            .get_mut(owner)
-                            .apply_layout(gummy_tree, &mut layout_order, text_context, sf);
-                    }
+        if root_dirty || gummy_tree.is_apply_layout_dirty(&root_node) {
+            let apply_start = Instant::now();
+            let sf = self.effective_scale_factor();
+            let owners = gummy_tree.take_layout_owners(root_node, root_dirty);
+            for (owner_id, owner, layout_order) in owners {
+                let mut layout_order = layout_order;
+                if owner_id == self.element_data.internal_id {
+                    self.apply_layout(gummy_tree, &mut layout_order, text_context, sf);
+                } else {
+                    nodes
+                        .get_mut(owner)
+                        .apply_layout(gummy_tree, &mut layout_order, text_context, sf);
                 }
-                gummy_tree.apply_layout(root_node);
-                apply = apply_start.elapsed();
             }
-            //}
-        });
+            gummy_tree.apply_layout(root_node);
+            apply = apply_start.elapsed();
+        }
 
         LayoutStats::new(total_start.elapsed(), compute, apply)
     }

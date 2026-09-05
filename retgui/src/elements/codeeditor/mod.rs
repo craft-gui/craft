@@ -110,11 +110,10 @@ impl CodeEditorNode {
     fn highlight(&mut self, elements: &mut Elements) {
         let text = self.text_input.text(elements);
         let code_editor = compute_code_editor_style(&text, None, None, &self.extension, &self.theme);
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            let text = elements.get_as_mut::<crate::elements::TextInputNode>(self.text_input.inner);
-            text.set_ranged_styles(gummy_tree, code_editor.ranged_styles);
-            text.set_background_brush(Brush::Color(code_editor.background_color));
-            text.set_text_brush(gummy_tree, Brush::Color(code_editor.foreground_color));
-        });
+        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+        let text = nodes.get_as_mut::<crate::elements::TextInputNode>(self.text_input.inner);
+        text.set_ranged_styles(gummy_tree, code_editor.ranged_styles);
+        text.set_background_brush(Brush::Color(code_editor.background_color));
+        text.set_text_brush(gummy_tree, Brush::Color(code_editor.foreground_color));
     }
 }

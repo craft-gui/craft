@@ -103,20 +103,18 @@ impl TextInput {
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
     pub fn set_text(&self, elements: &mut Elements, text: &str) {
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
-                input.set_text(gummy_tree, text);
-            }
-        });
+        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+        if let Some(input) = nodes.try_get_as_mut::<TextInputNode>(self.inner) {
+            input.set_text(gummy_tree, text);
+        }
     }
 
     /// Styles the text along ranges.
     pub fn set_ranged_styles(&self, elements: &mut Elements, ranged_styles: RangedStyles) {
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
-                input.set_ranged_styles(gummy_tree, ranged_styles);
-            }
-        });
+        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+        if let Some(input) = nodes.try_get_as_mut::<TextInputNode>(self.inner) {
+            input.set_ranged_styles(gummy_tree, ranged_styles);
+        }
     }
 
     /// Returns the ranged styles.

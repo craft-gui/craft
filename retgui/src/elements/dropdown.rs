@@ -572,8 +572,9 @@ impl Dropdown {
             .style
             .set_margin(TrblRectangle::new(px(0.0), px(8.0), px(0.0), auto()));
         let _ = element;
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            let element = elements.get_as_mut::<DropdownNode>(inner);
+        {
+            let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+            let element = nodes.get_as_mut::<DropdownNode>(inner);
             element.element_data.create_layout_node(gummy_tree, None);
             element.floating_window.create_gummy_node(gummy_tree);
             element.arrow.create_gummy_node(gummy_tree);
@@ -586,7 +587,7 @@ impl Dropdown {
             let owner_id = element.element_data.internal_id;
             gummy_tree.register_owner(floating_window_child_id, owner_id, inner);
             gummy_tree.register_owner(arrow_child_id, owner_id, inner);
-        });
+        }
 
         Self { inner }
     }

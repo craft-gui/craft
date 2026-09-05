@@ -188,14 +188,15 @@ impl Audio {
             })
         });
 
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            let audio = elements.get_as_mut::<AudioNode>(inner);
+        {
+            let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+            let audio = nodes.get_as_mut::<AudioNode>(inner);
             audio.set_height(gummy_tree, Unit::Px(24.0));
             audio.set_align_items(gummy_tree, AlignItems::Center);
             audio.set_background_brush(Brush::Color(rgb(72, 72, 72)));
             audio.set_padding_all(gummy_tree, Unit::Px(6.0));
             audio.set_column_gap(gummy_tree, Unit::Px(12.0));
-        });
+        }
         elements.create_layout_node(inner, None);
 
         play_button.push(elements, play_button_icon);
@@ -252,11 +253,10 @@ impl Audio {
     }
 
     pub fn set_controls(&self, elements: &mut Elements, controls: bool) {
-        elements.with_gummy_tree(|gummy_tree, elements| {
-            if let Some(audio) = elements.try_get_as_mut::<AudioNode>(self.inner) {
-                audio.set_controls(gummy_tree, controls);
-            }
-        });
+        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+        if let Some(audio) = nodes.try_get_as_mut::<AudioNode>(self.inner) {
+            audio.set_controls(gummy_tree, controls);
+        }
     }
 
     pub fn play(&self, elements: &mut Elements) {
