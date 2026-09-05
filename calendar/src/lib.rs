@@ -8,14 +8,14 @@ mod windows;
 
 use jiff::Zoned;
 
-use icu::calendar::preferences::FirstDay;
-use icu::calendar::week::WeekPreferences;
-use icu::calendar::{Date, Gregorian};
-use icu::datetime::{FixedCalendarDateTimeFormatter, fieldsets};
+use icu_calendar::preferences::FirstDay;
+use icu_calendar::week::WeekPreferences;
+use icu_calendar::{Date, Gregorian};
+use icu_datetime::{FixedCalendarDateTimeFormatter, fieldsets};
 
-pub use icu::calendar::options::DateAddOptions;
-pub use icu::calendar::types::{DateDuration, EraYear, Month, Weekday, YearInfo};
-pub use icu::locale::Locale;
+pub use icu_calendar::options::DateAddOptions;
+pub use icu_calendar::types::{DateDuration, EraYear, Month, Weekday, YearInfo};
+pub use icu_locale::Locale;
 
 /// Returns the first day of the week for the current system user.
 ///

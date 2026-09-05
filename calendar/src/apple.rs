@@ -1,7 +1,7 @@
 use std::ffi::c_void;
 
-use icu::calendar::types::Weekday;
-use icu::calendar::{Date, Gregorian};
+use icu_calendar::types::Weekday;
+use icu_calendar::{Date, Gregorian};
 
 pub(super) fn first_day_of_week() -> Option<Weekday> {
     use std::ffi::c_void;
@@ -216,7 +216,7 @@ pub fn format_date_day_number(date: &Date<Gregorian>) -> String {
     }
 }
 
-pub fn month_name(month: icu::calendar::types::Month) -> Option<String> {
+pub fn month_name(month: icu_calendar::types::Month) -> Option<String> {
     #[link(name = "CoreFoundation", kind = "framework")]
     unsafe extern "C" {
         static kCFDateFormatterMonthSymbols: *mut c_void;
