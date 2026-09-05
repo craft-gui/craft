@@ -11,7 +11,7 @@ use retgui_resource_manager::resource_type::ResourceType;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementNode, Elements};
+use crate::elements::{DynElement, Element, ElementInternals, Elements};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::text::text_context::TextContext;
@@ -23,13 +23,13 @@ pub struct Image {
 }
 
 #[derive(Clone)]
-pub(crate) struct ImageNode {
+pub(crate) struct ImageElement {
     is_image_dirty: bool,
     resource_id: ResourceId,
     element_data: ElementData,
 }
 
-impl crate::elements::ElementNodeData for ImageNode {
+impl crate::elements::HasElementData for ImageElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -45,7 +45,7 @@ impl Element for Image {
     }
 }
 
-impl ElementNode for ImageNode {
+impl ElementInternals for ImageElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
@@ -90,7 +90,7 @@ impl ElementNode for ImageNode {
 impl Image {
     pub fn new(elements: &mut Elements, resource_id: ResourceId) -> Self {
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(ImageNode {
+            Box::new(ImageElement {
                 is_image_dirty: false,
                 resource_id: resource_id.clone(),
                 element_data: ElementData::new(me, false, access_tree),
@@ -106,7 +106,7 @@ impl Image {
 
     pub fn dummy(elements: &mut Elements) -> Self {
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(ImageNode {
+            Box::new(ImageElement {
                 is_image_dirty: false,
                 resource_id: ResourceId::DUMMY,
                 element_data: ElementData::new(me, false, access_tree),
@@ -121,7 +121,7 @@ impl Image {
     pub fn set_resource_id(&self, elements: &mut Elements, resource_id: ResourceId) {
         elements.try_dispatch_mut(self.inner, |image, elements| {
             (image as &mut dyn std::any::Any)
-                .downcast_mut::<ImageNode>()
+                .downcast_mut::<ImageElement>()
                 .unwrap()
                 .set_image(elements, resource_id)
         });
@@ -129,12 +129,12 @@ impl Image {
 
     pub fn resource_id(&self, elements: &Elements) -> ResourceId {
         elements
-            .try_get_as::<ImageNode>(self.inner)
+            .try_get_as::<ImageElement>(self.inner)
             .map_or(ResourceId::DUMMY, |image| image.get_resource_id().clone())
     }
 }
 
-impl ImageNode {
+impl ImageElement {
     pub fn set_image(&mut self, elements: &mut Elements, resource_id: ResourceId) {
         self.is_image_dirty = true;
         self.resource_id = resource_id.clone();
@@ -148,7 +148,7 @@ impl ImageNode {
             .element_data
             .layout
             .gummy_node_id
-            .expect("Failed to get Image node");
+            .expect("Failed to get Image layout node");
         elements.gummy_tree.set_node_context(node, Some(context));
         self.request_window_redraw();
     }

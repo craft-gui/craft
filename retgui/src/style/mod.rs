@@ -56,7 +56,7 @@ pub enum Display {
     None,
 }
 
-/// Controls how child nodes are aligned in the cross/block axis.
+/// Controls how child elements are aligned in the cross/block axis.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum AlignItems {
     #[default]
@@ -79,7 +79,7 @@ pub enum AlignItems {
     SafeCenter,
 }
 
-/// Controls how an individual node is aligned in the cross/block axis.
+/// Controls how an individual element is aligned in the cross/block axis.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum AlignSelf {
     #[default]

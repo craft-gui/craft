@@ -8,7 +8,7 @@ use winit::keyboard::KeyCode;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementNode, Elements};
+use crate::elements::{DynElement, Element, ElementInternals, Elements};
 use crate::events::{ClickEvent, ClickTrigger, EventKind};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
@@ -24,7 +24,7 @@ pub struct Button {
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub(crate) struct ButtonNode {
+pub(crate) struct ButtonElement {
     element_data: ElementData,
 }
 
@@ -42,7 +42,7 @@ impl Element for Button {
     }
 }
 
-impl crate::elements::ElementNodeData for ButtonNode {
+impl crate::elements::HasElementData for ButtonElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -52,7 +52,7 @@ impl crate::elements::ElementNodeData for ButtonNode {
     }
 }
 
-impl ElementNode for ButtonNode {
+impl ElementInternals for ButtonElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
@@ -111,12 +111,12 @@ impl ElementNode for ButtonNode {
 impl Button {
     pub fn new(elements: &mut Elements) -> Self {
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(ButtonNode {
+            Box::new(ButtonElement {
                 element_data: ElementData::new(me, true, access_tree),
             })
         });
         elements.create_layout_node(inner, None);
-        let inner_mut = elements.get_as_mut::<ButtonNode>(inner);
+        let inner_mut = elements.get_as_mut::<ButtonElement>(inner);
         inner_mut.element_data.set_accessibility_role(Role::Button);
         Self { inner }
     }

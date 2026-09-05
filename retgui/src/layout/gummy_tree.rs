@@ -5,7 +5,7 @@ use gummy::{Layout, NodeId, Size, Style};
 
 use retgui_resource_manager::ResourceManager;
 
-use crate::elements::{DynElement, ElementNodes, Elements};
+use crate::elements::{DynElement, Elements, RetainedElements};
 use crate::layout::layout_context::{LayoutContext, measure_content};
 use crate::text::text_context::TextContext;
 
@@ -101,15 +101,15 @@ impl GummyTree {
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
     ) {
-        let (_, nodes) = elements.disjoint_borrow_layout_and_elements();
-        self.compute_layout_with_nodes(node_id, available_space, nodes, text_context, resource_manager);
+        let (_, elements) = elements.disjoint_borrow_layout_and_elements();
+        self.compute_layout_with_elements(node_id, available_space, elements, text_context, resource_manager);
     }
 
-    pub(crate) fn compute_layout_with_nodes(
+    pub(crate) fn compute_layout_with_elements(
         &mut self,
         node_id: NodeId,
         available_space: Size<gummy::AvailableSpace>,
-        nodes: &mut ElementNodes,
+        elements: &mut RetainedElements,
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
     ) {
@@ -122,7 +122,7 @@ impl GummyTree {
                         known_dimensions,
                         available_space,
                         node_context,
-                        nodes,
+                        elements,
                         text_context,
                         resource_manager.clone(),
                         style,

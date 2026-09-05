@@ -8,7 +8,7 @@ use winit::event::ElementState;
 use winit::keyboard::KeyCode;
 
 use crate::elements::element_data::ElementData;
-use crate::elements::{DynElement, ElementNode, Elements};
+use crate::elements::{DynElement, ElementInternals, Elements};
 use crate::events::{Event, EventKind, PointerButton, PointerId, PointerType, ScrollDelta, ScrollEvent as RetGuiScrollEvent};
 use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};
 use crate::style::{Overflow, Style};
@@ -302,13 +302,13 @@ pub struct HandleScrollLogicResult {
     pub pointer_id: Option<PointerId>,
 }
 
-pub(crate) fn handle_scroll_logic(elements: &mut Elements, element: &mut dyn ElementNode, event: &mut EventKind) {
+pub(crate) fn handle_scroll_logic(elements: &mut Elements, element: &mut dyn ElementInternals, event: &mut EventKind) {
     handle_scroll_logic_internal(elements, element, event, true);
 }
 
 fn handle_scroll_logic_internal(
     elements: &mut Elements,
-    element: &mut dyn ElementNode,
+    element: &mut dyn ElementInternals,
     event: &mut EventKind,
     focus_on_pointer_down: bool,
 ) {
@@ -512,7 +512,7 @@ pub(crate) fn handle_scroll_logic_advance(
 
 pub(crate) fn handle_accessibility_scroll_event(
     elements: &mut Elements,
-    element: &mut dyn ElementNode,
+    element: &mut dyn ElementInternals,
     event: &AccessEvent,
 ) {
     match event {
@@ -554,7 +554,7 @@ fn scroll_from_accessibility(elements: &mut Elements, data: &mut ElementData, ev
     scroll_to(elements, data, target)
 }
 
-fn scroll_into_view(elements: &mut Elements, element: &mut dyn ElementNode) -> bool {
+fn scroll_into_view(elements: &mut Elements, element: &mut dyn ElementInternals) -> bool {
     let target = element.element_data().layout.world_box().border_rectangle();
     let mut ancestor = element.element_data().parent;
 

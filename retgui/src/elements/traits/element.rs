@@ -11,14 +11,14 @@ use smol_str::SmolStr;
 use crate::RetGuiError;
 use crate::elements::internal_helpers::push_child_to_element;
 use crate::elements::scrollable::{ScrollOptions, ScrollState};
-use crate::elements::{DynElement, ElementEditor, ElementNode, Elements};
+use crate::elements::{DynElement, ElementEditor, ElementInternals, Elements};
 use crate::events::{CheckboxToggledEvent, ClickEvent, CustomEvent, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, KeyboardEvent, PointerButtonEvent, PointerCaptureEvent, PointerEnterEvent, PointerId, PointerLeaveEvent, PointerMovedEvent, RadioValueChangedEvent, ScrollEvent, SliderValueChangedEvent, TextInputChangedEvent, UnfocusEvent};
 use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, TextAlign, Underline, Unit};
 
 fn with_element<E: Element, R>(
     element: E,
     elements: &Elements,
-    callback: impl FnOnce(&dyn ElementNode) -> R,
+    callback: impl FnOnce(&dyn ElementInternals) -> R,
 ) -> Option<R> {
     elements.try_get(element.as_dyn_element()).map(callback)
 }
@@ -26,7 +26,7 @@ fn with_element<E: Element, R>(
 fn with_element_mut<E: Element, R>(
     element: E,
     elements: &mut Elements,
-    callback: impl FnOnce(&mut dyn ElementNode, &mut Elements) -> R,
+    callback: impl FnOnce(&mut dyn ElementInternals, &mut Elements) -> R,
 ) -> Option<R> {
     elements.try_dispatch_mut(element.as_dyn_element(), callback)
 }

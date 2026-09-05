@@ -21,7 +21,7 @@ use winit::window::{ImeCapabilities, ImeEnableRequest, ImeHint, ImePurpose, ImeR
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::traits::clone_element;
-use crate::elements::{AnimationSchedule, DynElement, Element, ElementNode, Elements, WindowNode, scrollable};
+use crate::elements::{AnimationSchedule, DynElement, Element, ElementInternals, Elements, WindowElement, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{GummyTextInputContext, LayoutContext, TextHashKey};
@@ -38,7 +38,7 @@ pub struct TextInput {
 
 // A stateful element that shows text.
 #[derive(Clone)]
-pub(crate) struct TextInputNode {
+pub(crate) struct TextInputElement {
     pub(crate) element_data: ElementData,
     pub(crate) ranged_styles: Option<RangedStyles>,
     pub(crate) disabled: bool,
@@ -58,13 +58,13 @@ impl TextInput {
     /// Creates a single line editable text input.
     pub fn new(elements: &mut Elements, text: &str) -> Self {
         Self {
-            inner: TextInputNode::create(elements, text),
+            inner: TextInputElement::create(elements, text),
         }
     }
 
     /// Disables the text input.
     pub fn set_disabled(&self, elements: &mut Elements, disabled: bool) {
-        if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
+        if let Some(input) = elements.try_get_as_mut::<TextInputElement>(self.inner) {
             input.disabled(disabled);
         }
     }
@@ -72,19 +72,19 @@ impl TextInput {
     /// Returns whether the element is disabled.
     pub fn is_disabled(&self, elements: &Elements) -> bool {
         elements
-            .try_get_as::<TextInputNode>(self.inner)
+            .try_get_as::<TextInputElement>(self.inner)
             .is_some_and(|input| input.disabled)
     }
 
     /// Returns whether the text input is multiline.
     pub fn is_multiline(&self, elements: &Elements) -> bool {
         elements
-            .try_get_as::<TextInputNode>(self.inner)
+            .try_get_as::<TextInputElement>(self.inner)
             .is_some_and(|input| input.state.multiline)
     }
 
     pub fn set_multiline(&self, elements: &mut Elements, multiline: bool) {
-        if let Some(input) = elements.try_get_as_mut::<TextInputNode>(self.inner) {
+        if let Some(input) = elements.try_get_as_mut::<TextInputElement>(self.inner) {
             input.multiline(multiline);
         }
     }
@@ -94,7 +94,7 @@ impl TextInput {
     /// This does not include the ime preedit text.
     pub fn text(&self, elements: &Elements) -> String {
         elements
-            .try_get_as::<TextInputNode>(self.inner)
+            .try_get_as::<TextInputElement>(self.inner)
             .map_or_else(String::new, |input| input.state.editor().text().chars().collect())
     }
 
@@ -103,16 +103,16 @@ impl TextInput {
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
     pub fn set_text(&self, elements: &mut Elements, text: &str) {
-        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-        if let Some(input) = nodes.try_get_as_mut::<TextInputNode>(self.inner) {
+        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+        if let Some(input) = elements.try_get_as_mut::<TextInputElement>(self.inner) {
             input.set_text(gummy_tree, text);
         }
     }
 
     /// Styles the text along ranges.
     pub fn set_ranged_styles(&self, elements: &mut Elements, ranged_styles: RangedStyles) {
-        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-        if let Some(input) = nodes.try_get_as_mut::<TextInputNode>(self.inner) {
+        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+        if let Some(input) = elements.try_get_as_mut::<TextInputElement>(self.inner) {
             input.set_ranged_styles(gummy_tree, ranged_styles);
         }
     }
@@ -120,7 +120,7 @@ impl TextInput {
     /// Returns the ranged styles.
     pub fn ranged_styles(&self, elements: &Elements) -> Option<RangedStyles> {
         elements
-            .try_get_as::<TextInputNode>(self.inner)
+            .try_get_as::<TextInputElement>(self.inner)
             .and_then(|input| input.ranged_styles.clone())
     }
 }
@@ -131,7 +131,7 @@ impl Element for TextInput {
     }
 }
 
-impl crate::elements::ElementNodeData for TextInputNode {
+impl crate::elements::HasElementData for TextInputElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -141,7 +141,7 @@ impl crate::elements::ElementNodeData for TextInputNode {
     }
 }
 
-impl ElementNode for TextInputNode {
+impl ElementInternals for TextInputElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
             let gummy_id = element.element_data.layout.gummy_node_id();
@@ -449,14 +449,14 @@ impl ElementNode for TextInputNode {
     }
 }
 
-impl TextInputNode {
+impl TextInputElement {
     fn set_ime_enabled(&mut self, elements: &Elements, enabled: bool) {
         self.state.ime_state.is_ime_active = enabled;
 
         let Some(window) = self
             .element_data
             .window
-            .and_then(|window| elements.get_as::<WindowNode>(window).winit_window())
+            .and_then(|window| elements.get_as::<WindowElement>(window).winit_window())
         else {
             return;
         };
@@ -482,7 +482,7 @@ impl TextInputNode {
         let Some(window) = self
             .element_data
             .window
-            .and_then(|window| elements.get_as::<WindowNode>(window).winit_window())
+            .and_then(|window| elements.get_as::<WindowElement>(window).winit_window())
         else {
             return;
         };
@@ -526,19 +526,19 @@ impl TextInputNode {
     }
 
     pub fn create(elements: &mut Elements, text: &str) -> DynElement {
-        let default_style = TextInputNode::get_default_style();
+        let default_style = TextInputElement::get_default_style();
 
         let text_input_state = TextInputState::default();
 
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(TextInputNode {
+            Box::new(TextInputElement {
                 element_data: ElementData::new(me, true, access_tree),
                 ranged_styles: Some(RangedStyles::new(vec![])),
                 disabled: false,
                 state: text_input_state,
             })
         });
-        let inner_mut = elements.get_as_mut::<TextInputNode>(inner);
+        let inner_mut = elements.get_as_mut::<TextInputElement>(inner);
         inner_mut.element_data.style = default_style;
 
         {
@@ -553,7 +553,7 @@ impl TextInputNode {
         elements.create_layout_node(inner, context);
         TextInput { inner }.set_text(elements, text);
 
-        let inner_mut = elements.get_as_mut::<TextInputNode>(inner);
+        let inner_mut = elements.get_as_mut::<TextInputElement>(inner);
         let gummy_id = inner_mut.element_data.layout.gummy_node_id;
         inner_mut.state.gummy_id = gummy_id;
         inner_mut.state.editor.gummy_id = gummy_id;
@@ -590,7 +590,7 @@ impl TextInputNode {
     }
 }
 
-impl TextData for TextInputNode {
+impl TextData for TextInputElement {
     fn get_text_renderer(&self) -> Option<&TextRender> {
         self.state.text_render.as_ref()
     }

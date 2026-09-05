@@ -1,9 +1,9 @@
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::{DynElement, ElementNode, Elements};
+use crate::elements::{DynElement, ElementInternals, Elements};
 
 pub fn clone_element<T, F>(source: &T, elements: &mut Elements, remap: F) -> DynElement
 where
-    T: ElementNode + Clone + 'static,
+    T: ElementInternals + Clone + 'static,
     F: FnOnce(&mut T, &mut crate::layout::GummyTree) -> Option<gummy::NodeId>,
 {
     let source_children = source.element_data().children.clone();
@@ -35,8 +35,8 @@ where
     });
 
     let (access_tree, access_key, access_scale_factor, node_id) = {
-        let (tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-        let element = nodes.get_as_mut::<T>(new_element);
+        let (tree, elements) = elements.disjoint_borrow_layout_and_elements();
+        let element = elements.get_as_mut::<T>(new_element);
         let data = element.element_data_mut();
         let node_id = data.layout.gummy_node_id_mut();
         *node_id = tree.clone_node(*node_id);
@@ -51,8 +51,8 @@ where
     };
 
     let child_layout_parent = {
-        let (tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-        remap(nodes.get_as_mut::<T>(new_element), tree).unwrap_or(node_id)
+        let (tree, elements) = elements.disjoint_borrow_layout_and_elements();
+        remap(elements.get_as_mut::<T>(new_element), tree).unwrap_or(node_id)
     };
 
     let mut children = Vec::with_capacity(source_children.len());

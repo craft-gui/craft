@@ -123,14 +123,14 @@ fn pointer_capture_example(elements: &mut Elements) -> Container {
 fn pointer_enter_leave_example(elements: &mut Elements) -> Container {
     let event_log = event_log(elements);
 
-    let pointer_enter_log = move |node_name: &'static str| {
+    let pointer_enter_log = move |element_name: &'static str| {
         move |_event: &mut PointerEnterEvent, elements: &mut Elements| {
-            event_log.push(elements, format!("Pointer Enter: {node_name}"));
+            event_log.push(elements, format!("Pointer Enter: {element_name}"));
         }
     };
-    let pointer_leave_log = move |node_name: &'static str| {
+    let pointer_leave_log = move |element_name: &'static str| {
         move |_event: &mut PointerLeaveEvent, elements: &mut Elements| {
-            event_log.push(elements, format!("Pointer Leave: {node_name}"));
+            event_log.push(elements, format!("Pointer Leave: {element_name}"));
         }
     };
 

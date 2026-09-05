@@ -20,7 +20,7 @@ use crate::elements::element_data::ElementData;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementNode, Elements, scrollable};
+use crate::elements::{DynElement, Element, ElementInternals, Elements, scrollable};
 use crate::events::{CheckboxToggledEvent, EventKind};
 use crate::layout::GummyTree;
 use crate::style::Unit;
@@ -33,7 +33,7 @@ pub struct Checkbox {
 }
 
 #[derive(Clone)]
-pub(crate) struct CheckboxNode {
+pub(crate) struct CheckboxElement {
     element_data: ElementData,
     box_layout: ElementData,
     box_rect: Rectangle,
@@ -47,7 +47,7 @@ impl Element for Checkbox {
     }
 }
 
-impl crate::elements::ElementNodeData for CheckboxNode {
+impl crate::elements::HasElementData for CheckboxElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -57,7 +57,7 @@ impl crate::elements::ElementNodeData for CheckboxNode {
     }
 }
 
-impl ElementNode for CheckboxNode {
+impl ElementInternals for CheckboxElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
             let owner_id = element.element_data.internal_id;
@@ -182,7 +182,7 @@ impl Checkbox {
     pub fn new(elements: &mut Elements, label: &str, checked: bool) -> Self {
         let size = 16.0;
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(CheckboxNode {
+            Box::new(CheckboxElement {
                 element_data: ElementData::new(me, true, access_tree.clone()),
                 box_layout: ElementData::new_pseudo(me, false, access_tree),
                 box_rect: Rectangle::new(0.0, 0.0, size, size),
@@ -192,7 +192,7 @@ impl Checkbox {
         });
 
         {
-            let inner_mut = elements.get_as_mut::<CheckboxNode>(inner);
+            let inner_mut = elements.get_as_mut::<CheckboxElement>(inner);
             inner_mut.box_layout.style.set_min_width(Unit::Px(size));
             inner_mut.box_layout.style.set_min_height(Unit::Px(size));
             inner_mut
@@ -204,8 +204,8 @@ impl Checkbox {
             inner_mut.element_data.set_accessibility_checked(checked);
         }
         {
-            let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-            let inner_mut = nodes.get_as_mut::<CheckboxNode>(inner);
+            let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+            let inner_mut = elements.get_as_mut::<CheckboxElement>(inner);
             inner_mut.element_data.create_layout_node(gummy_tree, None);
             inner_mut.box_layout.create_layout_node(gummy_tree, None);
             let box_node = inner_mut.box_layout.layout.gummy_node_id();
@@ -217,7 +217,7 @@ impl Checkbox {
     }
 }
 
-impl CheckboxNode {
+impl CheckboxElement {
     fn toggle(&mut self, elements: &mut Elements) {
         self.checked = !self.checked;
         self.element_data.set_accessibility_checked(self.checked);

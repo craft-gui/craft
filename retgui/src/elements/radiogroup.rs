@@ -14,7 +14,7 @@ use winit::keyboard::KeyCode;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementNode, Elements, RadioNode, scrollable};
+use crate::elements::{DynElement, Element, ElementInternals, Elements, RadioElement, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
@@ -28,7 +28,7 @@ pub struct RadioGroup {
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub(crate) struct RadioGroupNode {
+pub(crate) struct RadioGroupElement {
     element_data: ElementData,
 }
 
@@ -38,7 +38,7 @@ impl Element for RadioGroup {
     }
 }
 
-impl crate::elements::ElementNodeData for RadioGroupNode {
+impl crate::elements::HasElementData for RadioGroupElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -48,7 +48,7 @@ impl crate::elements::ElementNodeData for RadioGroupNode {
     }
 }
 
-impl ElementNode for RadioGroupNode {
+impl ElementInternals for RadioGroupElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
@@ -92,13 +92,13 @@ impl ElementNode for RadioGroupNode {
     }
 }
 
-impl RadioGroupNode {
+impl RadioGroupElement {
     fn move_selection(&mut self, elements: &mut Elements, direction: isize) -> bool {
         let radios = self
             .element_data
             .children
             .iter()
-            .filter(|child| (elements.get(**child) as &dyn Any).is::<RadioNode>())
+            .filter(|child| (elements.get(**child) as &dyn Any).is::<RadioElement>())
             .copied()
             .collect::<Vec<_>>();
         let Some(current_index) = radios.iter().position(|radio| elements.get(*radio).is_focused()) else {
@@ -113,16 +113,16 @@ impl RadioGroupNode {
         {
             let next_handle = radios[next_index];
             elements.dispatch_mut(next_handle, |next, elements| {
-                let next = (next as &mut dyn Any).downcast_mut::<RadioNode>().unwrap();
+                let next = (next as &mut dyn Any).downcast_mut::<RadioElement>().unwrap();
                 next.focus(elements);
                 next.set_value_from_group(elements);
             });
         }
         for radio in radios {
-            let state = elements.get_as::<RadioNode>(radio).active_value;
+            let state = elements.get_as::<RadioElement>(radio).active_value;
             let selected = elements.state(state).clone();
             elements
-                .get_as_mut::<RadioNode>(radio)
+                .get_as_mut::<RadioElement>(radio)
                 .set_accessibility_selection(&selected);
         }
         true
@@ -132,12 +132,12 @@ impl RadioGroupNode {
 impl RadioGroup {
     pub fn new(elements: &mut Elements, label: &str) -> Self {
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(RadioGroupNode {
+            Box::new(RadioGroupElement {
                 element_data: ElementData::new(me, true, access_tree),
             })
         });
         elements.create_layout_node(inner, None);
-        let inner_mut = elements.get_as_mut::<RadioGroupNode>(inner);
+        let inner_mut = elements.get_as_mut::<RadioGroupElement>(inner);
         {
             inner_mut.element_data.set_accessibility_role(issho::Role::Group);
             inner_mut.element_data.set_accessibility_name(label.to_string());

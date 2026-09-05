@@ -3,7 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use retgui_primitives::geometry::Point;
 use retgui_renderer::renderer::Renderer;
 
-use crate::elements::{DynElement, Elements, WindowNode};
+use crate::elements::{DynElement, Elements, WindowElement};
 use crate::events::helpers::{TargetSearchContext, call_user_event_handlers, find_target, freeze_target_list, nearest_common_ancestor};
 use crate::events::{ClickEvent, ClickTrigger, Event, EventKind, PointerButton, PointerEnterEvent, PointerId, PointerLeaveEvent};
 use crate::text::text_context::TextContext;
@@ -170,7 +170,7 @@ impl EventDispatcher {
         if event_kind.is_system_pointer_event()
             && let Some(pointer_id) = event_kind.pointer_id()
         {
-            let capture = &elements.get_as::<WindowNode>(window).pointer_capture;
+            let capture = &elements.get_as::<WindowElement>(window).pointer_capture;
             captured = capture.find_pointer_capture_target(event_kind, &pointer_id).is_some();
             let target = find_target(
                 root,
@@ -209,16 +209,16 @@ impl EventDispatcher {
         if event_kind.is_system_pointer_event()
             && let Some(pointer_id) = event_kind.pointer_id()
         {
-            let mut capture = std::mem::take(&mut elements.get_as_mut::<WindowNode>(window).pointer_capture);
+            let mut capture = std::mem::take(&mut elements.get_as_mut::<WindowElement>(window).pointer_capture);
             let changed =
                 capture.maybe_handle_implicit_pointer_capture_release(elements, event_kind, text_context, &pointer_id);
-            let during_dispatch = std::mem::take(&mut elements.get_as_mut::<WindowNode>(window).pointer_capture);
+            let during_dispatch = std::mem::take(&mut elements.get_as_mut::<WindowElement>(window).pointer_capture);
             capture
                 .pending_pointer_captures
                 .extend(during_dispatch.pending_pointer_captures);
-            elements.get_as_mut::<WindowNode>(window).pointer_capture = capture;
+            elements.get_as_mut::<WindowElement>(window).pointer_capture = capture;
             if changed {
-                let capture = &elements.get_as::<WindowNode>(window).pointer_capture;
+                let capture = &elements.get_as::<WindowElement>(window).pointer_capture;
                 let target = find_target(
                     root,
                     mouse_position,

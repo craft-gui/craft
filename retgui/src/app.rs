@@ -22,7 +22,7 @@ use winit::dpi::PhysicalPosition;
 use winit::event::{ElementState, Ime, KeyEvent, PointerKind, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 
-use crate::elements::{AnimationSchedule, DynElement, Elements, Window, WindowNode, scrollable, set_focus_outline_visible};
+use crate::elements::{AnimationSchedule, DynElement, Elements, Window, WindowElement, scrollable, set_focus_outline_visible};
 use crate::events::{EventDispatcher, EventKind, ImeEvent, KeyboardEvent, PointerButtonEvent, PointerInfo, PointerMovedEvent, PointerScrollEvent, PointerState};
 use crate::text::text_context::TextContext;
 
@@ -109,7 +109,7 @@ impl App {
             WindowEvent::KeyboardInput { event, .. } => self.on_keyboard_input(window, event),
             WindowEvent::ModifiersChanged(modifiers) => {
                 self.elements
-                    .get_as_mut::<WindowNode>(window.inner)
+                    .get_as_mut::<WindowElement>(window.inner)
                     .update_modifiers(modifiers.state());
             }
             WindowEvent::PointerMoved {
@@ -173,7 +173,7 @@ impl App {
             WindowEvent::Moved(_) => self.on_move(window),
             WindowEvent::Focused(focused) => {
                 if !focused {
-                    self.elements.get_as_mut::<WindowNode>(window.inner).ime_composing = false;
+                    self.elements.get_as_mut::<WindowElement>(window.inner).ime_composing = false;
                 }
                 window.on_focused(&self.elements, focused);
             }
@@ -225,12 +225,10 @@ impl App {
     fn process_created_renderers(&mut self) {
         while let Ok(created) = self.created_renderer_receiver.try_recv() {
             if self.elements.contains(created.window) {
-                let (gummy_tree, nodes) = self.elements.disjoint_borrow_layout_and_elements();
-                nodes.get_as_mut::<WindowNode>(created.window).on_renderer_created(
-                    gummy_tree,
-                    created.renderer,
-                    created.size,
-                );
+                let (gummy_tree, elements) = self.elements.disjoint_borrow_layout_and_elements();
+                elements
+                    .get_as_mut::<WindowElement>(created.window)
+                    .on_renderer_created(gummy_tree, created.renderer, created.size);
             }
         }
     }
@@ -312,7 +310,7 @@ impl App {
         let pointer_scroll_update = PointerScrollEvent::new(DynElement::new(window.inner), pointer, delta, state);
         let zoomed = self.elements.dispatch_mut(window.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowNode>()
+                .downcast_mut::<WindowElement>()
                 .unwrap()
                 .maybe_zoom(elements, &pointer_scroll_update)
         });
@@ -362,7 +360,7 @@ impl App {
             Ime::Enabled | Ime::Commit(_) | Ime::Disabled => Some(false),
             _ => None,
         } {
-            self.elements.get_as_mut::<WindowNode>(window.inner).ime_composing = is_composing;
+            self.elements.get_as_mut::<WindowElement>(window.inner).ime_composing = is_composing;
         }
         let event = ImeEvent::new(DynElement::new(window.inner), ime);
         self.dispatch_event(window, EventKind::Ime(event));
@@ -370,7 +368,7 @@ impl App {
 
     pub fn on_keyboard_input(&mut self, window: Window, keyboard_input: KeyEvent) {
         let (modifiers, is_composing) = {
-            let window = self.elements.get_as::<WindowNode>(window.inner);
+            let window = self.elements.get_as::<WindowElement>(window.inner);
             (window.modifiers, window.ime_composing)
         };
         let state = keyboard_input.state;
@@ -380,7 +378,7 @@ impl App {
         let event = KeyboardEvent::new(DynElement::new(window.inner), keyboard_input, modifiers, is_composing);
         let toggled = self.elements.dispatch_mut(window.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowNode>()
+                .downcast_mut::<WindowElement>()
                 .unwrap()
                 .maybe_toggle_perf_stats(elements, &event)
         });
@@ -389,7 +387,7 @@ impl App {
         }
         let zoomed = self.elements.dispatch_mut(window.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowNode>()
+                .downcast_mut::<WindowElement>()
                 .unwrap()
                 .maybe_zoom_keyboard(elements, &event)
         });
@@ -398,7 +396,7 @@ impl App {
         }
         let navigation_target = self
             .elements
-            .get_as::<WindowNode>(window.inner)
+            .get_as::<WindowElement>(window.inner)
             .tab_navigation_target(&self.elements, &event);
         let event = match state {
             ElementState::Pressed => EventKind::KeyDown(event),
@@ -433,7 +431,7 @@ impl App {
     fn dispatch_event(&mut self, window: Window, mut event: EventKind) -> bool {
         let mouse_pos = window.mouse_position(&self.elements);
         let mut renderer = std::mem::replace(
-            &mut self.elements.get_as_mut::<WindowNode>(window.inner).renderer,
+            &mut self.elements.get_as_mut::<WindowElement>(window.inner).renderer,
             Box::new(retgui_renderer::blank_renderer::BlankRenderer::default()),
         );
         let prevented = self.event_dispatcher.dispatch_event(
@@ -445,7 +443,7 @@ impl App {
             &mut self.target_scratch,
             &mut self.elements,
         );
-        self.elements.get_as_mut::<WindowNode>(window.inner).renderer = renderer;
+        self.elements.get_as_mut::<WindowElement>(window.inner).renderer = renderer;
         prevented
     }
 

@@ -2,7 +2,7 @@ use crate::elements::DynElement;
 
 /// Used as a super trait and forces implementations to
 /// support the retrieval and mutation of `ElementData`(struct).
-pub trait ElementNodeData {
+pub trait HasElementData {
     fn element_data(&self) -> &crate::elements::element_data::ElementData;
 
     fn element_data_mut(&mut self) -> &mut crate::elements::element_data::ElementData;

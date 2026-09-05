@@ -6,7 +6,7 @@ use issho::IsshoError;
 
 use winit::window::Window;
 
-use crate::elements::{DynElement, ElementNode, Elements};
+use crate::elements::{DynElement, ElementInternals, Elements};
 
 #[derive(Clone)]
 pub struct RetGuiAccessTree {
@@ -54,7 +54,7 @@ impl Deref for RetGuiAccessTree {
 
 pub(crate) fn set_subtree_context(
     elements: &mut Elements,
-    element: &mut dyn ElementNode,
+    element: &mut dyn ElementInternals,
     tree: &RetGuiAccessTree,
     root: issho::AccessKey,
     scale_factor: f64,
@@ -75,7 +75,7 @@ pub(crate) fn set_subtree_context(
 
 pub(crate) fn reparent_subtree(
     elements: &mut Elements,
-    element: &mut dyn ElementNode,
+    element: &mut dyn ElementInternals,
     tree: &RetGuiAccessTree,
     parent: issho::AccessKey,
     root: issho::AccessKey,
@@ -93,7 +93,7 @@ pub(crate) fn reparent_subtree(
     set_subtree_context(elements, element, tree, root, scale_factor);
 }
 
-pub(crate) fn detach_subtree(elements: &mut Elements, element: &mut dyn ElementNode) {
+pub(crate) fn detach_subtree(elements: &mut Elements, element: &mut dyn ElementInternals) {
     let (tree, key) = {
         let data = element.element_data();
         (data.access_tree.clone(), data.access_key)

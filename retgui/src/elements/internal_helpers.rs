@@ -1,4 +1,4 @@
-use crate::elements::{DynElement, ElementNode, Elements};
+use crate::elements::{DynElement, ElementInternals, Elements};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
 
@@ -26,28 +26,28 @@ pub fn push_child_to_element(elements: &mut Elements, parent_handle: DynElement,
                 .map(|nodes| (data.access_tree.clone(), nodes)),
         )
     };
-    elements.dispatch_mut(child, |child_node, elements| {
-        child_node.element_data_mut().parent = Some(me);
-        child_node.element_data_mut().window = me_window;
-        child_node.element_data_mut().redraw_signal = redraw_signal;
-        child_node.propagate_window_down(elements);
-        child_node.set_scale_factor(elements, scale_factor);
+    elements.dispatch_mut(child, |child_element, elements| {
+        child_element.element_data_mut().parent = Some(me);
+        child_element.element_data_mut().window = me_window;
+        child_element.element_data_mut().redraw_signal = redraw_signal;
+        child_element.propagate_window_down(elements);
+        child_element.set_scale_factor(elements, scale_factor);
         elements.get_mut(parent_handle).element_data_mut().children.push(child);
 
-        if let Some(child_id) = child_node.element_data().layout.gummy_node_id {
+        if let Some(child_id) = child_element.element_data().layout.gummy_node_id {
             elements.gummy_tree.add_child(parent_id.unwrap(), child_id);
         }
-        child_node.on_post_add_layout_tree(&mut elements.gummy_tree);
+        child_element.on_post_add_layout_tree(&mut elements.gummy_tree);
 
         if let Some((tree, (parent_node, root))) = access {
-            crate::accessibility::reparent_subtree(elements, child_node, &tree, parent_node, root, scale_factor);
+            crate::accessibility::reparent_subtree(elements, child_element, &tree, parent_node, root, scale_factor);
         }
     });
     elements.get(parent_handle).request_window_redraw();
 }
 
 pub fn apply_generic_container_layout(
-    element: &mut dyn ElementNode,
+    element: &mut dyn ElementInternals,
     gummy_tree: &mut GummyTree,
     z_index: &mut u32,
     scale_factor: f64,
@@ -105,7 +105,7 @@ pub fn apply_generic_container_layout_non_dom(
 }
 
 pub fn apply_generic_leaf_layout(
-    element: &mut dyn ElementNode,
+    element: &mut dyn ElementInternals,
     gummy_tree: &mut GummyTree,
     z_index: &mut u32,
     scale_factor: f64,
@@ -126,7 +126,7 @@ pub fn apply_generic_leaf_layout(
 }
 
 pub fn draw_generic_container(
-    element: &dyn ElementNode,
+    element: &dyn ElementInternals,
     elements: &Elements,
     renderer: &mut dyn Renderer,
     resource_manager: Arc<ResourceManager>,

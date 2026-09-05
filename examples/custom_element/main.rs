@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use retgui::elements::{DynElement, Element, ElementData, ElementEditor, ElementNode, ElementNodeData, Elements, Text, Window, clone_element};
+use retgui::elements::{DynElement, Element, ElementData, ElementEditor, ElementInternals, Elements, HasElementData, Text, Window, clone_element};
 use retgui::events::EventKind;
 use retgui::style::AlignSelf;
 use retgui::text::text_context::TextContext;
@@ -14,7 +14,7 @@ struct ColorTile {
 }
 
 #[derive(Clone)]
-struct ColorTileNode {
+struct ColorTileElement {
     element_data: ElementData,
     color: Color,
     alternate: Color,
@@ -27,7 +27,7 @@ impl Element for ColorTile {
     }
 }
 
-impl ElementNodeData for ColorTileNode {
+impl HasElementData for ColorTileElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -37,7 +37,7 @@ impl ElementNodeData for ColorTileNode {
     }
 }
 
-impl ElementNode for ColorTileNode {
+impl ElementInternals for ColorTileElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         clone_element(self, elements, |_, _| None)
     }
@@ -72,7 +72,7 @@ impl ElementNode for ColorTileNode {
 
 impl ColorTile {
     fn new(elements: &mut Elements) -> Self {
-        let inner = elements.insert_element(true, |element_data| ColorTileNode {
+        let inner = elements.insert_element(true, |element_data| ColorTileElement {
             element_data,
             color: rgb(37, 99, 235),
             alternate: rgb(219, 39, 119),
@@ -82,14 +82,14 @@ impl ColorTile {
     }
 
     fn fill_color(self, elements: &mut Elements, color: Color) -> Self {
-        let tile = elements.get_as_mut::<ColorTileNode>(self.inner);
+        let tile = elements.get_as_mut::<ColorTileElement>(self.inner);
         tile.color = color;
         tile.request_window_redraw();
         self
     }
 
     fn click_count(self, elements: &Elements) -> u32 {
-        elements.get_as::<ColorTileNode>(self.inner).clicks
+        elements.get_as::<ColorTileElement>(self.inner).clicks
     }
 }
 

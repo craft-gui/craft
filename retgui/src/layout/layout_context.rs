@@ -7,7 +7,7 @@ use retgui_resource_manager::{ResourceId, ResourceManager};
 
 use tinyvg_rs::TinyVg;
 
-use crate::elements::{DynElement, ElementNodes, TextInputNode, TextNode};
+use crate::elements::{DynElement, RetainedElements, TextElement, TextInputElement};
 use crate::text::text_context::TextContext;
 
 #[derive(Clone)]
@@ -32,9 +32,9 @@ pub struct TextHashKey {
 pub enum AvailableSpaceKey {
     /// The amount of space available is the specified number of pixels
     Definite(u32),
-    /// The amount of space available is indefinite and the node should be laid out under a min-content constraint
+    /// The amount of space available is indefinite and the element should be laid out under a min-content constraint
     MinContent,
-    /// The amount of space available is indefinite and the node should be laid out under a max-content constraint
+    /// The amount of space available is indefinite and the element should be laid out under a max-content constraint
     MaxContent,
 }
 
@@ -145,7 +145,7 @@ pub(crate) fn measure_content(
     known_dimensions: Size<Option<f32>>,
     available_space: Size<gummy::AvailableSpace>,
     node_context: Option<&mut LayoutContext>,
-    nodes: &mut ElementNodes,
+    elements: &mut RetainedElements,
     text_context: &mut TextContext,
     resource_manager: Arc<ResourceManager>,
     style: &gummy::Style,
@@ -160,11 +160,11 @@ pub(crate) fn measure_content(
 
     match node_context {
         None => Size::ZERO,
-        Some(LayoutContext::Text(gummy_text_context)) => nodes
-            .get_as_mut::<TextNode>(gummy_text_context.element)
+        Some(LayoutContext::Text(gummy_text_context)) => elements
+            .get_as_mut::<TextElement>(gummy_text_context.element)
             .measure(known_dimensions, available_space, text_context),
-        Some(LayoutContext::TextInput(gummy_text_input_context)) => nodes
-            .get_as_mut::<TextInputNode>(gummy_text_input_context.element)
+        Some(LayoutContext::TextInput(gummy_text_input_context)) => elements
+            .get_as_mut::<TextInputElement>(gummy_text_input_context.element)
             .state
             .measure(known_dimensions, available_space, text_context),
         Some(LayoutContext::Image(image_context)) => {

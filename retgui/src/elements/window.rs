@@ -33,7 +33,7 @@ use crate::accessibility::RetGuiAccessTree;
 use crate::app::App;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container};
-use crate::elements::{DynElement, Element, ElementNode, Elements, scrollable};
+use crate::elements::{DynElement, Element, ElementInternals, Elements, scrollable};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{EventKind, KeyboardEvent, PointerScrollEvent, PointerType};
 use crate::layout::GummyTree;
@@ -50,7 +50,7 @@ pub struct Window {
 /// Stores one or more elements.
 ///
 /// If overflow is set to scroll, it will become scrollable.
-pub(crate) struct WindowNode {
+pub(crate) struct WindowElement {
     /// The physical window size from winit.
     pub(crate) window_size: Size<f32>,
     pub(crate) renderer: Box<dyn Renderer>,
@@ -81,7 +81,7 @@ pub(crate) struct WindowNode {
     pub(crate) ime_composing: bool,
 }
 
-impl Clone for WindowNode {
+impl Clone for WindowElement {
     fn clone(&self) -> Self {
         todo!()
     }
@@ -93,7 +93,7 @@ impl Element for Window {
     }
 }
 
-impl crate::elements::ElementNodeData for WindowNode {
+impl crate::elements::HasElementData for WindowElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -103,7 +103,7 @@ impl crate::elements::ElementNodeData for WindowNode {
     }
 }
 
-impl ElementNode for WindowNode {
+impl ElementInternals for WindowElement {
     fn window_pointer_capture(&mut self) -> Option<&mut PointerCapture> {
         Some(&mut self.pointer_capture)
     }
@@ -147,13 +147,13 @@ impl Window {
     where
         F: FnMut(&dyn ActiveEventLoop) -> Box<dyn WinitWindow> + 'static,
     {
-        let inner = WindowNode::insert(elements, Some(window_fn), None, renderer_type);
+        let inner = WindowElement::insert(elements, Some(window_fn), None, renderer_type);
 
         Window { inner }
     }
 
     pub fn new(elements: &mut Elements, title: &str) -> Self {
-        let inner = WindowNode::insert(
+        let inner = WindowElement::insert(
             elements,
             None::<fn(&dyn ActiveEventLoop) -> Box<dyn WinitWindow>>,
             Some(title),
@@ -164,7 +164,7 @@ impl Window {
     }
 
     pub fn new_with_renderer(elements: &mut Elements, title: &str, renderer_type: RendererType) -> Self {
-        let inner = WindowNode::insert(
+        let inner = WindowElement::insert(
             elements,
             None::<fn(&dyn ActiveEventLoop) -> Box<dyn WinitWindow>>,
             Some(title),
@@ -175,19 +175,21 @@ impl Window {
     }
 
     pub fn screenshot(&self, elements: &mut Elements) -> Screenshot {
-        elements.get_as_mut::<WindowNode>(self.inner).screenshot()
+        elements.get_as_mut::<WindowElement>(self.inner).screenshot()
     }
 
     pub fn close(&self, elements: &Elements) {
-        elements.get_as::<WindowNode>(self.inner).close();
+        elements.get_as::<WindowElement>(self.inner).close();
     }
 
     pub fn winit_window(&self, elements: &Elements) -> Option<Arc<dyn winit::window::Window>> {
-        elements.get_as::<WindowNode>(self.inner).winit_window()
+        elements.get_as::<WindowElement>(self.inner).winit_window()
     }
 
     pub fn set_winit_window(&self, elements: &mut Elements, window: Option<Arc<dyn WinitWindow>>) {
-        elements.get_as_mut::<WindowNode>(self.inner).set_winit_window(window)
+        elements
+            .get_as_mut::<WindowElement>(self.inner)
+            .set_winit_window(window)
     }
 
     pub fn set_scale_factor(&self, elements: &mut Elements, scale_factor: f64) {
@@ -198,23 +200,23 @@ impl Window {
 
     /// Get the effective scale factor factoring window scale factor and zoom.
     pub fn effective_scale_factor(&self, elements: &Elements) -> f64 {
-        elements.get_as::<WindowNode>(self.inner).effective_scale_factor()
+        elements.get_as::<WindowElement>(self.inner).effective_scale_factor()
     }
 
     /// Get the logical size of the window.
     pub fn window_size(&self, elements: &Elements) -> Size<f32> {
-        elements.get_as::<WindowNode>(self.inner).window_size()
+        elements.get_as::<WindowElement>(self.inner).window_size()
     }
 
     pub fn zoom_scale_factor(&self, elements: &Elements) -> f64 {
-        elements.get_as::<WindowNode>(self.inner).zoom_scale_factor()
+        elements.get_as::<WindowElement>(self.inner).zoom_scale_factor()
     }
 
     pub fn on_request_redraw(&self, retgui_app: &mut App) {
         let mut elements = std::mem::take(&mut retgui_app.elements);
         elements.dispatch_mut(self.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowNode>()
+                .downcast_mut::<WindowElement>()
                 .unwrap()
                 .on_request_redraw(retgui_app, elements)
         });
@@ -222,17 +224,17 @@ impl Window {
     }
 
     pub(crate) fn request_redraw(&self, elements: &Elements) {
-        elements.get_as::<WindowNode>(self.inner).request_redraw();
+        elements.get_as::<WindowElement>(self.inner).request_redraw();
     }
 
     pub(crate) fn redraw_requested(&self, elements: &Elements) -> bool {
-        elements.get_as::<WindowNode>(self.inner).redraw_requested()
+        elements.get_as::<WindowElement>(self.inner).redraw_requested()
     }
 
     pub fn zoom_in(&self, elements: &mut Elements) {
         elements.dispatch_mut(self.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowNode>()
+                .downcast_mut::<WindowElement>()
                 .unwrap()
                 .zoom_in(elements)
         })
@@ -241,25 +243,27 @@ impl Window {
     pub fn zoom_out(&self, elements: &mut Elements) {
         elements.dispatch_mut(self.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowNode>()
+                .downcast_mut::<WindowElement>()
                 .unwrap()
                 .zoom_out(elements)
         })
     }
 
     pub(crate) fn mouse_position(&self, elements: &Elements) -> Option<Point> {
-        elements.get_as::<WindowNode>(self.inner).mouse_position()
+        elements.get_as::<WindowElement>(self.inner).mouse_position()
     }
 
     pub(crate) fn on_resize(&self, elements: &mut Elements, new_size: Size<f32>) {
-        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-        nodes
-            .get_as_mut::<WindowNode>(self.inner)
+        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+        elements
+            .get_as_mut::<WindowElement>(self.inner)
             .on_resize(gummy_tree, new_size)
     }
 
     pub(crate) fn set_mouse_position(&self, elements: &mut Elements, point: Option<Point>) {
-        elements.get_as_mut::<WindowNode>(self.inner).set_mouse_position(point)
+        elements
+            .get_as_mut::<WindowElement>(self.inner)
+            .set_mouse_position(point)
     }
 
     pub(crate) fn on_redraw(
@@ -270,7 +274,7 @@ impl Window {
     ) {
         elements.dispatch_mut(self.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowNode>()
+                .downcast_mut::<WindowElement>()
                 .unwrap()
                 .on_redraw(elements, text_context, resource_manager)
         })
@@ -284,7 +288,7 @@ impl Window {
     ) {
         elements.dispatch_mut(self.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowNode>()
+                .downcast_mut::<WindowElement>()
                 .unwrap()
                 .create(retgui_app, elements, event_loop, self.inner)
         });
@@ -293,18 +297,20 @@ impl Window {
     pub(crate) fn on_scale_factor_changed(&self, elements: &mut Elements, scale_factor: f64) {
         elements.dispatch_mut(self.inner, |window, elements| {
             (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowNode>()
+                .downcast_mut::<WindowElement>()
                 .unwrap()
                 .on_scale_factor_changed(elements, scale_factor)
         });
     }
 
     pub(crate) fn on_focused(&self, elements: &Elements, focused: bool) {
-        elements.get_as::<WindowNode>(self.inner).on_focused(elements, focused);
+        elements
+            .get_as::<WindowElement>(self.inner)
+            .on_focused(elements, focused);
     }
 }
 
-impl WindowNode {
+impl WindowElement {
     pub fn insert<F>(
         elements: &mut Elements,
         f: Option<F>,
@@ -725,15 +731,15 @@ impl WindowNode {
             height: AvailableSpace::Definite(window_size.height),
         };
 
-        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
+        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
         let root_dirty = gummy_tree.is_layout_dirty(root_node);
 
         if root_dirty {
             let compute_start = Instant::now();
-            gummy_tree.compute_layout_with_nodes(
+            gummy_tree.compute_layout_with_elements(
                 root_node,
                 available_space,
-                nodes,
+                elements,
                 text_context,
                 resource_manager.clone(),
             );
@@ -749,7 +755,7 @@ impl WindowNode {
                 if owner_id == self.element_data.internal_id {
                     self.apply_layout(gummy_tree, &mut layout_order, text_context, sf);
                 } else {
-                    nodes
+                    elements
                         .get_mut(owner)
                         .apply_layout(gummy_tree, &mut layout_order, text_context, sf);
                 }

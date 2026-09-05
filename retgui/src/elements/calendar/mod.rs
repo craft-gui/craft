@@ -8,7 +8,7 @@ use std::sync::Arc;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container};
 use crate::elements::traits::clone_element;
-use crate::elements::{Container, Dropdown, DynElement, Element, ElementNode, Elements, Text};
+use crate::elements::{Container, Dropdown, DynElement, Element, ElementInternals, Elements, Text};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::style::{AlignItems, Display, FlexDirection, JustifyContent, Unit};
@@ -24,7 +24,7 @@ pub struct Calendar {
 
 /// A calendar.
 #[derive(Clone)]
-pub(crate) struct CalendarNode {
+pub(crate) struct CalendarElement {
     element_data: ElementData,
     pub first_day: Weekday,
     pub nav: Container,
@@ -52,7 +52,7 @@ impl Element for Calendar {
     }
 }
 
-impl crate::elements::ElementNodeData for CalendarNode {
+impl crate::elements::HasElementData for CalendarElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -62,7 +62,7 @@ impl crate::elements::ElementNodeData for CalendarNode {
     }
 }
 
-impl ElementNode for CalendarNode {
+impl ElementInternals for CalendarElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
@@ -117,7 +117,7 @@ impl Calendar {
         let month_dropdown = Dropdown::new(elements);
         month_dropdown.set_width(elements, px(100));
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(CalendarNode {
+            Box::new(CalendarElement {
                 element_data: ElementData::new(me, true, access_tree),
                 week_grid,
                 days: Vec::new(),
@@ -136,7 +136,7 @@ impl Calendar {
         elements.create_layout_node(inner, None);
         elements.dispatch_mut(inner, |inner_value, elements| {
             let inner = (inner_value as &mut dyn std::any::Any)
-                .downcast_mut::<CalendarNode>()
+                .downcast_mut::<CalendarElement>()
                 .unwrap();
             inner.setup_years(elements);
             inner.setup_months(elements);
@@ -202,7 +202,7 @@ impl Calendar {
         }
         elements.try_dispatch_mut(self.inner, |inner, elements| {
             (inner as &mut dyn std::any::Any)
-                .downcast_mut::<CalendarNode>()
+                .downcast_mut::<CalendarElement>()
                 .unwrap()
                 .set_start_year(elements, year)
         });
@@ -220,14 +220,14 @@ impl Calendar {
         }
         elements.try_dispatch_mut(self.inner, |inner, elements| {
             (inner as &mut dyn std::any::Any)
-                .downcast_mut::<CalendarNode>()
+                .downcast_mut::<CalendarElement>()
                 .unwrap()
                 .set_end_year(elements, year)
         });
     }
 }
 
-impl CalendarNode {
+impl CalendarElement {
     fn update_calendar(&mut self, elements: &mut Elements) {
         let mut start_date = current_calendar_start(self.first_day, self.focus_year, Month::new(self.focus_month));
         for day_element in &self.days {

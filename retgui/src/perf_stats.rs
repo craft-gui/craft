@@ -14,7 +14,7 @@ use retgui_renderer::text_renderer_data::{TextData, TextSnapshot};
 use web_time::{Duration, Instant};
 
 use crate::Color;
-use crate::elements::{Element, ElementNode, ElementNodeData as _, Elements, Text, TextNode};
+use crate::elements::{Element, ElementInternals, Elements, HasElementData as _, Text, TextElement};
 use crate::text::text_context::TextContext;
 
 const FPS_SAMPLE_INTERVAL: Duration = Duration::from_millis(250);
@@ -249,7 +249,9 @@ impl PerfStats {
         let scale_changed = (self.scale_factor - scale_factor).abs() > f64::EPSILON;
         self.scale_factor = scale_factor;
         elements.dispatch_mut(text, |element, elements| {
-            let text_inner = (element as &mut dyn std::any::Any).downcast_mut::<TextNode>().unwrap();
+            let text_inner = (element as &mut dyn std::any::Any)
+                .downcast_mut::<TextElement>()
+                .unwrap();
             if scale_changed {
                 text_inner.set_scale_factor(elements, scale_factor);
             }

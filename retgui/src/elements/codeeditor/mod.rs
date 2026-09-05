@@ -10,7 +10,7 @@ use crate::elements::codeeditor::highlighter::compute_code_editor_style;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementNode, Elements, TextInput};
+use crate::elements::{DynElement, Element, ElementInternals, Elements, TextInput};
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
@@ -26,7 +26,7 @@ pub mod highlighter;
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub(crate) struct CodeEditorNode {
+pub(crate) struct CodeEditorElement {
     element_data: ElementData,
     extension: String,
     theme: String,
@@ -40,7 +40,7 @@ impl Element for CodeEditor {
     }
 }
 
-impl crate::elements::ElementNodeData for CodeEditorNode {
+impl crate::elements::HasElementData for CodeEditorElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -50,7 +50,7 @@ impl crate::elements::ElementNodeData for CodeEditorNode {
     }
 }
 
-impl ElementNode for CodeEditorNode {
+impl ElementInternals for CodeEditorElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
@@ -87,7 +87,7 @@ impl CodeEditor {
     pub fn new(elements: &mut Elements, code: &str, extension: &str, theme: &str) -> Self {
         let text_input = TextInput::new(elements, code);
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(CodeEditorNode {
+            Box::new(CodeEditorElement {
                 element_data: ElementData::new(me, true, access_tree),
                 extension: extension.to_string(),
                 theme: theme.to_string(),
@@ -98,7 +98,7 @@ impl CodeEditor {
         crate::elements::internal_helpers::push_child_to_element(elements, inner, text_input.inner);
         elements.dispatch_mut(inner, |element, elements| {
             (element as &mut dyn std::any::Any)
-                .downcast_mut::<CodeEditorNode>()
+                .downcast_mut::<CodeEditorElement>()
                 .expect("code editor handle changed type")
                 .highlight(elements);
         });
@@ -106,12 +106,12 @@ impl CodeEditor {
     }
 }
 
-impl CodeEditorNode {
+impl CodeEditorElement {
     fn highlight(&mut self, elements: &mut Elements) {
         let text = self.text_input.text(elements);
         let code_editor = compute_code_editor_style(&text, None, None, &self.extension, &self.theme);
-        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-        let text = nodes.get_as_mut::<crate::elements::TextInputNode>(self.text_input.inner);
+        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+        let text = elements.get_as_mut::<crate::elements::TextInputElement>(self.text_input.inner);
         text.set_ranged_styles(gummy_tree, code_editor.ranged_styles);
         text.set_background_brush(Brush::Color(code_editor.background_color));
         text.set_text_brush(gummy_tree, Brush::Color(code_editor.foreground_color));

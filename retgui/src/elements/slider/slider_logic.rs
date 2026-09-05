@@ -1,9 +1,9 @@
 use retgui_primitives::geometry::Point;
 
 use crate::elements::slider::slider_element::SliderDirection;
-use crate::elements::{ElementNodeData, SliderNode};
+use crate::elements::{HasElementData, SliderElement};
 
-impl SliderNode {
+impl SliderElement {
     pub(super) fn compute_step(&self, by: i32, current_value: f64) -> f64 {
         let delta = by.abs() as f64 * self.get_step();
 
@@ -110,7 +110,7 @@ mod tests {
     fn steps_one() {
         let mut elements = Elements::new();
         let slider = Slider::new(&mut elements, 16.0);
-        let slider = elements.get_as_mut::<SliderNode>(slider.inner);
+        let slider = elements.get_as_mut::<SliderElement>(slider.inner);
 
         slider.set_value(50.0);
         let next_step = slider.compute_step(1, slider.get_value());
@@ -122,7 +122,7 @@ mod tests {
     fn steps_down_one() {
         let mut elements = Elements::new();
         let slider = Slider::new(&mut elements, 16.0);
-        let slider = elements.get_as_mut::<SliderNode>(slider.inner);
+        let slider = elements.get_as_mut::<SliderElement>(slider.inner);
 
         slider.set_value(50.0);
         let next_step = slider.compute_step(-1, slider.get_value());

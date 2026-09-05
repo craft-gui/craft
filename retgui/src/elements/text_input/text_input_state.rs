@@ -25,7 +25,7 @@ use winit::dpi;
 
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::parley_box_to_rect;
-use crate::elements::{ElementNode, Elements, TextInputNode};
+use crate::elements::{ElementInternals, Elements, TextInputElement};
 use crate::events::{EventKind, KeyboardEvent, TextInputChangedEvent};
 use crate::layout::layout_context::TextHashKey;
 use crate::style::{Style, TextStyleProperty};
@@ -64,7 +64,7 @@ pub struct TextInputState {
     start_time: Option<Instant>,
     blink_period: Duration,
 
-    /// True if the node needs laid-out.
+    /// True if the element needs layout.
     pub is_layout_dirty: bool,
 }
 
@@ -100,7 +100,7 @@ impl Clone for TextInputState {
 
 impl Default for TextInputState {
     fn default() -> Self {
-        let default_style = TextInputNode::get_default_style();
+        let default_style = TextInputElement::get_default_style();
         let mut editor = PlainEditor::new(default_style.get_font_size(), None);
         editor.set_scale(1.0);
         let style_set = editor.edit_styles();
@@ -297,7 +297,7 @@ impl TextInputState {
     }
 
     #[allow(dead_code)]
-    pub fn get_cursor_link(&self, cursor_pos: Point, element: &TextInputNode) -> Option<String> {
+    pub fn get_cursor_link(&self, cursor_pos: Point, element: &TextInputElement) -> Option<String> {
         if let Some(ranged_styles) = &element.ranged_styles {
             let layout = self.editor.try_layout().unwrap();
             for (range, style) in ranged_styles.styles.iter() {

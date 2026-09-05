@@ -5,7 +5,7 @@ use retgui_renderer::renderer::Renderer;
 
 use crate::Color;
 use crate::elements::slider::slider_element::SliderDirection;
-use crate::elements::{ElementNode, ElementNodeData, SliderNode};
+use crate::elements::{ElementInternals, HasElementData, SliderElement};
 use crate::layout::layout::{CssComputedBorder, draw_borders_generic};
 
 fn border_radius_to_vec_radius(border_radius: [(f32, f32); 4]) -> [Vec2; 4] {
@@ -18,7 +18,7 @@ fn border_radius_to_vec_radius(border_radius: [(f32, f32); 4]) -> [Vec2; 4] {
     ]
 }
 
-impl SliderNode {
+impl SliderElement {
     pub(super) fn draw_track(&self, renderer: &mut dyn Renderer, scale_factor: f64) {
         if let Some(track_color) = self.get_track_brush() {
             let mut track_box = self.element_data().layout.local_box();

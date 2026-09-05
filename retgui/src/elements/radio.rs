@@ -18,7 +18,7 @@ use crate::elements::element_data::ElementData;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementNode, Elements, State, scrollable};
+use crate::elements::{DynElement, Element, ElementInternals, Elements, State, scrollable};
 use crate::events::{Event, EventKind, RadioValueChangedEvent};
 use crate::layout::GummyTree;
 use crate::style::Unit;
@@ -34,7 +34,7 @@ pub struct Radio {
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub(crate) struct RadioNode {
+pub(crate) struct RadioElement {
     element_data: ElementData,
     circle_layout: ElementData,
     circle: Circle,
@@ -50,7 +50,7 @@ impl Element for Radio {
     }
 }
 
-impl crate::elements::ElementNodeData for RadioNode {
+impl crate::elements::HasElementData for RadioElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -60,7 +60,7 @@ impl crate::elements::ElementNodeData for RadioNode {
     }
 }
 
-impl ElementNode for RadioNode {
+impl ElementInternals for RadioElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
             let owner_id = element.element_data.internal_id;
@@ -165,7 +165,7 @@ impl ElementNode for RadioNode {
     }
 }
 
-impl RadioNode {
+impl RadioElement {
     fn set_value(&mut self, elements: &mut Elements) {
         self.set_value_from_group(elements);
 
@@ -176,10 +176,10 @@ impl RadioNode {
                 if me == sibling {
                     continue;
                 }
-                if (elements.get(sibling) as &dyn Any).is::<RadioNode>() {
+                if (elements.get(sibling) as &dyn Any).is::<RadioElement>() {
                     let selected = elements.state(self.active_value).clone();
                     elements
-                        .get_as_mut::<RadioNode>(sibling)
+                        .get_as_mut::<RadioElement>(sibling)
                         .set_accessibility_selection(&selected);
                 }
             }
@@ -217,7 +217,7 @@ impl Radio {
     pub fn new(elements: &mut Elements, value: &str, label: &str, active_value: State<String>) -> Self {
         let radius = 7.0;
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(RadioNode {
+            Box::new(RadioElement {
                 element_data: ElementData::new(me, true, access_tree.clone()),
                 circle_layout: ElementData::new_pseudo(me, false, access_tree),
                 circle: Circle::new(0.0, 0.0, radius),
@@ -229,7 +229,7 @@ impl Radio {
         });
         let selected = elements.state(active_value).clone();
         {
-            let inner_mut = elements.get_as_mut::<RadioNode>(inner);
+            let inner_mut = elements.get_as_mut::<RadioElement>(inner);
             inner_mut.circle_layout.style.set_min_width(Unit::Px(radius * 2.0));
             inner_mut.circle_layout.style.set_min_height(Unit::Px(radius * 2.0));
             inner_mut
@@ -241,8 +241,8 @@ impl Radio {
             inner_mut.set_accessibility_selection(&selected);
         }
         {
-            let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-            let inner_mut = nodes.get_as_mut::<RadioNode>(inner);
+            let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+            let inner_mut = elements.get_as_mut::<RadioElement>(inner);
             inner_mut.element_data.create_layout_node(gummy_tree, None);
             inner_mut.circle_layout.create_layout_node(gummy_tree, None);
             let node_id = inner_mut.circle_layout.layout.gummy_node_id();
@@ -256,7 +256,7 @@ impl Radio {
     /// Hide the default circle radio button.
     pub fn set_hide_radio(&self, elements: &mut Elements, value: bool) {
         // TODO: Hide in gummy.
-        if let Some(inner) = elements.try_get_as_mut::<RadioNode>(self.inner) {
+        if let Some(inner) = elements.try_get_as_mut::<RadioElement>(self.inner) {
             inner.hide_radio = value;
             inner.request_window_redraw();
         }
@@ -269,13 +269,13 @@ impl Radio {
 
     pub fn label(&self, elements: &Elements) -> String {
         elements
-            .try_get_as::<RadioNode>(self.inner)
+            .try_get_as::<RadioElement>(self.inner)
             .map_or_else(String::new, |radio| radio.label.clone())
     }
 
     pub fn value(&self, elements: &Elements) -> String {
         elements
-            .try_get_as::<RadioNode>(self.inner)
+            .try_get_as::<RadioElement>(self.inner)
             .map_or_else(String::new, |radio| radio.value.clone())
     }
 }

@@ -11,7 +11,7 @@ use winit::event_loop::ActiveEventLoop;
 use winit::window::WindowId;
 
 use crate::app::App;
-use crate::elements::{AnimationSchedule, DynElement, Elements, Window, WindowNode};
+use crate::elements::{AnimationSchedule, DynElement, Elements, Window, WindowElement};
 use crate::style::StyleVariant;
 
 #[derive(Clone, Copy, Debug)]
@@ -132,7 +132,7 @@ impl WindowManager {
     pub(crate) fn any_perf_stats_enabled(&self, elements: &Elements) -> bool {
         self.windows
             .iter()
-            .any(|window| elements.get_as::<WindowNode>(window.inner).perf_stats_enabled())
+            .any(|window| elements.get_as::<WindowElement>(window.inner).perf_stats_enabled())
     }
 
     pub fn close_window(&mut self, elements: &mut Elements, window: &Window) {
@@ -144,7 +144,7 @@ impl WindowManager {
             let is_target = w.inner == window.inner;
 
             if is_target {
-                elements.get_as_mut::<WindowNode>(w.inner).renderer = Box::new(BlankRenderer::default());
+                elements.get_as_mut::<WindowElement>(w.inner).renderer = Box::new(BlankRenderer::default());
                 release_window_accessibility(elements, w.inner);
                 w.set_winit_window(elements, None);
             }
@@ -270,8 +270,8 @@ impl WindowManager {
 }
 
 fn animation_is_runnable(elements: &Elements, element: DynElement) -> bool {
-    let node = elements.get(element);
-    let can_change_own_visibility = node.element_data().animations.iter().any(|animation| {
+    let element = elements.get(element);
+    let can_change_own_visibility = element.element_data().animations.iter().any(|animation| {
         !animation.is_finished()
             && animation
                 .key_frames
@@ -279,17 +279,17 @@ fn animation_is_runnable(elements: &Elements, element: DynElement) -> bool {
                 .flat_map(|keyframe| keyframe.styles())
                 .any(|style| matches!(style, StyleVariant::Display(_) | StyleVariant::Visible(_)))
     });
-    if !node.is_visible() && !can_change_own_visibility {
+    if !element.is_visible() && !can_change_own_visibility {
         return false;
     }
 
-    let mut ancestor = node.element_data().parent;
+    let mut ancestor = element.element_data().parent;
     while let Some(element) = ancestor {
-        let node = elements.get(element);
-        if !node.is_visible() {
+        let element = elements.get(element);
+        if !element.is_visible() {
             return false;
         }
-        ancestor = node.element_data().parent;
+        ancestor = element.element_data().parent;
     }
     true
 }

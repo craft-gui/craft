@@ -19,7 +19,7 @@ use retgui_resource_manager::ResourceManager;
 use crate::events::PointerId;
 
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
-use crate::elements::{DynElement, ElementNodeData, Elements, ScrollOptions, WindowNode};
+use crate::elements::{DynElement, Elements, HasElementData, ScrollOptions, WindowElement};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{CheckboxToggledHandler, ClickHandler, CustomHandler, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, FocusHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler, UnfocusEvent, UnfocusHandler};
 use crate::layout::GummyTree;
@@ -51,7 +51,7 @@ impl AnimationSchedule {
 }
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
-pub trait ElementNode: ElementNodeData + Any {
+pub trait ElementInternals: HasElementData + Any {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement;
 
     fn window_pointer_capture(&mut self) -> Option<&mut PointerCapture> {
@@ -434,7 +434,7 @@ pub trait ElementNode: ElementNodeData + Any {
         Ok(())
     }
 
-    /// Removes a direct child of this element and returns the removed node.
+    /// Removes a direct child of this element and returns the removed element.
     ///
     /// # Errors
     /// Returns [`RetGuiError::ElementNotFound`] if `child` is not an immediate child
@@ -443,7 +443,7 @@ pub trait ElementNode: ElementNodeData + Any {
     /// # Panics
     /// Panics if the corresponding Gummy layout nodes fail to be removed.
     fn remove_child(&mut self, elements: &mut Elements, child: DynElement) -> Result<DynElement, RetGuiError> {
-        // Find the node.
+        // Find the child element.
         let children = &mut self.element_data_mut().children;
         let position = children
             .iter()
@@ -452,7 +452,7 @@ pub trait ElementNode: ElementNodeData + Any {
 
         let child = children[position];
 
-        // Remove the node from the element.
+        // Remove the child from this element.
 
         children.remove(position);
 
@@ -467,8 +467,8 @@ pub trait ElementNode: ElementNodeData + Any {
         let parent_id = self.element_data().layout.gummy_node_id;
         elements.gummy_tree.mark_dirty(parent_id.unwrap());
 
-        fn remove_element_from_document(node: DynElement, pointer_capture: &mut PointerCapture) {
-            pointer_capture.remove_element(node);
+        fn remove_element_from_document(element: DynElement, pointer_capture: &mut PointerCapture) {
+            pointer_capture.remove_element(element);
         }
 
         if let Some(window) = self.element_data().window {
@@ -476,7 +476,7 @@ pub trait ElementNode: ElementNodeData + Any {
                 self.window_pointer_capture()
                     .expect("a window root must provide pointer capture state")
             } else {
-                &mut elements.get_as_mut::<WindowNode>(window).pointer_capture
+                &mut elements.get_as_mut::<WindowElement>(window).pointer_capture
             };
             remove_element_from_document(child, pointer_capture);
         }
@@ -732,7 +732,7 @@ pub trait ElementNode: ElementNodeData + Any {
         // 6. For the specified pointerId, set the pending pointer capture target override to the Element on which this method was invoked.
         if let Some(window) = self.element_data().window {
             elements
-                .get_as_mut::<WindowNode>(window)
+                .get_as_mut::<WindowElement>(window)
                 .pointer_capture
                 .pending_pointer_captures
                 .insert(pointer_id, self.element_data().me);
@@ -752,7 +752,7 @@ pub trait ElementNode: ElementNodeData + Any {
         // 3. For the specified pointerId, clear the pending pointer capture target override, if set.
         if let Some(window) = self.element_data().window {
             elements
-                .get_as_mut::<WindowNode>(window)
+                .get_as_mut::<WindowElement>(window)
                 .pointer_capture
                 .pending_pointer_captures
                 .remove(&pointer_id);
@@ -763,7 +763,7 @@ pub trait ElementNode: ElementNodeData + Any {
         // https://w3c.github.io/pointerevents/#dom-element-haspointercapture
         if let Some(window) = self.element_data().window {
             elements
-                .get_as::<WindowNode>(window)
+                .get_as::<WindowElement>(window)
                 .pointer_capture
                 .pending_pointer_captures
                 .get(&pointer_id)

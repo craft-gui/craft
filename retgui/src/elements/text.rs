@@ -29,7 +29,7 @@ use retgui_resource_manager::ResourceManager;
 
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementNode, Elements};
+use crate::elements::{DynElement, Element, ElementInternals, Elements};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{GummyTextContext, LayoutContext, TextHashKey};
@@ -47,7 +47,7 @@ pub struct Text {
 
 // A stateful element that shows text.
 #[derive(Clone)]
-pub(crate) struct TextNode {
+pub(crate) struct TextElement {
     element_data: ElementData,
     selectable: bool,
     pub(crate) state: TextState,
@@ -89,7 +89,7 @@ impl Element for Text {
     }
 }
 
-impl crate::elements::ElementNodeData for TextNode {
+impl crate::elements::HasElementData for TextElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -99,7 +99,7 @@ impl crate::elements::ElementNodeData for TextNode {
     }
 }
 
-impl TextData for TextNode {
+impl TextData for TextElement {
     fn get_text_renderer(&self) -> Option<&TextRender> {
         self.state.text_render.as_deref()
     }
@@ -142,7 +142,7 @@ impl Default for TextState {
     }
 }
 
-impl ElementNode for TextNode {
+impl ElementInternals for TextElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
             let node = element.element_data.layout.gummy_node_id();
@@ -331,13 +331,13 @@ impl ElementNode for TextNode {
 impl Text {
     pub fn new(elements: &mut Elements, text: &str) -> Self {
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(TextNode {
+            Box::new(TextElement {
                 element_data: ElementData::new(me, false, access_tree),
                 selectable: true,
                 state: TextState::default(),
             })
         });
-        let inner_mut = elements.get_as_mut::<TextNode>(inner);
+        let inner_mut = elements.get_as_mut::<TextElement>(inner);
 
         inner_mut.element_data.set_accessibility_role(issho::Role::Label);
         let selectable = inner_mut.selectable;
@@ -355,12 +355,12 @@ impl Text {
 
     pub fn is_selectable(&self, elements: &Elements) -> bool {
         elements
-            .try_get_as::<TextNode>(self.inner)
+            .try_get_as::<TextElement>(self.inner)
             .is_some_and(|text| text.selectable)
     }
 
     pub fn set_selectable(&self, elements: &mut Elements, selectable: bool) {
-        if let Some(text) = elements.try_get_as_mut::<TextNode>(self.inner) {
+        if let Some(text) = elements.try_get_as_mut::<TextElement>(self.inner) {
             text.set_selectable(selectable);
         }
     }
@@ -368,26 +368,26 @@ impl Text {
     /// Returns the current text, or an empty string if this handle is stale.
     pub fn text(&self, elements: &Elements) -> String {
         elements
-            .try_get_as::<TextNode>(self.inner)
+            .try_get_as::<TextElement>(self.inner)
             .map_or_else(String::new, |text| text.get_text().to_owned())
     }
 
     pub fn set_text(&self, elements: &mut Elements, text: &str) {
-        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-        if let Some(element) = nodes.try_get_as_mut::<TextNode>(self.inner) {
+        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+        if let Some(element) = elements.try_get_as_mut::<TextElement>(self.inner) {
             element.set_text(gummy_tree, text);
         }
     }
 
     pub fn set_text_smol_str(&self, elements: &mut Elements, text: SmolStr) {
-        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-        if let Some(element) = nodes.try_get_as_mut::<TextNode>(self.inner) {
+        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+        if let Some(element) = elements.try_get_as_mut::<TextElement>(self.inner) {
             element.set_text_smol_str(gummy_tree, text);
         }
     }
 }
 
-impl TextNode {
+impl TextElement {
     pub fn set_selectable(&mut self, selectable: bool) -> &mut Self {
         self.selectable = selectable;
         self.element_data.set_selectable(self.selectable);
@@ -639,7 +639,7 @@ mod animation_tests {
 
     use retgui_renderer::text_renderer_data::TextRender;
 
-    use super::{Text, TextNode};
+    use super::{Text, TextElement};
     use crate::elements::Elements;
     use crate::style::{Animation, KeyFrame, Repeat, StyleVariant, TimingFunction};
     use crate::{Brush, Color};
@@ -654,7 +654,7 @@ mod animation_tests {
             override_brush: None,
         });
         {
-            let text = elements.get_as_mut::<TextNode>(text.inner);
+            let text = elements.get_as_mut::<TextElement>(text.inner);
             text.state.text_render = Some(render.clone());
             text.state.refresh_text_snapshot();
             text.element_data.animations = vec![
@@ -668,7 +668,7 @@ mod animation_tests {
             text.animation_tick(elements, Duration::from_millis(500));
         });
 
-        let text = elements.get_as::<TextNode>(text.inner);
+        let text = elements.get_as::<TextElement>(text.inner);
         let snapshot = text.state.text_snapshot.as_ref().unwrap();
         assert!(snapshot.override_brush().is_some());
         assert_ne!(snapshot.override_brush(), Some(&Brush::Color(Color::BLACK)));

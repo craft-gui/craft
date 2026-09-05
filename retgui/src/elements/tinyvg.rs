@@ -23,7 +23,7 @@ use retgui_resource_manager::{ResourceId, ResourceManager};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementNode, Elements};
+use crate::elements::{DynElement, Element, ElementInternals, Elements};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{LayoutContext, TinyVgContext};
 use crate::rgba;
@@ -36,13 +36,13 @@ pub struct TinyVg {
 }
 
 #[derive(Clone)]
-pub(crate) struct TinyVgNode {
+pub(crate) struct TinyVgElement {
     is_tiny_vg_dirty: bool,
     resource_id: ResourceId,
     element_data: ElementData,
 }
 
-impl crate::elements::ElementNodeData for TinyVgNode {
+impl crate::elements::HasElementData for TinyVgElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -58,7 +58,7 @@ impl Element for TinyVg {
     }
 }
 
-impl ElementNode for TinyVgNode {
+impl ElementInternals for TinyVgElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
@@ -117,7 +117,7 @@ impl ElementNode for TinyVgNode {
 impl TinyVg {
     pub fn new(elements: &mut Elements, resource_id: ResourceId) -> Self {
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(TinyVgNode {
+            Box::new(TinyVgElement {
                 is_tiny_vg_dirty: false,
                 resource_id: resource_id.clone(),
                 element_data: ElementData::new(me, false, access_tree),
@@ -126,7 +126,7 @@ impl TinyVg {
         let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(resource_id.clone())));
         elements.create_layout_node(inner, layout_context);
         elements
-            .get_as_mut::<TinyVgNode>(inner)
+            .get_as_mut::<TinyVgElement>(inner)
             .style_mut()
             .set_text_brush(Brush::Color(Color::TRANSPARENT));
 
@@ -139,7 +139,7 @@ impl TinyVg {
 
     pub fn dummy(elements: &mut Elements) -> Self {
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(TinyVgNode {
+            Box::new(TinyVgElement {
                 is_tiny_vg_dirty: false,
                 resource_id: ResourceId::DUMMY,
                 element_data: ElementData::new(me, false, access_tree),
@@ -148,7 +148,7 @@ impl TinyVg {
         let layout_context = Some(LayoutContext::TinyVg(TinyVgContext::new(ResourceId::DUMMY)));
         elements.create_layout_node(inner, layout_context);
         elements
-            .get_as_mut::<TinyVgNode>(inner)
+            .get_as_mut::<TinyVgElement>(inner)
             .style_mut()
             .set_text_brush(Brush::Color(Color::TRANSPARENT));
 
@@ -158,7 +158,7 @@ impl TinyVg {
     pub fn set_resource_id(&self, elements: &mut Elements, resource_id: ResourceId) {
         elements.try_dispatch_mut(self.inner, |tiny, elements| {
             (tiny as &mut dyn std::any::Any)
-                .downcast_mut::<TinyVgNode>()
+                .downcast_mut::<TinyVgElement>()
                 .unwrap()
                 .set_resource_id(elements, resource_id)
         });
@@ -166,12 +166,12 @@ impl TinyVg {
 
     pub fn resource_id(&self, elements: &Elements) -> ResourceId {
         elements
-            .try_get_as::<TinyVgNode>(self.inner)
+            .try_get_as::<TinyVgElement>(self.inner)
             .map_or(ResourceId::DUMMY, |tiny| tiny.get_resource_id().clone())
     }
 }
 
-impl TinyVgNode {
+impl TinyVgElement {
     pub fn set_resource_id(&mut self, elements: &mut Elements, resource_id: ResourceId) {
         self.is_tiny_vg_dirty = true;
         self.resource_id = resource_id.clone();
@@ -185,7 +185,7 @@ impl TinyVgNode {
             .element_data
             .layout
             .gummy_node_id
-            .expect("Failed to get TinyVg node");
+            .expect("Failed to get TinyVg layout node");
         elements.gummy_tree.set_node_context(node, Some(context));
         self.request_window_redraw();
     }

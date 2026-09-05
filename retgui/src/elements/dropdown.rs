@@ -15,7 +15,7 @@ use winit::keyboard::KeyCode;
 use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance, set_scroll_y};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementNode, ElementNodeData, Elements};
+use crate::elements::{DynElement, Element, ElementInternals, Elements, HasElementData};
 use crate::events::{DropdownItemSelectedEvent, DropdownToggledEvent, Event, EventKind, PointerButton, PointerId};
 use crate::layout::GummyTree;
 use crate::layout::layout::Layout;
@@ -81,7 +81,7 @@ pub struct Shape {
 ///
 /// If overflow is set to scroll, it will become scrollable.
 #[derive(Clone)]
-pub(crate) struct DropdownNode {
+pub(crate) struct DropdownElement {
     element_data: ElementDataStruct,
     floating_window: Shape,
     arrow: Shape,
@@ -98,7 +98,7 @@ impl Element for Dropdown {
     }
 }
 
-impl ElementNodeData for DropdownNode {
+impl HasElementData for DropdownElement {
     fn element_data(&self) -> &ElementDataStruct {
         &self.element_data
     }
@@ -108,7 +108,7 @@ impl ElementNodeData for DropdownNode {
     }
 }
 
-impl ElementNode for DropdownNode {
+impl ElementInternals for DropdownElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         let element = clone_element::<Self, _>(self, elements, |element, gummy_tree| {
             let owner_id = element.element_data.internal_id;
@@ -495,7 +495,7 @@ impl Shape {
 impl Dropdown {
     pub fn new(elements: &mut Elements) -> Self {
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(DropdownNode {
+            Box::new(DropdownElement {
                 element_data: ElementDataStruct::new(me, true, access_tree),
                 floating_window: Shape::new(true),
                 arrow: Shape::new(false),
@@ -511,7 +511,7 @@ impl Dropdown {
         let border_width = px(1.0);
         let border_radius = [(5.0, 5.0); 4];
 
-        let element = elements.get_as_mut::<DropdownNode>(inner);
+        let element = elements.get_as_mut::<DropdownElement>(inner);
         element.element_data.set_accessibility_role(issho::Role::ComboBox);
         element.element_data.style.set_display(Display::Flex);
         element.element_data.style.set_align_items(AlignItems::Center);
@@ -573,8 +573,8 @@ impl Dropdown {
             .set_margin(TrblRectangle::new(px(0.0), px(8.0), px(0.0), auto()));
         let _ = element;
         {
-            let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-            let element = nodes.get_as_mut::<DropdownNode>(inner);
+            let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+            let element = elements.get_as_mut::<DropdownElement>(inner);
             element.element_data.create_layout_node(gummy_tree, None);
             element.floating_window.create_gummy_node(gummy_tree);
             element.arrow.create_gummy_node(gummy_tree);
@@ -594,19 +594,19 @@ impl Dropdown {
 
     pub fn set_selected_item(&self, elements: &mut Elements, index: usize) {
         elements.try_dispatch_mut(self.inner, |inner, elements| {
-            let inner = (inner as &mut dyn Any).downcast_mut::<DropdownNode>().unwrap();
+            let inner = (inner as &mut dyn Any).downcast_mut::<DropdownElement>().unwrap();
             inner.set_selected_element(elements, index);
         });
     }
 
     pub fn selected_item(&self, elements: &Elements) -> Option<usize> {
         elements
-            .try_get_as::<DropdownNode>(self.inner)
+            .try_get_as::<DropdownElement>(self.inner)
             .and_then(|dropdown| dropdown.selected_element_index)
     }
 }
 
-impl DropdownNode {
+impl DropdownElement {
     fn handle_keyboard_input(&mut self, elements: &mut Elements, event: &mut EventKind) -> bool {
         if !self.is_focused() {
             return false;
@@ -743,7 +743,11 @@ impl DropdownNode {
     fn set_selected_element(&mut self, elements: &mut Elements, child_index: usize) {
         // Remove the old selected element from the layout tree.
         if let Some(old_selected_element) = &self.selected_element {
-            let old_node = elements.get(*old_selected_element).element_data().layout.gummy_node_id();
+            let old_node = elements
+                .get(*old_selected_element)
+                .element_data()
+                .layout
+                .gummy_node_id();
             elements.gummy_tree.unparent_node(old_node);
         }
 
@@ -768,7 +772,9 @@ impl DropdownNode {
 
         // Add the selected element to the parent's layout tree at index 1.
         let parent_id = self.element_data.layout.gummy_node_id.unwrap();
-        elements.gummy_tree.add_child_at_index(parent_id, selected_element_id, 1);
+        elements
+            .gummy_tree
+            .add_child_at_index(parent_id, selected_element_id, 1);
         self.request_window_redraw();
     }
 

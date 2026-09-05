@@ -11,7 +11,7 @@ use crate::accessibility::RetGuiAccessTree;
 use crate::elements::audio::AudioContext;
 use crate::elements::element_data::ElementData;
 use crate::elements::gui_actions::GuiActionQueue;
-use crate::elements::{DynElement, ElementNode};
+use crate::elements::{DynElement, ElementInternals};
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::layout::layout_context::LayoutContext;
@@ -24,7 +24,7 @@ static NEXT_STORE_ID: AtomicU64 = AtomicU64::new(1);
 
 /// Owns every retained element and application state value.
 pub struct Elements {
-    elements: ElementNodes,
+    elements: RetainedElements,
     states: SlotMap<DefaultKey, Box<dyn Any>>,
     by_internal_id: FxHashMap<u64, DynElement>,
     pub(crate) access_tree: RetGuiAccessTree,
@@ -40,20 +40,20 @@ pub struct Elements {
     gui_actions: GuiActionQueue,
 }
 
-/// Retained nodes, kept separate from layout so both can be borrowed mutably.
-pub(crate) struct ElementNodes {
+/// Retained elements, kept separate from layout so both can be borrowed mutably.
+pub(crate) struct RetainedElements {
     id: u64,
-    nodes: SlotMap<DefaultKey, Option<Box<dyn ElementNode>>>,
+    slots: SlotMap<DefaultKey, Option<Box<dyn ElementInternals>>>,
 }
 
-impl ElementNodes {
-    pub(crate) fn get_mut(&mut self, element: DynElement) -> &mut dyn ElementNode {
+impl RetainedElements {
+    pub(crate) fn get_mut(&mut self, element: DynElement) -> &mut dyn ElementInternals {
         assert_eq!(
             element.store_id(),
             self.id,
             "element handle belongs to a different store"
         );
-        self.nodes
+        self.slots
             .get_mut(element.key())
             .and_then(Option::as_deref_mut)
             .expect("element handle no longer belongs to this store")
@@ -61,20 +61,20 @@ impl ElementNodes {
 
     /// Returns a retained element mutably, or `None` when the handle is stale
     /// or belongs to another store.
-    fn try_get_mut(&mut self, element: DynElement) -> Option<&mut dyn ElementNode> {
+    fn try_get_mut(&mut self, element: DynElement) -> Option<&mut dyn ElementInternals> {
         if element.store_id() != self.id {
             return None;
         }
-        self.nodes.get_mut(element.key()).and_then(Option::as_deref_mut)
+        self.slots.get_mut(element.key()).and_then(Option::as_deref_mut)
     }
 
-    pub(crate) fn get_as_mut<T: ElementNode>(&mut self, element: DynElement) -> &mut T {
+    pub(crate) fn get_as_mut<T: ElementInternals>(&mut self, element: DynElement) -> &mut T {
         (self.get_mut(element) as &mut dyn Any)
             .downcast_mut()
             .expect("typed element handle changed type")
     }
 
-    pub(crate) fn try_get_as_mut<T: ElementNode>(&mut self, element: DynElement) -> Option<&mut T> {
+    pub(crate) fn try_get_as_mut<T: ElementInternals>(&mut self, element: DynElement) -> Option<&mut T> {
         Some(
             (self.try_get_mut(element)? as &mut dyn Any)
                 .downcast_mut()
@@ -92,9 +92,9 @@ impl Default for Elements {
 impl Elements {
     pub fn new() -> Self {
         Self {
-            elements: ElementNodes {
+            elements: RetainedElements {
                 id: NEXT_STORE_ID.fetch_add(1, Ordering::Relaxed),
-                nodes: SlotMap::with_key(),
+                slots: SlotMap::with_key(),
             },
             states: SlotMap::with_key(),
             by_internal_id: FxHashMap::default(),
@@ -112,8 +112,8 @@ impl Elements {
         }
     }
 
-    /// Inserts an element node into this store and creates its layout node.
-    pub fn insert_element<T: ElementNode>(
+    /// Inserts an element into this store and creates its layout node.
+    pub fn insert_element<T: ElementInternals>(
         &mut self,
         is_scrollable: bool,
         create: impl FnOnce(ElementData) -> T,
@@ -150,13 +150,13 @@ impl Elements {
 
     pub(crate) fn insert_with(
         &mut self,
-        create: impl FnOnce(DynElement, RetGuiAccessTree) -> Box<dyn ElementNode>,
+        create: impl FnOnce(DynElement, RetGuiAccessTree) -> Box<dyn ElementInternals>,
     ) -> DynElement {
         let access_tree = self.access_tree.clone();
         let store_id = self.elements.id;
         let key = self
             .elements
-            .nodes
+            .slots
             .insert_with_key(|key| Some(create(DynElement::from_key(key, store_id), access_tree)));
         let handle = DynElement::from_key(key, store_id);
         let id = self.get(handle).element_data().internal_id;
@@ -164,14 +164,14 @@ impl Elements {
         handle
     }
 
-    pub(crate) fn get(&self, element: DynElement) -> &dyn ElementNode {
+    pub(crate) fn get(&self, element: DynElement) -> &dyn ElementInternals {
         assert_eq!(
             element.store_id(),
             self.elements.id,
             "element handle belongs to a different store"
         );
         self.elements
-            .nodes
+            .slots
             .get(element.key())
             .and_then(Option::as_deref)
             .expect("element handle no longer belongs to this store")
@@ -179,36 +179,36 @@ impl Elements {
 
     /// Returns a retained element, or `None` when the handle is stale or belongs
     /// to another store.
-    pub(crate) fn try_get(&self, element: DynElement) -> Option<&dyn ElementNode> {
+    pub(crate) fn try_get(&self, element: DynElement) -> Option<&dyn ElementInternals> {
         if element.store_id() != self.elements.id {
             return None;
         }
-        self.elements.nodes.get(element.key()).and_then(Option::as_deref)
+        self.elements.slots.get(element.key()).and_then(Option::as_deref)
     }
 
     /// Fast retained-tree lookup for handles already validated when they were
     /// attached to this store.
-    pub(crate) fn get_for_draw(&self, element: DynElement) -> &dyn ElementNode {
+    pub(crate) fn get_for_draw(&self, element: DynElement) -> &dyn ElementInternals {
         debug_assert_eq!(element.store_id(), self.elements.id);
-        self.elements.nodes[element.key()]
+        self.elements.slots[element.key()]
             .as_deref()
             .expect("retained tree contains a deleted element")
     }
 
-    pub(crate) fn get_mut(&mut self, element: DynElement) -> &mut dyn ElementNode {
+    pub(crate) fn get_mut(&mut self, element: DynElement) -> &mut dyn ElementInternals {
         self.elements.get_mut(element)
     }
 
-    /// Borrows a retained element as its concrete node type. .
-    pub fn get_as<T: ElementNode>(&self, element: DynElement) -> &T {
+    /// Borrows a retained element as its concrete type.
+    pub fn get_as<T: ElementInternals>(&self, element: DynElement) -> &T {
         (self.get(element) as &dyn Any)
             .downcast_ref()
             .expect("typed element handle changed type")
     }
 
-    /// Borrows a retained element as its concrete node type, returning `None`
+    /// Borrows a retained element as its concrete type, returning `None`
     /// for a stale handle.
-    pub(crate) fn try_get_as<T: ElementNode>(&self, element: DynElement) -> Option<&T> {
+    pub(crate) fn try_get_as<T: ElementInternals>(&self, element: DynElement) -> Option<&T> {
         Some(
             (self.try_get(element)? as &dyn Any)
                 .downcast_ref()
@@ -216,22 +216,22 @@ impl Elements {
         )
     }
 
-    /// Mutably borrows a retained element as its concrete node type.
+    /// Mutably borrows a retained element as its concrete type.
     ///
     /// The borrow is tied to this store borrow, just like the framework's own
     /// element-specific setters; no runtime borrow guard is involved.
-    pub fn get_as_mut<T: ElementNode>(&mut self, element: DynElement) -> &mut T {
+    pub fn get_as_mut<T: ElementInternals>(&mut self, element: DynElement) -> &mut T {
         self.elements.get_as_mut(element)
     }
 
-    /// Mutably borrows a retained element as its concrete node type, returning
+    /// Mutably borrows a retained element as its concrete type, returning
     /// `None` for a stale handle.
-    pub(crate) fn try_get_as_mut<T: ElementNode>(&mut self, element: DynElement) -> Option<&mut T> {
+    pub(crate) fn try_get_as_mut<T: ElementInternals>(&mut self, element: DynElement) -> Option<&mut T> {
         self.elements.try_get_as_mut(element)
     }
 
     pub(crate) fn contains(&self, element: DynElement) -> bool {
-        element.store_id() == self.elements.id && self.elements.nodes.get(element.key()).is_some_and(Option::is_some)
+        element.store_id() == self.elements.id && self.elements.slots.get(element.key()).is_some_and(Option::is_some)
     }
 
     pub(crate) fn delete_all_children(&mut self, parent: DynElement) {
@@ -262,7 +262,9 @@ impl Elements {
         }
 
         if let Some(window) = self.get(parent).element_data().window {
-            let capture = &mut self.get_as_mut::<crate::elements::WindowNode>(window).pointer_capture;
+            let capture = &mut self
+                .get_as_mut::<crate::elements::WindowElement>(window)
+                .pointer_capture;
             for element in &subtree {
                 capture.remove_element(*element);
             }
@@ -286,7 +288,7 @@ impl Elements {
         }
 
         for handle in subtree.into_iter().rev() {
-            if let Some(element) = self.elements.nodes.remove(handle.key()).flatten() {
+            if let Some(element) = self.elements.slots.remove(handle.key()).flatten() {
                 self.by_internal_id.remove(&element.element_data().internal_id);
             }
         }
@@ -301,13 +303,13 @@ impl Elements {
             .filter(|handle| self.contains(*handle))
     }
 
-    pub(crate) fn disjoint_borrow_layout_and_elements(&mut self) -> (&mut GummyTree, &mut ElementNodes) {
+    pub(crate) fn disjoint_borrow_layout_and_elements(&mut self) -> (&mut GummyTree, &mut RetainedElements) {
         (&mut self.gummy_tree, &mut self.elements)
     }
 
     pub(crate) fn create_layout_node(&mut self, element: DynElement, context: Option<LayoutContext>) {
-        let (tree, nodes) = self.disjoint_borrow_layout_and_elements();
-        nodes
+        let (tree, elements) = self.disjoint_borrow_layout_and_elements();
+        elements
             .get_mut(element)
             .element_data_mut()
             .create_layout_node(tree, context);
@@ -369,18 +371,18 @@ impl Elements {
     pub(crate) fn dispatch_mut<R>(
         &mut self,
         handle: DynElement,
-        callback: impl FnOnce(&mut dyn ElementNode, &mut Elements) -> R,
+        callback: impl FnOnce(&mut dyn ElementInternals, &mut Elements) -> R,
     ) -> R {
         assert_eq!(
             handle.store_id(),
             self.elements.id,
             "element handle belongs to a different store"
         );
-        let mut element = self.elements.nodes[handle.key()]
+        let mut element = self.elements.slots[handle.key()]
             .take()
             .expect("element is already being visited");
         let result = callback(element.as_mut(), self);
-        self.elements.nodes[handle.key()] = Some(element);
+        self.elements.slots[handle.key()] = Some(element);
         result
     }
 
@@ -389,14 +391,14 @@ impl Elements {
     pub(crate) fn try_dispatch_mut<R>(
         &mut self,
         handle: DynElement,
-        callback: impl FnOnce(&mut dyn ElementNode, &mut Elements) -> R,
+        callback: impl FnOnce(&mut dyn ElementInternals, &mut Elements) -> R,
     ) -> Option<R> {
         if handle.store_id() != self.elements.id {
             return None;
         }
-        let mut element = self.elements.nodes.get_mut(handle.key())?.take()?;
+        let mut element = self.elements.slots.get_mut(handle.key())?.take()?;
         let result = callback(element.as_mut(), self);
-        if let Some(slot) = self.elements.nodes.get_mut(handle.key()) {
+        if let Some(slot) = self.elements.slots.get_mut(handle.key()) {
             *slot = Some(element);
         }
         Some(result)
@@ -569,14 +571,14 @@ mod deletion_tests {
         let child_access = elements.get(child.inner).element_data().access_key.unwrap();
         let access_tree = elements.get(child.inner).element_data().access_tree.clone();
 
-        assert_eq!(elements.elements.nodes.len(), 3);
+        assert_eq!(elements.elements.slots.len(), 3);
         parent.delete_all_children(&mut elements);
 
         assert!(parent.children(&elements).is_empty());
         assert!(!elements.contains(child.inner));
         assert!(!elements.contains(grandchild.inner));
         assert!(!access_tree.contains_node(child_access));
-        assert_eq!(elements.elements.nodes.len(), 1);
+        assert_eq!(elements.elements.slots.len(), 1);
     }
 
     #[test]
@@ -589,9 +591,9 @@ mod deletion_tests {
                 let child = Text::new(&mut elements, "row");
                 parent.push(&mut elements, child);
             }
-            assert_eq!(elements.elements.nodes.len(), 101);
+            assert_eq!(elements.elements.slots.len(), 101);
             parent.delete_all_children(&mut elements);
-            assert_eq!(elements.elements.nodes.len(), 1);
+            assert_eq!(elements.elements.slots.len(), 1);
         }
     }
 
@@ -618,6 +620,6 @@ mod deletion_tests {
             text.parent(&elements),
             Err(crate::RetGuiError::ElementNotFound)
         ));
-        assert_eq!(elements.elements.nodes.len(), 1);
+        assert_eq!(elements.elements.slots.len(), 1);
     }
 }

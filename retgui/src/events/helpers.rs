@@ -10,9 +10,9 @@ use crate::events::{Event, EventCallback, EventCallbackKind, EventKind, PointerI
 pub(super) fn freeze_target_list(target: DynElement, elements: &Elements) -> VecDeque<DynElement> {
     let mut current = Some(target);
     let mut targets = VecDeque::new();
-    while let Some(node) = current {
-        targets.push_back(node);
-        current = elements.get(node).parent();
+    while let Some(element) = current {
+        targets.push_back(element);
+        current = elements.get(element).parent();
     }
     targets
 }
@@ -64,7 +64,7 @@ pub(super) fn find_target(
 
     target_scratch
         .drain(..)
-        .find(|node| mouse_position.is_some_and(|point| elements.get(*node).in_bounds(point)))
+        .find(|element| mouse_position.is_some_and(|point| elements.get(*element).in_bounds(point)))
         .unwrap_or(root)
 }
 

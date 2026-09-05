@@ -18,7 +18,7 @@ use retgui_resource_manager::{ResourceId, ResourceManager};
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container, push_child_to_element};
 use crate::elements::traits::clone_element;
-use crate::elements::{AnimationSchedule, Button, DynElement, Element, ElementNode, Elements, Slider, State, Text, TinyVg, scrollable};
+use crate::elements::{AnimationSchedule, Button, DynElement, Element, ElementInternals, Elements, Slider, State, Text, TinyVg, scrollable};
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::style::{AlignItems, Display, Unit};
@@ -63,7 +63,7 @@ pub struct Audio {
 }
 
 #[derive(Clone)]
-pub(crate) struct AudioNode {
+pub(crate) struct AudioElement {
     element_data: ElementData,
     play_button: Button,
     play_button_icon: TinyVg,
@@ -84,7 +84,7 @@ impl Element for Audio {
     }
 }
 
-impl crate::elements::ElementNodeData for AudioNode {
+impl crate::elements::HasElementData for AudioElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -94,7 +94,7 @@ impl crate::elements::ElementNodeData for AudioNode {
     }
 }
 
-impl ElementNode for AudioNode {
+impl ElementInternals for AudioElement {
     fn deep_clone(&self, elements: &mut Elements) -> DynElement {
         DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
     }
@@ -172,7 +172,7 @@ impl Audio {
         duration.set_color(elements, Color::WHITE);
 
         let inner = elements.insert_with(|me, access_tree| {
-            Box::new(AudioNode {
+            Box::new(AudioElement {
                 element_data: ElementData::new(me, true, access_tree),
                 play_button,
                 play_button_icon,
@@ -189,8 +189,8 @@ impl Audio {
         });
 
         {
-            let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-            let audio = nodes.get_as_mut::<AudioNode>(inner);
+            let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+            let audio = elements.get_as_mut::<AudioElement>(inner);
             audio.set_height(gummy_tree, Unit::Px(24.0));
             audio.set_align_items(gummy_tree, AlignItems::Center);
             audio.set_background_brush(Brush::Color(rgb(72, 72, 72)));
@@ -203,7 +203,7 @@ impl Audio {
         play_button.add_click_listener(elements, move |_event, elements| {
             elements.dispatch_mut(inner, |audio, elements| {
                 (audio as &mut dyn std::any::Any)
-                    .downcast_mut::<AudioNode>()
+                    .downcast_mut::<AudioElement>()
                     .expect("audio handle changed type")
                     .toggle(elements);
             });
@@ -212,7 +212,7 @@ impl Audio {
         track.add_slider_value_changed_listener(elements, move |event, elements| {
             elements.dispatch_mut(inner, |audio, elements| {
                 (audio as &mut dyn std::any::Any)
-                    .downcast_mut::<AudioNode>()
+                    .downcast_mut::<AudioElement>()
                     .expect("audio handle changed type")
                     .set_cursor(elements, event.value as f32);
             });
@@ -221,7 +221,7 @@ impl Audio {
         volume_track.add_slider_value_changed_listener(elements, move |event, elements| {
             elements.dispatch_mut(inner, |audio, elements| {
                 (audio as &mut dyn std::any::Any)
-                    .downcast_mut::<AudioNode>()
+                    .downcast_mut::<AudioElement>()
                     .expect("audio handle changed type")
                     .set_volume(elements, event.value as f32);
             });
@@ -244,7 +244,7 @@ impl Audio {
 
         elements.dispatch_mut(inner, |audio, elements| {
             (audio as &mut dyn std::any::Any)
-                .downcast_mut::<AudioNode>()
+                .downcast_mut::<AudioElement>()
                 .expect("audio handle changed type")
                 .set_sound(elements, path);
         });
@@ -253,8 +253,8 @@ impl Audio {
     }
 
     pub fn set_controls(&self, elements: &mut Elements, controls: bool) {
-        let (gummy_tree, nodes) = elements.disjoint_borrow_layout_and_elements();
-        if let Some(audio) = nodes.try_get_as_mut::<AudioNode>(self.inner) {
+        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+        if let Some(audio) = elements.try_get_as_mut::<AudioElement>(self.inner) {
             audio.set_controls(gummy_tree, controls);
         }
     }
@@ -262,7 +262,7 @@ impl Audio {
     pub fn play(&self, elements: &mut Elements) {
         elements.try_dispatch_mut(self.inner, |audio, elements| {
             (audio as &mut dyn std::any::Any)
-                .downcast_mut::<AudioNode>()
+                .downcast_mut::<AudioElement>()
                 .expect("audio handle changed type")
                 .play(elements);
         });
@@ -271,7 +271,7 @@ impl Audio {
     pub fn pause(&self, elements: &mut Elements) {
         elements.try_dispatch_mut(self.inner, |audio, elements| {
             (audio as &mut dyn std::any::Any)
-                .downcast_mut::<AudioNode>()
+                .downcast_mut::<AudioElement>()
                 .expect("audio handle changed type")
                 .pause(elements);
         });
@@ -280,7 +280,7 @@ impl Audio {
     pub fn toggle(&self, elements: &mut Elements) {
         elements.try_dispatch_mut(self.inner, |audio, elements| {
             (audio as &mut dyn std::any::Any)
-                .downcast_mut::<AudioNode>()
+                .downcast_mut::<AudioElement>()
                 .expect("audio handle changed type")
                 .toggle(elements);
         });
@@ -288,12 +288,12 @@ impl Audio {
 
     pub fn is_playing(&self, elements: &Elements) -> bool {
         elements
-            .try_get_as::<AudioNode>(self.inner)
+            .try_get_as::<AudioElement>(self.inner)
             .is_some_and(|audio| audio.is_playing(elements))
     }
 }
 
-impl AudioNode {
+impl AudioElement {
     fn toggle(&mut self, elements: &mut Elements) {
         if self.is_playing(elements) {
             self.pause(elements);
