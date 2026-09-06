@@ -73,7 +73,7 @@ impl App {
 
         let resource_manager = elements.resource_manager().clone();
         let text_context = TextContext {
-            font_context: elements.font_context().clone(),
+            font_context: elements.font_context.clone(),
             layout_context: Default::default(),
         };
         #[cfg(target_arch = "wasm32")]

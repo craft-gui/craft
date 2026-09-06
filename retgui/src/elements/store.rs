@@ -27,7 +27,7 @@ static NEXT_STORE_ID: AtomicU64 = AtomicU64::new(1);
 
 /// Owns every retained element and application state value.
 pub struct Elements {
-    font_context: Option<parley::FontContext>,
+    pub(crate) font_context: parley::FontContext,
     resource_manager: Option<Arc<ResourceManager>>,
     elements: RetainedElements,
     states: SlotMap<DefaultKey, Box<dyn Any>>,
@@ -113,7 +113,7 @@ impl Default for Elements {
 impl Elements {
     pub fn new() -> Self {
         Self {
-            font_context: None,
+            font_context: crate::text::text_context::create_font_context(),
             resource_manager: None,
             elements: RetainedElements {
                 id: NEXT_STORE_ID.fetch_add(1, Ordering::Relaxed),
@@ -145,7 +145,7 @@ impl Elements {
         let bytes = bytes.into();
         if resource_type == ResourceType::Font {
             let fonts = self
-                .font_context()
+                .font_context
                 .collection
                 .register_fonts(peniko::Blob::new(Arc::new(bytes)), None);
             if fonts.is_empty() {
@@ -156,11 +156,6 @@ impl Elements {
         }
         self.dirty_and_redraw_all_windows(true);
         Ok(())
-    }
-
-    pub(crate) fn font_context(&mut self) -> &mut parley::FontContext {
-        self.font_context
-            .get_or_insert_with(crate::text::text_context::create_font_context)
     }
 
     pub(crate) fn resource_manager(&mut self) -> &Arc<ResourceManager> {
