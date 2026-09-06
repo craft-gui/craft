@@ -8,8 +8,8 @@ use retgui::elements::Audio;
 use retgui::elements::{Button, Calendar, Checkbox, CheckboxGroup, Container, Dropdown, DynElement, Element, Elements, Image, Radio, RadioGroup, Slider, SliderDirection, State, Text, TextInput, TinyVg, Window};
 use retgui::events::Event;
 use retgui::geometry::Point;
-use retgui::style::{AlignItems, Animation, BoxShadow, Display, FlexDirection, FontStyle, FontWeight, JustifyContent, KeyFrame, Overflow, Position, Repeat, StyleVariant, TextAlign, TimingFunction};
-use retgui::{Brush, Color, ColorStop, Gradient, ResourceId, RetGuiOptions, auto, pct, px, retgui_main, rgb, rgba};
+use retgui::style::{AlignItems, Animation, BoxShadow, Display, FlexDirection, FontFamily, FontStyle, FontWeight, JustifyContent, KeyFrame, Overflow, Position, Repeat, StyleVariant, TextAlign, TimingFunction};
+use retgui::{Brush, Color, ColorStop, Gradient, ResourceId, ResourceType, RetGuiOptions, auto, pct, px, retgui_main, rgb, rgba};
 
 use serde::Deserialize;
 
@@ -134,7 +134,57 @@ pub fn text(elements: &mut Elements) -> Container {
         .finish()
 }
 
+pub fn variable_fonts(elements: &mut Elements) -> Container {
+    let font = include_bytes!("../../assets/fonts/Roboto-VariableFont_wdth,wght.ttf");
+    elements
+        .upload_resource(ResourceId::StaticBytes(font), ResourceType::Font, font.as_slice())
+        .expect("gallery font must load");
+    let heading = title(elements, "Variable Fonts");
+    let description = Text::new(
+        elements,
+        "Roboto: drag the slider to explore font weights from 100 to 900.",
+    );
+    let preview = Text::new(elements, "The quick brown fox jumps over the lazy dog.\nABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz 0123456789")
+        .edit(elements)
+        .font_family(FontFamily::new("Roboto"))
+        .font_size(36.0)
+        .font_weight(FontWeight::NORMAL)
+        .finish();
+    let weight_label = Text::new(elements, "Weight: 400");
+    let weight = Slider::new(elements, 20.0)
+        .edit(elements)
+        .min(100.0)
+        .max(900.0)
+        .step(1.0)
+        .value(400.0)
+        .width(px(300.0))
+        .height(px(10.0))
+        .margin_vertical(px(10.0))
+        .add_slider_value_changed_listener(move |event, elements| {
+            let weight = event.value.round() as u16;
+            preview.edit(elements).font_weight(FontWeight(weight)).finish();
+            weight_label.edit(elements).text(&format!("Weight: {weight}")).finish();
+        })
+        .finish();
+
+    Container::new(elements)
+        .edit(elements)
+        .display(Display::Flex)
+        .flex_direction(FlexDirection::Column)
+        .row_gap(px(12.0))
+        .push(heading)
+        .push(description)
+        .push(weight_label)
+        .push(weight)
+        .push(preview)
+        .finish()
+}
+
 pub fn tinyvg(elements: &mut Elements) -> Container {
+    let tiger = include_bytes!("tiger.tvg");
+    elements
+        .upload_resource(ResourceId::StaticBytes(tiger), ResourceType::TinyVg, tiger.as_slice())
+        .expect("gallery image must load");
     let image = TinyVg::new(elements, ResourceId::StaticBytes(include_bytes!("tiger.tvg")))
         .edit(elements)
         .width(px(250.0))
@@ -717,6 +767,7 @@ fn gallery_examples(elements: &mut Elements) -> Vec<GalleryExample> {
     let text_input = text_input(elements);
     let dropdown = dropdown(elements);
     let text = text(elements);
+    let variable_fonts = variable_fonts(elements);
     let tinyvg = tinyvg(elements);
     let images = images(elements);
     let gradient = gradient(elements);
@@ -736,6 +787,7 @@ fn gallery_examples(elements: &mut Elements) -> Vec<GalleryExample> {
         GalleryExample::new(elements, "Text Input", text_input),
         GalleryExample::new(elements, "Dropdown", dropdown),
         GalleryExample::new(elements, "Text", text),
+        GalleryExample::new(elements, "Variable Fonts", variable_fonts),
         GalleryExample::new(elements, "TinyVG", tinyvg),
         GalleryExample::new(elements, "Image", images),
         GalleryExample::new(elements, "Gradients", gradient),

@@ -48,6 +48,7 @@ pub struct TextRenderItem {
     #[allow(dead_code)]
     pub glyph_transform: Option<Affine>,
     pub font_size: f32,
+    pub normalized_coords: Vec<i16>,
     pub glyphs: Vec<TextRenderGlyph>,
     pub font: peniko::FontData,
 }

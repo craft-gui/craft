@@ -92,7 +92,8 @@ pub(crate) fn draw_text(cmd: &DrawTextCmd, scene: &mut RenderContext, resources:
             let glyph_run_builder = scene
                 .glyph_run(resources, &item.font)
                 .atlas_cache(use_glyph_cache)
-                .font_size(item.font_size);
+                .font_size(item.font_size)
+                .normalized_coords(&item.normalized_coords);
             glyph_run_builder.fill_glyphs(item.glyphs.iter().map(|glyph| Glyph {
                 id: glyph.id,
                 x: glyph.x,
