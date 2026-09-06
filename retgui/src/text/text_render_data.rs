@@ -127,6 +127,7 @@ pub fn from_editor(layout: &Layout<Brush>) -> TextRender {
                 strikethrough,
                 glyph_transform: glyph_xform,
                 font_size,
+                normalized_coords: run.normalized_coords().iter().map(|coord| coord.to_bits()).collect(),
                 glyphs: glyphs.collect(),
                 font: font.font.clone(),
             };

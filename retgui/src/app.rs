@@ -67,18 +67,21 @@ pub enum WindowEventResult {
 }
 
 impl App {
-    pub(crate) fn new(elements: Elements) -> Self {
+    pub(crate) fn new(mut elements: Elements) -> Self {
         let runtime = RetGuiRuntime::new();
         info!("Created async runtime");
 
-        #[allow(clippy::arc_with_non_send_sync)]
-        let resource_manager = Arc::new(ResourceManager::new(runtime.handle()));
+        let resource_manager = elements.resource_manager().clone();
+        let text_context = TextContext {
+            font_context: elements.font_context().clone(),
+            layout_context: Default::default(),
+        };
         #[cfg(target_arch = "wasm32")]
         let (created_renderer_sender, created_renderer_receiver) = std::sync::mpsc::channel();
 
         Self {
             event_dispatcher: EventDispatcher::new(),
-            text_context: create_text_context(),
+            text_context,
             elements,
             in_progress_resources: VecDeque::new(),
             resource_manager,
@@ -448,39 +451,8 @@ impl App {
                 continue;
             }
             self.resource_manager
-                .async_download_resource(resource.clone(), &resource_type);
+                .async_download_resource(resource.clone(), &resource_type, &self.runtime.handle());
             self.in_progress_resources.push_back((resource, resource_type));
         }
     }
-}
-
-fn create_text_context() -> TextContext {
-    #[cfg(any(target_arch = "wasm32", not(feature = "system_fonts")))]
-    let mut text_context = TextContext::new();
-    #[cfg(all(not(target_arch = "wasm32"), feature = "system_fonts"))]
-    let text_context = TextContext::new();
-
-    #[cfg(any(target_arch = "wasm32", not(feature = "system_fonts")))]
-    {
-        let regular = include_bytes!("../../assets/fonts/Roboto-Regular.ttf");
-        let bold = include_bytes!("../../assets/fonts/Roboto-Bold.ttf");
-        let semi_bold = include_bytes!("../../assets/fonts/Roboto-SemiBold.ttf");
-        let medium = include_bytes!("../../assets/fonts/Roboto-Medium.ttf");
-
-        fn register_and_append(font_data: &'static [u8], text_context: &mut TextContext) {
-            let blob = peniko::Blob::new(Arc::new(font_data));
-            let fonts = text_context.font_context.collection.register_fonts(blob, None);
-            text_context
-                .font_context
-                .collection
-                .append_generic_families(parley::GenericFamily::SystemUi, fonts.iter().map(|font| font.0));
-        }
-
-        register_and_append(regular, &mut text_context);
-        register_and_append(bold, &mut text_context);
-        register_and_append(semi_bold, &mut text_context);
-        register_and_append(medium, &mut text_context);
-    }
-
-    text_context
 }

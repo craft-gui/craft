@@ -1,11 +1,12 @@
 use std::any::Any;
+use std::collections::VecDeque;
 use std::future::Future;
 use std::marker::PhantomData;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::collections::VecDeque;
 
-use retgui_resource_manager::ResourceId;
 use retgui_resource_manager::resource_type::ResourceType;
+use retgui_resource_manager::{ResourceError, ResourceId, ResourceManager};
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -26,6 +27,8 @@ static NEXT_STORE_ID: AtomicU64 = AtomicU64::new(1);
 
 /// Owns every retained element and application state value.
 pub struct Elements {
+    font_context: Option<parley::FontContext>,
+    resource_manager: Option<Arc<ResourceManager>>,
     elements: RetainedElements,
     states: SlotMap<DefaultKey, Box<dyn Any>>,
     by_internal_id: FxHashMap<u64, DynElement>,
@@ -110,6 +113,8 @@ impl Default for Elements {
 impl Elements {
     pub fn new() -> Self {
         Self {
+            font_context: None,
+            resource_manager: None,
             elements: RetainedElements {
                 id: NEXT_STORE_ID.fetch_add(1, Ordering::Relaxed),
                 slots: SlotMap::with_key(),
@@ -128,6 +133,40 @@ impl Elements {
             audio_context: None,
             gui_actions: GuiActionQueue::new(),
         }
+    }
+
+    /// Synchronously uploads resources.
+    pub fn upload_resource(
+        &mut self,
+        resource_id: ResourceId,
+        resource_type: ResourceType,
+        bytes: impl Into<Vec<u8>>,
+    ) -> Result<(), crate::RetGuiError> {
+        let bytes = bytes.into();
+        if resource_type == ResourceType::Font {
+            let fonts = self
+                .font_context()
+                .collection
+                .register_fonts(peniko::Blob::new(Arc::new(bytes)), None);
+            if fonts.is_empty() {
+                return Err(ResourceError::new(ResourceType::Font, "No fonts found in uploaded data").into());
+            }
+        } else {
+            self.resource_manager().upload(resource_id, resource_type, bytes)?;
+        }
+        self.dirty_and_redraw_all_windows(true);
+        Ok(())
+    }
+
+    pub(crate) fn font_context(&mut self) -> &mut parley::FontContext {
+        self.font_context
+            .get_or_insert_with(crate::text::text_context::create_font_context)
+    }
+
+    pub(crate) fn resource_manager(&mut self) -> &Arc<ResourceManager> {
+        #[allow(clippy::arc_with_non_send_sync)]
+        self.resource_manager
+            .get_or_insert_with(|| Arc::new(ResourceManager::new()))
     }
 
     /// Inserts an element into this store and creates its layout node.
