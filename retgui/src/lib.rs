@@ -8,7 +8,8 @@ pub use retgui_primitives::{Color, ColorStop, Extend, Gradient, GradientKind, Hu
 pub use retgui_renderer::RendererType;
 pub use retgui_renderer::renderer::Renderer;
 
-pub use retgui_resource_manager::{ResourceId, ResourceManager};
+pub use retgui_resource_manager::resource_type::ResourceType;
+pub use retgui_resource_manager::{ResourceError, ResourceId, ResourceManager};
 
 pub use retgui_runtime::{self, RetGuiRuntime};
 

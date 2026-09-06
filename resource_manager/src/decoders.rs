@@ -6,19 +6,23 @@ use retgui_logging::info;
 
 use tinyvg_rs::TinyVg;
 
+use crate::ResourceError;
 use crate::image::ImageResource;
+use crate::resource_type::ResourceType;
 
-pub fn image_decoder(bytes: Vec<u8>) -> Box<dyn Any + Send + Sync> {
+pub fn image_decoder(bytes: Vec<u8>) -> Result<Box<dyn Any + Send + Sync>, ResourceError> {
     info!("Image downloaded");
 
-    let image = image::load_from_memory(bytes.as_bytes()).unwrap();
+    let image = image::load_from_memory(bytes.as_bytes())
+        .map_err(|error| ResourceError::new(ResourceType::Image, error.to_string()))?;
     let image = image.to_rgba8();
 
-    Box::new(ImageResource { image })
+    Ok(Box::new(ImageResource { image }))
 }
 
-pub fn tinyvg_decoder(bytes: Vec<u8>) -> Box<dyn Any + Send + Sync> {
-    let tinyvg = TinyVg::from_bytes(bytes.as_bytes()).unwrap();
+pub fn tinyvg_decoder(bytes: Vec<u8>) -> Result<Box<dyn Any + Send + Sync>, ResourceError> {
+    let tinyvg = TinyVg::from_bytes(bytes.as_bytes())
+        .map_err(|error| ResourceError::new(ResourceType::TinyVg, format!("Invalid TinyVG: {error:?}")))?;
 
-    Box::new(tinyvg)
+    Ok(Box::new(tinyvg))
 }
