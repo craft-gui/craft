@@ -1,16 +1,18 @@
 //! Displays an image.
 
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use retgui_renderer::renderer::Renderer;
 
-use retgui_resource_manager::{ResourceId, ResourceManager};
 use retgui_resource_manager::resource_type::ResourceType;
+use retgui_resource_manager::{ResourceId, ResourceManager};
 
+use crate::App;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::apply_generic_leaf_layout;
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementInternals, Elements};
+use crate::elements::{DynElement, Element, ElementIds, ElementInternals, ElementStates, RetGuiAccessTree, RetainedElements};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{ImageContext, LayoutContext};
 use crate::text::text_context::TextContext;
@@ -45,8 +47,21 @@ impl Element for Image {
 }
 
 impl ElementInternals for ImageElement {
-    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
+    fn deep_clone(
+        &self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(
+            self,
+            elements,
+            gummy_tree,
+            access_tree,
+            by_internal_id,
+            |_, _| None,
+        ))
     }
 
     fn apply_layout(
@@ -61,7 +76,8 @@ impl ElementInternals for ImageElement {
 
     fn draw(
         &self,
-        _elements: &Elements,
+        _elements: &RetainedElements,
+        _states: &ElementStates,
         _renderer: &mut dyn Renderer,
         _resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -87,60 +103,88 @@ impl ElementInternals for ImageElement {
 }
 
 impl Image {
-    pub fn new(elements: &mut Elements, resource_id: ResourceId) -> Self {
-        let inner = elements.insert_with(|me, access_tree| {
+    pub fn new(app: &mut App, resource_id: ResourceId) -> Self {
+        Self {
+            inner: ImageElement::insert(
+                &mut app.elements,
+                &mut app.gummy_tree,
+                &app.access_tree,
+                &mut app.by_internal_id,
+                &mut app.pending_resources,
+                resource_id,
+            ),
+        }
+    }
+
+    pub fn dummy(app: &mut App) -> Self {
+        Self {
+            inner: ImageElement::insert_unloaded(
+                &mut app.elements,
+                &mut app.gummy_tree,
+                &app.access_tree,
+                &mut app.by_internal_id,
+                ResourceId::DUMMY,
+            ),
+        }
+    }
+
+    pub fn set_resource_id(&self, app: &mut App, resource_id: ResourceId) {
+        if let Some(image) = app.elements.try_get_as_mut::<ImageElement>(self.inner) {
+            image.set_image(&mut app.gummy_tree, &mut app.pending_resources, resource_id);
+        }
+    }
+
+    pub fn resource_id(&self, app: &App) -> ResourceId {
+        app.try_get_as::<ImageElement>(self.inner)
+            .map_or(ResourceId::DUMMY, |image| image.get_resource_id().clone())
+    }
+}
+
+impl ImageElement {
+    pub(crate) fn insert(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        pending_resources: &mut VecDeque<(ResourceId, ResourceType)>,
+        resource_id: ResourceId,
+    ) -> DynElement {
+        let inner = Self::insert_unloaded(elements, gummy_tree, access_tree, by_internal_id, resource_id.clone());
+        pending_resources.push_back((resource_id, ResourceType::Image));
+        inner
+    }
+
+    fn insert_unloaded(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        resource_id: ResourceId,
+    ) -> DynElement {
+        let inner = elements.insert_with(access_tree, by_internal_id, |me, access_tree| {
             Box::new(ImageElement {
                 is_image_dirty: false,
                 resource_id: resource_id.clone(),
                 element_data: ElementData::new(me, false, access_tree),
             })
         });
-        let layout_context = Some(LayoutContext::Image(ImageContext::new(resource_id.clone())));
-        elements.create_layout_node(inner, layout_context);
-
-        elements.pending_resources.push_back((resource_id, ResourceType::Image));
-
-        Self { inner }
+        let element = elements.get_as_mut::<ImageElement>(inner);
+        element
+            .element_data
+            .create_layout_node(gummy_tree, Some(LayoutContext::Image(ImageContext::new(resource_id))));
+        inner
     }
 
-    pub fn dummy(elements: &mut Elements) -> Self {
-        let inner = elements.insert_with(|me, access_tree| {
-            Box::new(ImageElement {
-                is_image_dirty: false,
-                resource_id: ResourceId::DUMMY,
-                element_data: ElementData::new(me, false, access_tree),
-            })
-        });
-        let layout_context = Some(LayoutContext::Image(ImageContext::new(ResourceId::DUMMY)));
-        elements.create_layout_node(inner, layout_context);
-
-        Self { inner }
-    }
-
-    pub fn set_resource_id(&self, elements: &mut Elements, resource_id: ResourceId) {
-        elements.try_dispatch_mut(self.inner, |image, elements| {
-            (image as &mut dyn std::any::Any)
-                .downcast_mut::<ImageElement>()
-                .unwrap()
-                .set_image(elements, resource_id)
-        });
-    }
-
-    pub fn resource_id(&self, elements: &Elements) -> ResourceId {
-        elements
-            .try_get_as::<ImageElement>(self.inner)
-            .map_or(ResourceId::DUMMY, |image| image.get_resource_id().clone())
-    }
-}
-
-impl ImageElement {
-    pub fn set_image(&mut self, elements: &mut Elements, resource_id: ResourceId) {
+    pub fn set_image(
+        &mut self,
+        gummy_tree: &mut GummyTree,
+        pending_resources: &mut VecDeque<(ResourceId, ResourceType)>,
+        resource_id: ResourceId,
+    ) {
         self.is_image_dirty = true;
         self.resource_id = resource_id.clone();
 
-        elements
-            .pending_resources
-            .push_back((self.resource_id.clone(), ResourceType::Image));
+        pending_resources.push_back((self.resource_id.clone(), ResourceType::Image));
 
         let context = LayoutContext::Image(ImageContext::new(resource_id));
         let node = self
@@ -148,7 +192,7 @@ impl ImageElement {
             .layout
             .gummy_node_id
             .expect("Failed to get Image layout node");
-        elements.gummy_tree.set_node_context(node, Some(context));
+        gummy_tree.set_node_context(node, Some(context));
         self.request_window_redraw();
     }
 

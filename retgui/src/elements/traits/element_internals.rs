@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -11,11 +12,10 @@ use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::ResourceManager;
 
-use crate::events::PointerId;
 use crate::elements::scrollable::{ScrollState, draw_scrollbar};
-use crate::elements::{DynElement, Elements, HasElementData, ScrollOptions, WindowElement};
+use crate::elements::{DynElement, ElementIds, ElementStates, HasElementData, RetGuiAccessTree, RetainedElements, ScrollOptions, WindowElement};
 use crate::events::pointer_capture::PointerCapture;
-use crate::events::{CheckboxToggledHandler, ClickHandler, CustomHandler, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, FocusHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler, UnfocusEvent, UnfocusHandler};
+use crate::events::{CheckboxToggledHandler, ClickHandler, CustomHandler, EventCallback, EventCallbackKind, EventKind, EventListenerOptions, FocusEvent, FocusHandler, KeyboardInputHandler, PointerCaptureHandler, PointerEnterHandler, PointerEventHandler, PointerId, PointerLeaveHandler, PointerUpdateHandler, RadioValueChangedHandler, ScrollHandler, SliderValueChangedHandler, TextInputChangedHandler, UnfocusEvent, UnfocusHandler};
 use crate::layout::GummyTree;
 use crate::style::{AlignContent, AlignItems, AlignSelf, Animation, BoxShadow, BoxSizing, Display, FlexDirection, FlexWrap, FontFamily, FontStyle, FontWeight, JustifyContent, Overflow, Position, ScrollbarColor, Style, StyleVariant, TextAlign, Underline, Unit};
 use crate::text::text_context::TextContext;
@@ -52,13 +52,19 @@ impl AnimationSchedule {
 
 /// Internal element methods that should typically be ignored by users. Public for custom elements.
 pub trait ElementInternals: HasElementData + Any {
-    fn deep_clone(&self, elements: &mut Elements) -> DynElement;
+    fn deep_clone(
+        &self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> DynElement;
 
     fn window_pointer_capture(&mut self) -> Option<&mut PointerCapture> {
         None
     }
 
-    fn position_in_parent(&self, elements: &Elements) -> Option<usize> {
+    fn position_in_parent(&self, elements: &RetainedElements) -> Option<usize> {
         let parent = self.parent();
 
         // @OPTIMIZE: We are copying the vec here.
@@ -89,7 +95,8 @@ pub trait ElementInternals: HasElementData + Any {
     /// A helper to draw all children.
     fn draw_children(
         &self,
-        elements: &Elements,
+        elements: &RetainedElements,
+        states: &ElementStates,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
@@ -102,6 +109,7 @@ pub trait ElementInternals: HasElementData + Any {
         for child in &self.element_data().children {
             elements.get_for_draw(*child).draw_transformed(
                 elements,
+                states,
                 renderer,
                 resource_manager.clone(),
                 scale_factor,
@@ -149,7 +157,8 @@ pub trait ElementInternals: HasElementData + Any {
 
     fn draw_transformed(
         &self,
-        elements: &Elements,
+        elements: &RetainedElements,
+        states: &ElementStates,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
@@ -178,14 +187,15 @@ pub trait ElementInternals: HasElementData + Any {
             self.element_data().set_accessibility_bounds_from_layout(scale_factor);
         }
 
-        self.draw(elements, renderer, resource_manager, scale_factor, text_context);
+        self.draw(elements, states, renderer, resource_manager, scale_factor, text_context);
         renderer.set_transform(parent_transform);
     }
 
     /// Draws this element in its own local coordinate space.
     fn draw(
         &self,
-        _elements: &Elements,
+        _elements: &RetainedElements,
+        _states: &ElementStates,
         _renderer: &mut dyn Renderer,
         _resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -193,7 +203,7 @@ pub trait ElementInternals: HasElementData + Any {
     ) {
     }
 
-    fn sync_accessibility_children(&mut self, elements: &Elements) {
+    fn sync_accessibility_children(&mut self, elements: &RetainedElements) {
         let data = self.element_data();
         let Some(node) = data.access_key else {
             return;
@@ -207,7 +217,21 @@ pub trait ElementInternals: HasElementData + Any {
     }
 
     /// Handles default events.
-    fn on_event(&mut self, _elements: &mut Elements, _event: &mut EventKind, _text_context: &mut TextContext) {}
+    fn on_event(
+        &mut self,
+        _elements: &mut RetainedElements,
+        _gummy_tree: &mut GummyTree,
+        _access_tree: &RetGuiAccessTree,
+        _by_internal_id: &mut ElementIds,
+        _event_queue: &mut VecDeque<EventKind>,
+        _focus: &mut Option<DynElement>,
+        _focus_outline_visible: bool,
+        _pending_animation_updates: &mut Vec<(DynElement, bool)>,
+        _states: &mut ElementStates,
+        _event: &mut EventKind,
+        _text_context: &mut TextContext,
+    ) {
+    }
 
     /// Computes this element's box model.
     fn resolve_box(&mut self, result: &gummy::Layout, layout_order: &mut u32) {
@@ -309,13 +333,15 @@ pub trait ElementInternals: HasElementData + Any {
     }
 
     /// Set's this element's scale factor. This should not be used to scale individual elements.
-    fn set_scale_factor(&mut self, elements: &mut Elements, scale_factor: f64) {
+    fn set_scale_factor(&mut self, elements: &mut RetainedElements, gummy_tree: &mut GummyTree, scale_factor: f64) {
         self.element_data_mut().applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         for child in self.element_data().children.clone() {
-            elements.dispatch_mut(child, |child, elements| child.set_scale_factor(elements, scale_factor));
+            elements.dispatch_mut(child, |child, elements| {
+                child.set_scale_factor(elements, gummy_tree, scale_factor)
+            });
         }
-        self.mark_dirty(&mut elements.gummy_tree);
+        self.mark_dirty(gummy_tree);
     }
 
     fn get_first_child(&self) -> Result<DynElement, RetGuiError> {
@@ -334,7 +360,7 @@ pub trait ElementInternals: HasElementData + Any {
             .ok_or(RetGuiError::ElementNotFound)
     }
 
-    fn get_previous_sibling(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
+    fn get_previous_sibling(&self, elements: &RetainedElements) -> Result<DynElement, RetGuiError> {
         let parent = self.parent();
         let position = self.position_in_parent(elements);
 
@@ -354,7 +380,7 @@ pub trait ElementInternals: HasElementData + Any {
         }
     }
 
-    fn get_next_sibling(&self, elements: &Elements) -> Result<DynElement, RetGuiError> {
+    fn get_next_sibling(&self, elements: &RetainedElements) -> Result<DynElement, RetGuiError> {
         let parent = self.parent();
         let position = self.position_in_parent(elements);
 
@@ -374,7 +400,8 @@ pub trait ElementInternals: HasElementData + Any {
 
     fn swap_child(
         &mut self,
-        elements: &mut Elements,
+        elements: &RetainedElements,
+        gummy_tree: &mut GummyTree,
         child_1: DynElement,
         child_2: DynElement,
     ) -> Result<(), RetGuiError> {
@@ -401,7 +428,6 @@ pub trait ElementInternals: HasElementData + Any {
         let child_1_id = elements.get(child_1).element_data().layout.gummy_node_id;
         let child_2_id = elements.get(child_2).element_data().layout.gummy_node_id;
 
-        let gummy_tree = &mut elements.gummy_tree;
         if let Some(parent_id) = parent_id
             && let Some(child_1_id) = child_1_id
             && let Some(child_2_id) = child_2_id
@@ -442,7 +468,14 @@ pub trait ElementInternals: HasElementData + Any {
     ///
     /// # Panics
     /// Panics if the corresponding Gummy layout nodes fail to be removed.
-    fn remove_child(&mut self, elements: &mut Elements, child: DynElement) -> Result<DynElement, RetGuiError> {
+    fn remove_child(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        event_queue: &mut VecDeque<EventKind>,
+        focus: &mut Option<DynElement>,
+        child: DynElement,
+    ) -> Result<DynElement, RetGuiError> {
         // Find the child element.
         let children = &mut self.element_data_mut().children;
         let position = children
@@ -461,11 +494,11 @@ pub trait ElementInternals: HasElementData + Any {
 
         let child_id = elements.get(child).element_data().layout.gummy_node_id;
         if let Some(child_id) = child_id {
-            elements.gummy_tree.unparent_node(child_id);
+            gummy_tree.unparent_node(child_id);
         }
 
         let parent_id = self.element_data().layout.gummy_node_id;
-        elements.gummy_tree.mark_dirty(parent_id.unwrap());
+        gummy_tree.mark_dirty(parent_id.unwrap());
 
         fn remove_element_from_document(element: DynElement, pointer_capture: &mut PointerCapture) {
             pointer_capture.remove_element(element);
@@ -482,7 +515,7 @@ pub trait ElementInternals: HasElementData + Any {
         }
 
         elements.dispatch_mut(child, |child, elements| {
-            child.unfocus(elements);
+            child.unfocus(event_queue, focus);
             crate::accessibility::detach_subtree(elements, child);
             child.element_data_mut().window = None;
             child.element_data_mut().redraw_signal = None;
@@ -493,10 +526,17 @@ pub trait ElementInternals: HasElementData + Any {
         Ok(child)
     }
 
-    fn remove_all_children(&mut self, elements: &mut Elements) {
+    fn remove_all_children(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        event_queue: &mut VecDeque<EventKind>,
+        focus: &mut Option<DynElement>,
+    ) {
         // @OPTIMIZE: We are copying the vec here.
         for child in self.element_data().children.clone().iter().rev() {
-            self.remove_child(elements, *child).unwrap();
+            self.remove_child(elements, gummy_tree, event_queue, focus, *child)
+                .unwrap();
         }
     }
 
@@ -633,9 +673,16 @@ pub trait ElementInternals: HasElementData + Any {
         self.add_event_listener(EventCallbackKind::Scroll(on_scroll), EventListenerOptions::default());
     }
 
-    fn scroll_to_child_by_id_with_options(&mut self, elements: &mut Elements, id: &str, options: ScrollOptions) {
+    fn scroll_to_child_by_id_with_options(
+        &mut self,
+        elements: &RetainedElements,
+        event_queue: &mut VecDeque<EventKind>,
+        id: &str,
+        options: ScrollOptions,
+    ) {
         if crate::elements::scrollable::scroll_to_child_by_id_with_options(
             elements,
+            event_queue,
             self.element_data_mut(),
             id,
             options,
@@ -644,26 +691,26 @@ pub trait ElementInternals: HasElementData + Any {
         }
     }
 
-    fn scroll_to(&mut self, elements: &mut Elements, y: f32) {
-        if crate::elements::scrollable::scroll_to(elements, self.element_data_mut(), y) {
+    fn scroll_to(&mut self, event_queue: &mut VecDeque<EventKind>, y: f32) {
+        if crate::elements::scrollable::scroll_to(event_queue, self.element_data_mut(), y) {
             self.request_window_redraw();
         }
     }
 
-    fn scroll_to_top(&mut self, elements: &mut Elements) {
-        if crate::elements::scrollable::scroll_to_top(elements, self.element_data_mut()) {
+    fn scroll_to_top(&mut self, event_queue: &mut VecDeque<EventKind>) {
+        if crate::elements::scrollable::scroll_to_top(event_queue, self.element_data_mut()) {
             self.request_window_redraw();
         }
     }
 
-    fn scroll_to_bottom(&mut self, elements: &mut Elements) {
-        if crate::elements::scrollable::scroll_to_bottom(elements, self.element_data_mut()) {
+    fn scroll_to_bottom(&mut self, event_queue: &mut VecDeque<EventKind>) {
+        if crate::elements::scrollable::scroll_to_bottom(event_queue, self.element_data_mut()) {
             self.request_window_redraw();
         }
     }
 
-    fn scroll_by(&mut self, elements: &mut Elements, y: f32) {
-        if crate::elements::scrollable::scroll_by(elements, self.element_data_mut(), y) {
+    fn scroll_by(&mut self, event_queue: &mut VecDeque<EventKind>, y: f32) {
+        if crate::elements::scrollable::scroll_by(event_queue, self.element_data_mut(), y) {
             self.request_window_redraw();
         }
     }
@@ -704,7 +751,7 @@ pub trait ElementInternals: HasElementData + Any {
         }
     }
 
-    fn propagate_window_down(&mut self, elements: &mut Elements) {
+    fn propagate_window_down(&mut self, elements: &mut RetainedElements) {
         let window = self.element_data().window;
         let redraw_signal = self.element_data().redraw_signal.clone();
         for child in self.element_data().children.clone() {
@@ -716,7 +763,7 @@ pub trait ElementInternals: HasElementData + Any {
         }
     }
 
-    fn set_pointer_capture(&self, elements: &mut Elements, pointer_id: PointerId) {
+    fn set_pointer_capture(&self, elements: &mut RetainedElements, pointer_id: PointerId) {
         // 9.2 Setting pointer capture
         // https://w3c.github.io/pointerevents/#setting-pointer-capture
 
@@ -739,7 +786,7 @@ pub trait ElementInternals: HasElementData + Any {
         }
     }
 
-    fn release_pointer_capture(&self, elements: &mut Elements, pointer_id: PointerId) {
+    fn release_pointer_capture(&self, elements: &mut RetainedElements, pointer_id: PointerId) {
         // 9.3 Releasing pointer capture
         // https://w3c.github.io/pointerevents/#releasing-pointer-capture
         let has_pointer_capture = self.has_pointer_capture(elements, pointer_id);
@@ -759,7 +806,7 @@ pub trait ElementInternals: HasElementData + Any {
         }
     }
 
-    fn has_pointer_capture(&self, elements: &Elements, pointer_id: PointerId) -> bool {
+    fn has_pointer_capture(&self, elements: &RetainedElements, pointer_id: PointerId) -> bool {
         // https://w3c.github.io/pointerevents/#dom-element-haspointercapture
         if let Some(window) = self.element_data().window {
             elements
@@ -1230,10 +1277,10 @@ pub trait ElementInternals: HasElementData + Any {
     }
 
     /// Sets the list of animations.
-    fn set_animations(&mut self, elements: &mut Elements, animations: Vec<Animation>) {
+    fn set_animations(&mut self, pending_animation_updates: &mut Vec<(DynElement, bool)>, animations: Vec<Animation>) {
         let element_data = self.element_data_mut();
         element_data.animations = animations;
-        elements.restart_animation_update(element_data.me);
+        crate::elements::internal_helpers::queue_animation_update(pending_animation_updates, element_data.me, true);
         self.request_window_redraw();
     }
 
@@ -1263,10 +1310,16 @@ pub trait ElementInternals: HasElementData + Any {
     /// Sets focus on the specified element, if it can be focused.
     ///
     /// The focused element is the element that will receive keyboard and similar events by default.
-    fn focus(&mut self, elements: &mut Elements) {
+    fn focus(
+        &mut self,
+        elements: &mut RetainedElements,
+        event_queue: &mut VecDeque<EventKind>,
+        focus: &mut Option<DynElement>,
+        focus_outline_visible: bool,
+    ) {
         // Todo: check if the element is focusable. Should we return a result?
         let me = self.element_data().me;
-        let previous_focus = elements.focus.replace(me);
+        let previous_focus = focus.replace(me);
         let focus_changed = previous_focus != Some(me);
         {
             if let Some(previous) = previous_focus.filter(|previous| *previous != me) {
@@ -1287,13 +1340,13 @@ pub trait ElementInternals: HasElementData + Any {
             if let Some(previous) = previous_focus.filter(|previous| elements.contains(*previous)) {
                 restore_unfocused_outline(elements.get_mut(previous).element_data_mut());
                 elements.get_mut(previous).element_data_mut().focused = false;
-                elements.queue_event(EventKind::Unfocus(UnfocusEvent::new(previous)));
+                event_queue.push_back(EventKind::Unfocus(UnfocusEvent::new(previous)));
             }
-            if focus_outline_visible(elements) {
+            if focus_outline_visible {
                 apply_focused_outline(self.element_data_mut());
             }
             self.element_data_mut().focused = true;
-            elements.queue_event(EventKind::Focus(FocusEvent::new(me)));
+            event_queue.push_back(EventKind::Focus(FocusEvent::new(me)));
             self.request_window_redraw();
         }
     }
@@ -1304,10 +1357,10 @@ pub trait ElementInternals: HasElementData + Any {
     }
 
     /// Removes focus if the element has focus.
-    fn unfocus(&mut self, elements: &mut Elements) {
+    fn unfocus(&mut self, event_queue: &mut VecDeque<EventKind>, focus: &mut Option<DynElement>) {
         if self.is_focused() {
             let me = self.element_data().me;
-            elements.focus = None;
+            *focus = None;
             {
                 let data = self.element_data();
                 if let Some(root) = data.access_root {
@@ -1316,7 +1369,7 @@ pub trait ElementInternals: HasElementData + Any {
             }
             restore_unfocused_outline(self.element_data_mut());
             self.element_data_mut().focused = false;
-            elements.queue_event(EventKind::Unfocus(UnfocusEvent::new(me)));
+            event_queue.push_back(EventKind::Unfocus(UnfocusEvent::new(me)));
             self.request_window_redraw();
         }
     }
@@ -1331,13 +1384,29 @@ pub trait ElementInternals: HasElementData + Any {
         }
     }
 
-    fn on_access_event(&mut self, _elements: &mut Elements, _event: AccessEvent) -> Result<(), IsshoError> {
+    fn on_access_event(
+        &mut self,
+        _elements: &mut RetainedElements,
+        _event_queue: &mut VecDeque<EventKind>,
+        _states: &mut ElementStates,
+        _event: AccessEvent,
+    ) -> Result<(), IsshoError> {
         Ok(())
     }
 
     /// Advances this element's animations and returns when it needs another update.
-    fn animation_tick(&mut self, elements: &mut Elements, delta: Duration) -> AnimationSchedule {
-        self.tick_style_animations(&mut elements.gummy_tree, delta)
+    fn animation_tick(
+        &mut self,
+        _elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        _states: &mut ElementStates,
+        _pending_resources: &mut VecDeque<(
+            retgui_resource_manager::ResourceId,
+            retgui_resource_manager::resource_type::ResourceType,
+        )>,
+        delta: Duration,
+    ) -> AnimationSchedule {
+        self.tick_style_animations(gummy_tree, delta)
     }
 
     /// Advances the style animations stored in this element's data.
@@ -1372,17 +1441,18 @@ fn apply_focused_outline(data: &mut crate::elements::element_data::ElementData) 
     data.apply_borders(data.applied_scale_factor);
 }
 
-fn focus_outline_visible(elements: &Elements) -> bool {
-    elements.focus_outline_visible
-}
-
-pub(crate) fn set_focus_outline_visible(elements: &mut Elements, visible: bool) {
-    let changed = std::mem::replace(&mut elements.focus_outline_visible, visible) != visible;
+pub(crate) fn set_focus_outline_visible(
+    elements: &mut RetainedElements,
+    focus: Option<DynElement>,
+    focus_outline_visible: &mut bool,
+    visible: bool,
+) {
+    let changed = std::mem::replace(focus_outline_visible, visible) != visible;
     if !changed {
         return;
     }
 
-    let focused = elements.focus.filter(|focused| elements.contains(*focused));
+    let focused = focus.filter(|focused| elements.contains(*focused));
     let Some(focused) = focused else {
         return;
     };
@@ -1408,39 +1478,40 @@ fn restore_unfocused_outline(data: &mut crate::elements::element_data::ElementDa
 
 #[cfg(test)]
 mod tests {
-    use crate::elements::{Button, Element, Elements};
     use super::*;
+    use crate::App;
+    use crate::elements::{Button, Element};
 
     #[test]
     fn outline_changes_while_focused_are_restored_on_unfocus() {
         let original_color = Color::from_rgb8(10, 20, 30);
         let updated_color = Color::from_rgb8(40, 50, 60);
-        let mut elements = Elements::new();
-        let button = Button::new(&mut elements);
-        button.set_outline_color_all(&mut elements, original_color);
-        button.set_outline_width_all(&mut elements, Unit::Px(1.0));
+        let mut app = App::new();
+        let button = Button::new(&mut app);
+        button.set_outline_color_all(&mut app, original_color);
+        button.set_outline_width_all(&mut app, Unit::Px(1.0));
 
-        button.focus(&mut elements);
-        button.set_outline_color_all(&mut elements, updated_color);
-        button.set_outline_width_all(&mut elements, Unit::Px(3.0));
+        button.focus(&mut app);
+        button.set_outline_color_all(&mut app, updated_color);
+        button.set_outline_width_all(&mut app, Unit::Px(3.0));
 
         assert_eq!(
-            elements.get(button.as_dyn_element()).style().get_outline_color(),
+            app.get(button.as_dyn_element()).style().get_outline_color(),
             TrblRectangle::new_all(crate::palette::css::DODGER_BLUE)
         );
         assert_eq!(
-            elements.get(button.as_dyn_element()).style().get_outline_width(),
+            app.get(button.as_dyn_element()).style().get_outline_width(),
             TrblRectangle::new_all(Unit::Px(2.0))
         );
 
-        button.unfocus(&mut elements);
+        button.unfocus(&mut app);
 
         assert_eq!(
-            elements.get(button.as_dyn_element()).style().get_outline_color(),
+            app.get(button.as_dyn_element()).style().get_outline_color(),
             TrblRectangle::new_all(updated_color)
         );
         assert_eq!(
-            elements.get(button.as_dyn_element()).style().get_outline_width(),
+            app.get(button.as_dyn_element()).style().get_outline_width(),
             TrblRectangle::new_all(Unit::Px(3.0))
         );
     }

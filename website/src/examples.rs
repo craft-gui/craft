@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
-use retgui::elements::{Container, Element, Elements, State, Text};
+use retgui::elements::{Container, Element, State, Text};
 use retgui::events::PointerButton;
 use retgui::style::{Display, FlexDirection, FontWeight, Overflow};
-use retgui::{palette, pct, px};
+use retgui::{App, palette, pct, px};
 
 use crate::WebsiteGlobalState;
 use crate::router::NavigateFn;
@@ -23,10 +23,10 @@ const COUNTER: &str = "/examples/counter";
 const POINTER_EVENTS: &str = "/examples/pointer-events";
 const TEXT: &str = "/examples/text";
 
-fn show_example(elements: &mut Elements, examples: &[Container], selected: usize) {
+fn show_example(app: &mut App, examples: &[Container], selected: usize) {
     for (index, example) in examples.iter().enumerate() {
         example.set_display(
-            elements,
+            app,
             if index == selected {
                 Display::Flex
             } else {
@@ -37,7 +37,7 @@ fn show_example(elements: &mut Elements, examples: &[Container], selected: usize
 }
 
 fn example_link(
-    elements: &mut Elements,
+    app: &mut App,
     label: &str,
     route: &'static str,
     index: usize,
@@ -45,49 +45,49 @@ fn example_link(
     examples: Rc<Vec<Container>>,
     navigate: NavigateFn,
 ) -> Text {
-    let color = if *selected.read(elements) == index {
+    let color = if *selected.read(app) == index {
         ACTIVE_LINK_COLOR
     } else {
         DEFAULT_LINK_COLOR
     };
-    Text::new(elements, label)
-        .edit(elements)
+    Text::new(app, label)
+        .edit(app)
         .color(color)
         .selectable(false)
-        .add_pointer_button_up_listener(move |event, elements| {
+        .add_pointer_button_up_listener(move |event, app| {
             if event.button == Some(PointerButton::Left) {
-                *selected.write(elements) = index;
-                show_example(elements, &examples, index);
-                navigate(route, elements);
+                *selected.write(app) = index;
+                show_example(app, &examples, index);
+                navigate(route, app);
             }
         })
         .finish()
 }
 
-pub fn examples(elements: &mut Elements, global_state: State<WebsiteGlobalState>, navigate: NavigateFn) -> Container {
-    let route = global_state.read(elements).get_route();
-    let counter = counter::counter(elements).edit(elements).id(COUNTER).finish();
-    let pointer = pointer_events::pointer_events(elements)
-        .edit(elements)
+pub fn examples(app: &mut App, global_state: State<WebsiteGlobalState>, navigate: NavigateFn) -> Container {
+    let route = global_state.read(app).get_route();
+    let counter = counter::counter(app).edit(app).id(COUNTER).finish();
+    let pointer = pointer_events::pointer_events(app)
+        .edit(app)
         .id(POINTER_EVENTS)
         .finish();
-    let text = text::text(elements).edit(elements).id(TEXT).finish();
+    let text = text::text(app).edit(app).id(TEXT).finish();
     let examples = Rc::new(vec![counter, pointer, text]);
     let selected_index = [COUNTER, POINTER_EVENTS, TEXT]
         .iter()
         .position(|candidate| *candidate == route)
         .unwrap_or(0);
-    let selected = elements.insert_state(selected_index);
-    show_example(elements, &examples, selected_index);
+    let selected = app.insert_state(selected_index);
+    show_example(app, &examples, selected_index);
 
-    let heading = Text::new(elements, "Examples")
-        .edit(elements)
+    let heading = Text::new(app, "Examples")
+        .edit(app)
         .selectable(false)
         .font_weight(FontWeight::MEDIUM)
         .font_size(20.0)
         .finish();
-    let sidebar = Container::new(elements)
-        .edit(elements)
+    let sidebar = Container::new(app)
+        .edit(app)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .gap(px(12), px(12))
@@ -98,36 +98,28 @@ pub fn examples(elements: &mut Elements, global_state: State<WebsiteGlobalState>
         .into_iter()
         .enumerate()
     {
-        let link = example_link(
-            elements,
-            label,
-            route,
-            index,
-            selected,
-            examples.clone(),
-            navigate.clone(),
-        );
-        sidebar.push(elements, link);
+        let link = example_link(app, label, route, index, selected, examples.clone(), navigate.clone());
+        sidebar.push(app, link);
     }
 
-    let content = Container::new(elements)
-        .edit(elements)
+    let content = Container::new(app)
+        .edit(app)
         .width(pct(100))
         .height(px(600))
         .background_color(palette::css::WHITE)
         .finish();
     for example in examples.iter() {
-        content.push(elements, *example);
+        content.push(app, *example);
     }
-    let page = wrapper(elements)
-        .edit(elements)
+    let page = wrapper(app)
+        .edit(app)
         .padding_all(px(40))
         .gap(px(24), px(24))
         .push(sidebar)
         .push(content)
         .finish();
-    Container::new(elements)
-        .edit(elements)
+    Container::new(app)
+        .edit(app)
         .overflow(Overflow::Visible, Overflow::Scroll)
         .push(page)
         .finish()

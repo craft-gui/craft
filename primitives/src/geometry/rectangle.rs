@@ -43,9 +43,7 @@ impl Rectangle {
             height: dpi::PhysicalUnit::from_logical::<f32, f32>(self.height, scale_factor).0,
         }
     }
-}
 
-impl Rectangle {
     /// Creates a new `Rectangle` with the given position and size.
     ///
     /// # Arguments

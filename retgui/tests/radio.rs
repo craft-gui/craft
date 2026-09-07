@@ -11,27 +11,27 @@ mod test_utils;
 fn switches_from_red_to_green() {
     run(
         "radio_switches_from_red_to_green",
-        |elements| {
-            let active_color = elements.insert_state("red".to_string());
-            let red_label = Text::new(elements, "Red");
-            let red = Radio::new(elements, "red", "red", active_color)
-                .edit(elements)
+        |app| {
+            let active_color = app.insert_state("red".to_string());
+            let red_label = Text::new(app, "Red");
+            let red = Radio::new(app, "red", "red", active_color)
+                .edit(app)
                 .push(red_label)
                 .finish();
-            let green_label = Text::new(elements, "Green");
-            let green = Radio::new(elements, "green", "green", active_color)
-                .edit(elements)
+            let green_label = Text::new(app, "Green");
+            let green = Radio::new(app, "green", "green", active_color)
+                .edit(app)
                 .push(green_label)
                 .finish();
-            let group = RadioGroup::new(elements, "Color")
-                .edit(elements)
+            let group = RadioGroup::new(app, "Color")
+                .edit(app)
                 .flex_direction(FlexDirection::Column)
                 .gap(px(8), px(8))
                 .push(red)
                 .push(green)
                 .finish();
-            let window = Window::new_with_renderer(elements, "Radio buttons", RendererType::VelloCPU)
-                .edit(elements)
+            let window = Window::new_with_renderer(app, "Radio buttons", RendererType::VelloCPU)
+                .edit(app)
                 .width(px(240))
                 .height(px(120))
                 .push(group)
@@ -40,11 +40,11 @@ fn switches_from_red_to_green() {
         },
         |test, (active_color, green, window)| {
             test.open(&window, Size::new(240.0, 120.0));
-            assert_eq!(test.elements().state(active_color).as_str(), "red");
+            assert_eq!(test.app().state(active_color).as_str(), "red");
 
             test.click(&green);
 
-            assert_eq!(test.elements().state(active_color).as_str(), "green");
+            assert_eq!(test.app().state(active_color).as_str(), "green");
             test_utils::check_snapshot(
                 test_utils::screenshot_rgb(test, &window),
                 "switches_from_red_to_green.png",

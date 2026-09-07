@@ -1,10 +1,16 @@
+use std::any::Any;
 use std::collections::VecDeque;
+use std::future::Future;
 use std::sync::Arc;
 #[cfg(target_arch = "wasm32")]
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender, channel};
 use std::time::Duration;
 
 use issho::AccessEvent;
+
+use parley::FontContext;
+
+use peniko::Blob;
 
 use retgui_logging::info;
 
@@ -14,17 +20,32 @@ use retgui_primitives::geometry::{Point, Size};
 use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::resource_type::ResourceType;
-use retgui_resource_manager::{ResourceId, ResourceManager};
+use retgui_resource_manager::{ResourceError, ResourceId, ResourceManager};
 
 use retgui_runtime::RetGuiRuntime;
+#[cfg(not(target_arch = "wasm32"))]
+use retgui_runtime::task::yield_now;
+
+use rustc_hash::FxHashMap;
+
+use slotmap::{DefaultKey, SlotMap};
 
 use winit::dpi::PhysicalPosition;
-use winit::event::{ElementState, Ime, KeyEvent, PointerKind, WindowEvent};
+use winit::event::{ElementState, Ime, KeyEvent, MouseButton, MouseScrollDelta, PointerKind, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
+use winit::window::WindowId;
 
-use crate::elements::{AnimationSchedule, DynElement, Elements, Window, WindowElement, scrollable, set_focus_outline_visible};
+use crate::RetGuiError;
+use crate::accessibility::RetGuiAccessTree;
+#[cfg(feature = "audio")]
+use crate::elements::audio::AudioContext;
+use crate::elements::gui_actions::GuiActionQueue;
+use crate::elements::internal_helpers::queue_animation_update;
+use crate::elements::{AnimationSchedule, DynElement, ElementData, ElementInternals, RetainedElements, State, Window, WindowElement, scrollable, set_focus_outline_visible};
 use crate::events::{EventDispatcher, EventKind, ImeEvent, KeyboardEvent, PointerButtonEvent, PointerInfo, PointerMovedEvent, PointerScrollEvent, PointerState};
-use crate::text::text_context::TextContext;
+use crate::layout::GummyTree;
+use crate::text::text_context::{TextContext, create_font_context};
+use crate::window_manager::WindowManager;
 
 #[cfg(target_arch = "wasm32")]
 pub(crate) struct CreatedRenderer {
@@ -37,7 +58,21 @@ pub struct App {
     pub(crate) event_dispatcher: EventDispatcher,
     /// Shared font and text-layout state.
     pub(crate) text_context: TextContext,
-    pub(crate) elements: Elements,
+    pub(crate) font_context: FontContext,
+    pub(crate) elements: RetainedElements,
+    pub(crate) states: SlotMap<DefaultKey, Box<dyn Any>>,
+    pub(crate) by_internal_id: FxHashMap<u64, DynElement>,
+    pub(crate) access_tree: RetGuiAccessTree,
+    pub(crate) gummy_tree: GummyTree,
+    pub(crate) window_manager: WindowManager,
+    pub(crate) pending_resources: VecDeque<(ResourceId, ResourceType)>,
+    pub(crate) event_queue: VecDeque<EventKind>,
+    pub(crate) pending_animation_updates: Vec<(DynElement, bool)>,
+    pub(crate) focus: Option<DynElement>,
+    pub(crate) focus_outline_visible: bool,
+    #[cfg(feature = "audio")]
+    pub(crate) audio_context: Option<AudioContext>,
+    pub(crate) gui_actions: GuiActionQueue,
     in_progress_resources: VecDeque<(ResourceId, ResourceType)>,
     /// The resource manager is used to manage resources such as images and fonts.
     ///
@@ -66,23 +101,45 @@ pub enum WindowEventResult {
     ExitRequested,
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl App {
-    pub(crate) fn new(mut elements: Elements) -> Self {
+    pub fn new() -> Self {
         let runtime = RetGuiRuntime::new();
         info!("Created async runtime");
 
-        let resource_manager = elements.resource_manager().clone();
+        #[allow(clippy::arc_with_non_send_sync)]
+        let resource_manager = Arc::new(ResourceManager::new());
+        let font_context = create_font_context();
         let text_context = TextContext {
-            font_context: elements.font_context.clone(),
+            font_context: font_context.clone(),
             layout_context: Default::default(),
         };
         #[cfg(target_arch = "wasm32")]
-        let (created_renderer_sender, created_renderer_receiver) = std::sync::mpsc::channel();
+        let (created_renderer_sender, created_renderer_receiver) = channel();
 
         Self {
             event_dispatcher: EventDispatcher::new(),
             text_context,
-            elements,
+            font_context,
+            elements: RetainedElements::new(),
+            states: SlotMap::with_key(),
+            by_internal_id: FxHashMap::default(),
+            access_tree: RetGuiAccessTree::new(),
+            gummy_tree: GummyTree::new(),
+            window_manager: WindowManager::new(),
+            pending_resources: VecDeque::new(),
+            event_queue: VecDeque::with_capacity(10),
+            pending_animation_updates: Vec::new(),
+            focus: None,
+            focus_outline_visible: true,
+            #[cfg(feature = "audio")]
+            audio_context: None,
+            gui_actions: GuiActionQueue::new(),
             in_progress_resources: VecDeque::new(),
             resource_manager,
             runtime,
@@ -121,7 +178,10 @@ impl App {
                 source,
                 ..
             } => {
-                let scale_factor = window.effective_scale_factor(&self.elements);
+                let scale_factor = self
+                    .elements
+                    .get_as::<WindowElement>(window.inner)
+                    .effective_scale_factor();
                 let pointer = PointerInfo::from_source(&source, primary);
                 self.on_pointer_moved(window, pointer, PointerState::new(position, scale_factor));
             }
@@ -132,7 +192,10 @@ impl App {
                 button,
                 ..
             } => {
-                let scale_factor = window.effective_scale_factor(&self.elements);
+                let scale_factor = self
+                    .elements
+                    .get_as::<WindowElement>(window.inner)
+                    .effective_scale_factor();
                 let pointer = PointerInfo::from_button(&button, primary);
                 self.on_pointer_button(
                     window,
@@ -143,8 +206,15 @@ impl App {
                 );
             }
             WindowEvent::MouseWheel { delta, .. } => {
-                let scale_factor = window.effective_scale_factor(&self.elements);
-                let logical_position = window.mouse_position(&self.elements).unwrap_or_default();
+                let scale_factor = self
+                    .elements
+                    .get_as::<WindowElement>(window.inner)
+                    .effective_scale_factor();
+                let logical_position = self
+                    .elements
+                    .get_as::<WindowElement>(window.inner)
+                    .mouse_position()
+                    .unwrap_or_default();
                 let physical_position =
                     PhysicalPosition::new(logical_position.x * scale_factor, logical_position.y * scale_factor);
                 self.on_pointer_scroll(
@@ -155,8 +225,8 @@ impl App {
                 );
             }
             WindowEvent::CloseRequested => {
-                self.elements.close_window(&window);
-                if self.elements.window_manager.is_empty() {
+                self.window_manager.close_window(&mut self.elements, &window);
+                if self.window_manager.is_empty() {
                     self.on_close_requested();
                     self.close_requested = true;
                 }
@@ -175,7 +245,9 @@ impl App {
                 if !focused {
                     self.elements.get_as_mut::<WindowElement>(window.inner).ime_composing = false;
                 }
-                window.on_focused(&self.elements, focused);
+                self.elements
+                    .get_as::<WindowElement>(window.inner)
+                    .on_focused(&self.elements, self.focus, focused);
             }
             _ => {}
         }
@@ -188,58 +260,78 @@ impl App {
     }
 
     pub fn on_scale_factor_changed(&mut self, window: Window, scale_factor: f64) {
-        window.on_scale_factor_changed(&mut self.elements, scale_factor);
+        self.elements.dispatch_mut(window.inner, |window, elements| {
+            (window as &mut dyn Any)
+                .downcast_mut::<WindowElement>()
+                .unwrap()
+                .on_scale_factor_changed(elements, &mut self.gummy_tree, scale_factor);
+        });
     }
 
     pub fn on_resume(&mut self, event_loop: Option<&dyn ActiveEventLoop>) {
         self.active = true;
 
-        let mut elements = std::mem::take(&mut self.elements);
-        elements.on_resume(self, event_loop);
-        self.elements = elements;
+        self.window_manager.on_resume(
+            &mut self.elements,
+            &mut self.gummy_tree,
+            &self.states,
+            &mut self.text_context,
+            &self.resource_manager,
+            &mut self.runtime,
+            &mut self.pending_animation_updates,
+            #[cfg(target_arch = "wasm32")]
+            &self.created_renderer_sender,
+            event_loop,
+        );
     }
 
     pub fn on_about_to_wait(&mut self, event_loop: Option<&dyn ActiveEventLoop>) -> Option<Duration> {
         #[cfg(not(target_arch = "wasm32"))]
         self.runtime.maybe_block_on(async {
-            retgui_runtime::task::yield_now().await;
+            yield_now().await;
         });
         self.runtime.handle().update_local_set();
-        self.elements.run_gui_actions();
+        self.run_gui_actions();
         #[cfg(target_arch = "wasm32")]
         self.process_created_renderers();
         self.process_resources();
         self.process_accessibility_events();
-        self.event_dispatcher
-            .dispatch_queued_events(&mut self.text_context, &mut self.elements);
-
-        let mut elements = std::mem::take(&mut self.elements);
-        let next_animation_update = elements.on_about_to_wait(self, event_loop);
-        self.elements = elements;
-        next_animation_update
+        EventDispatcher::dispatch_queued_events(self);
+        self.window_manager.on_about_to_wait(
+            &mut self.elements,
+            &mut self.gummy_tree,
+            &self.states,
+            &mut self.text_context,
+            &self.resource_manager,
+            &mut self.runtime,
+            &mut self.pending_animation_updates,
+            #[cfg(target_arch = "wasm32")]
+            &self.created_renderer_sender,
+            self.active,
+            event_loop,
+        )
     }
 
     #[cfg(target_arch = "wasm32")]
     fn process_created_renderers(&mut self) {
         while let Ok(created) = self.created_renderer_receiver.try_recv() {
             if self.elements.contains(created.window) {
-                let (gummy_tree, elements) = self.elements.disjoint_borrow_layout_and_elements();
-                elements
+                self.elements
                     .get_as_mut::<WindowElement>(created.window)
-                    .on_renderer_created(gummy_tree, created.renderer, created.size);
+                    .on_renderer_created(&mut self.gummy_tree, created.renderer, created.size);
             }
         }
     }
 
     fn process_accessibility_events(&mut self) {
-        let tree = self.elements.access_tree.clone();
+        let tree = self.access_tree.clone();
         while let Some((target, event)) = tree.pop_event() {
             if !self.elements.contains(target) {
                 continue;
             }
             let _ = self.elements.dispatch_mut(target, |target, elements| {
-                scrollable::handle_accessibility_scroll_event(elements, target, &event);
-                target.on_access_event(elements, event)
+                scrollable::handle_accessibility_scroll_event(elements, &mut self.event_queue, target, &event);
+                target.on_access_event(elements, &mut self.event_queue, &mut self.states, event)
             });
         }
     }
@@ -256,7 +348,8 @@ impl App {
         });
 
         if resource_loaded {
-            self.elements.dirty_and_redraw_all_windows(self.active);
+            self.window_manager
+                .dirty_and_redraw_all_windows(&self.elements, &mut self.gummy_tree, self.active);
         }
     }
 
@@ -266,8 +359,8 @@ impl App {
     }
 
     /// Returns the window associated with a winit window ID.
-    pub fn window_by_id(&self, window_id: winit::window::WindowId) -> Option<Window> {
-        self.elements.window_manager.get_window_by_id(&self.elements, window_id)
+    pub fn window_by_id(&self, window_id: WindowId) -> Option<Window> {
+        self.window_manager.get_window_by_id(&self.elements, window_id)
     }
 
     /// Returns whether the driver should exit its event loop.
@@ -278,12 +371,14 @@ impl App {
     /// Installs the driver callback used to wake a sleeping GUI event loop when
     /// asynchronous work schedules an element-store action.
     pub fn set_gui_waker(&self, waker: impl Fn() + Send + Sync + 'static) {
-        self.elements.set_gui_waker(waker);
+        self.gui_actions.set_waker(waker);
     }
 
     /// Handles the window resize event.
     pub fn on_resize(&mut self, window: Window, new_size: Size<f32>) {
-        window.on_resize(&mut self.elements, new_size);
+        self.elements
+            .get_as_mut::<WindowElement>(window.inner)
+            .on_resize(&mut self.gummy_tree, new_size);
     }
 
     /// Updates the tree, layouts the elements, and draws the view.
@@ -297,15 +392,15 @@ impl App {
         &mut self,
         window: Window,
         pointer: PointerInfo,
-        delta: winit::event::MouseScrollDelta,
+        delta: MouseScrollDelta,
         state: PointerState,
     ) {
         let pointer_scroll_update = PointerScrollEvent::new(DynElement::new(window.inner), pointer, delta, state);
         let zoomed = self.elements.dispatch_mut(window.inner, |window, elements| {
-            (window as &mut dyn std::any::Any)
+            (window as &mut dyn Any)
                 .downcast_mut::<WindowElement>()
                 .unwrap()
-                .maybe_zoom(elements, &pointer_scroll_update)
+                .maybe_zoom(elements, &mut self.gummy_tree, &pointer_scroll_update)
         });
         if zoomed {
             return;
@@ -316,13 +411,13 @@ impl App {
     pub fn on_pointer_button(
         &mut self,
         window: Window,
-        button: Option<winit::event::MouseButton>,
+        button: Option<MouseButton>,
         pointer: PointerInfo,
         state: PointerState,
         is_up: bool,
     ) {
         if !is_up {
-            set_focus_outline_visible(&mut self.elements, false);
+            set_focus_outline_visible(&mut self.elements, self.focus, &mut self.focus_outline_visible, false);
         }
 
         let cursor_position = state.logical_point();
@@ -333,16 +428,17 @@ impl App {
         } else {
             EventKind::PointerDown(pointer_event)
         };
-        window.set_mouse_position(
-            &mut self.elements,
-            Some(Point::new(cursor_position.x, cursor_position.y)),
-        );
+        self.elements
+            .get_as_mut::<WindowElement>(window.inner)
+            .set_mouse_position(Some(Point::new(cursor_position.x, cursor_position.y)));
 
         self.dispatch_event(window, event);
     }
 
     pub fn on_pointer_moved(&mut self, window: Window, pointer: PointerInfo, state: PointerState) {
-        window.set_mouse_position(&mut self.elements, Some(state.logical_point()));
+        self.elements
+            .get_as_mut::<WindowElement>(window.inner)
+            .set_mouse_position(Some(state.logical_point()));
         let event = PointerMovedEvent::new(DynElement::new(window.inner), pointer, state);
         self.dispatch_event(window, EventKind::PointerMoved(event));
     }
@@ -366,23 +462,23 @@ impl App {
         };
         let state = keyboard_input.state;
         if state == ElementState::Pressed && !modifiers.control_key() && !modifiers.alt_key() && !modifiers.meta_key() {
-            set_focus_outline_visible(&mut self.elements, true);
+            set_focus_outline_visible(&mut self.elements, self.focus, &mut self.focus_outline_visible, true);
         }
         let event = KeyboardEvent::new(DynElement::new(window.inner), keyboard_input, modifiers, is_composing);
         let toggled = self.elements.dispatch_mut(window.inner, |window, elements| {
-            (window as &mut dyn std::any::Any)
+            (window as &mut dyn Any)
                 .downcast_mut::<WindowElement>()
                 .unwrap()
-                .maybe_toggle_perf_stats(elements, &event)
+                .maybe_toggle_perf_stats(elements, &mut self.gummy_tree, &event)
         });
         if toggled {
             return;
         }
         let zoomed = self.elements.dispatch_mut(window.inner, |window, elements| {
-            (window as &mut dyn std::any::Any)
+            (window as &mut dyn Any)
                 .downcast_mut::<WindowElement>()
                 .unwrap()
-                .maybe_zoom_keyboard(elements, &event)
+                .maybe_zoom_keyboard(elements, &mut self.gummy_tree, &event)
         });
         if zoomed {
             return;
@@ -390,7 +486,7 @@ impl App {
         let navigation_target = self
             .elements
             .get_as::<WindowElement>(window.inner)
-            .tab_navigation_target(&self.elements, &event);
+            .tab_navigation_target(&self.elements, self.focus, &event);
         let event = match state {
             ElementState::Pressed => EventKind::KeyDown(event),
             ElementState::Released => EventKind::KeyUp(event),
@@ -398,48 +494,60 @@ impl App {
         let prevent_defaults = self.dispatch_event(window, event);
         if !prevent_defaults && let Some(target) = navigation_target {
             self.elements.dispatch_mut(target, |target, elements| {
-                target.focus(elements);
-                scrollable::handle_accessibility_scroll_event(elements, target, &AccessEvent::ScrollIntoView);
+                target.focus(
+                    elements,
+                    &mut self.event_queue,
+                    &mut self.focus,
+                    self.focus_outline_visible,
+                );
+                scrollable::handle_accessibility_scroll_event(
+                    elements,
+                    &mut self.event_queue,
+                    target,
+                    &AccessEvent::ScrollIntoView,
+                );
             });
-            window.request_redraw(&self.elements);
+            self.elements.get_as::<WindowElement>(window.inner).request_redraw();
         }
     }
 
     fn on_request_redraw_internal(&mut self, window: Window) {
-        let animation_schedule = self.elements.animation_tick(&window);
-        self.update_resources();
-        window.on_redraw(
+        let animation_schedule = self.window_manager.animation_tick(
             &mut self.elements,
+            &mut self.gummy_tree,
+            &mut self.states,
+            &mut self.pending_resources,
+            &mut self.pending_animation_updates,
+            &window,
+        );
+        self.update_resources();
+        WindowElement::on_request_redraw(
+            &mut self.elements,
+            &mut self.gummy_tree,
+            &self.states,
             &mut self.text_context,
             self.resource_manager.clone(),
+            window.inner,
         );
 
-        if animation_schedule == AnimationSchedule::NextFrame && window.winit_window(&self.elements).is_some() {
-            window.request_redraw(&self.elements);
+        if animation_schedule == AnimationSchedule::NextFrame
+            && self
+                .elements
+                .get_as::<WindowElement>(window.inner)
+                .winit_window()
+                .is_some()
+        {
+            self.elements.get_as::<WindowElement>(window.inner).request_redraw();
         }
     }
 
     fn dispatch_event(&mut self, window: Window, mut event: EventKind) -> bool {
-        let mouse_pos = window.mouse_position(&self.elements);
-        let mut renderer = std::mem::replace(
-            &mut self.elements.get_as_mut::<WindowElement>(window.inner).renderer,
-            Box::new(retgui_renderer::blank_renderer::BlankRenderer::default()),
-        );
-        let prevented = self.event_dispatcher.dispatch_event(
-            &mut event,
-            mouse_pos,
-            window.inner,
-            &mut self.text_context,
-            &mut *renderer,
-            &mut self.target_scratch,
-            &mut self.elements,
-        );
-        self.elements.get_as_mut::<WindowElement>(window.inner).renderer = renderer;
-        prevented
+        let mouse_pos = self.elements.get_as::<WindowElement>(window.inner).mouse_position();
+        EventDispatcher::dispatch_event(&mut event, mouse_pos, window.inner, self)
     }
 
     fn update_resources(&mut self) {
-        for (resource, resource_type) in self.elements.pending_resources.drain(..) {
+        for (resource, resource_type) in self.pending_resources.drain(..) {
             if self.resource_manager.contains(&resource)
                 || self
                     .in_progress_resources
@@ -454,5 +562,130 @@ impl App {
                 .async_download_resource(resource.clone(), &resource_type, &self.runtime.handle());
             self.in_progress_resources.push_back((resource, resource_type));
         }
+    }
+
+    /// Synchronously uploads resources.
+    pub fn upload_resource(
+        &mut self,
+        resource_id: ResourceId,
+        resource_type: ResourceType,
+        bytes: impl Into<Vec<u8>>,
+    ) -> Result<(), RetGuiError> {
+        let bytes = bytes.into();
+        if resource_type == ResourceType::Font {
+            let fonts = self
+                .font_context
+                .collection
+                .register_fonts(Blob::new(Arc::new(bytes)), None);
+            if fonts.is_empty() {
+                return Err(ResourceError::new(ResourceType::Font, "No fonts found in uploaded data").into());
+            }
+        } else {
+            self.resource_manager.upload(resource_id, resource_type, bytes)?;
+        }
+        self.window_manager
+            .dirty_and_redraw_all_windows(&self.elements, &mut self.gummy_tree, true);
+        Ok(())
+    }
+
+    /// Inserts an element into this store and creates its layout node.
+    pub fn insert_element<T: ElementInternals>(
+        &mut self,
+        is_scrollable: bool,
+        create: impl FnOnce(ElementData) -> T,
+    ) -> DynElement {
+        let element = self
+            .elements
+            .insert_with(&self.access_tree, &mut self.by_internal_id, |me, access_tree| {
+                Box::new(create(ElementData::new(me, is_scrollable, access_tree)))
+            });
+        self.elements
+            .get_mut(element)
+            .element_data_mut()
+            .create_layout_node(&mut self.gummy_tree, None);
+        element
+    }
+
+    /// Runs a local future and applies its result with exclusive access to this
+    /// application on the GUI thread.
+    pub fn spawn_local<F, O, C>(&self, future: F, on_complete: C)
+    where
+        F: Future<Output = O> + 'static,
+        O: 'static,
+        C: FnOnce(O, &mut App) + 'static,
+    {
+        self.gui_actions.spawn_local(future, on_complete);
+    }
+
+    pub(crate) fn run_gui_actions(&mut self) {
+        // Collect first so invoking an action never aliases the queue field with
+        // the exclusive borrow of the complete store.
+        let actions = self.gui_actions.drain();
+        for action in actions {
+            action(self);
+        }
+    }
+
+    pub(crate) fn get(&self, element: DynElement) -> &dyn ElementInternals {
+        self.elements.get(element)
+    }
+
+    /// Returns a retained element, or `None` when the handle is stale or belongs
+    /// to another store.
+    pub(crate) fn try_get(&self, element: DynElement) -> Option<&dyn ElementInternals> {
+        self.elements.try_get(element)
+    }
+
+    /// Borrows a retained element as its concrete type.
+    pub fn get_as<T: ElementInternals>(&self, element: DynElement) -> &T {
+        (self.get(element) as &dyn Any)
+            .downcast_ref()
+            .expect("typed element handle changed type")
+    }
+
+    /// Borrows a retained element as its concrete type, returning `None`
+    /// for a stale handle.
+    pub(crate) fn try_get_as<T: ElementInternals>(&self, element: DynElement) -> Option<&T> {
+        Some(
+            (self.try_get(element)? as &dyn Any)
+                .downcast_ref()
+                .expect("typed element handle changed type"),
+        )
+    }
+
+    /// Mutably borrows a retained element as its concrete type.
+    ///
+    /// The borrow is tied to this store borrow, just like the framework's own
+    /// element-specific setters; no runtime borrow guard is involved.
+    pub fn get_as_mut<T: ElementInternals>(&mut self, element: DynElement) -> &mut T {
+        self.elements.get_as_mut(element)
+    }
+
+    /// Mutably borrows a retained element as its concrete type, returning
+    /// `None` for a stale handle.
+    pub(crate) fn try_get_as_mut<T: ElementInternals>(&mut self, element: DynElement) -> Option<&mut T> {
+        self.elements.try_get_as_mut(element)
+    }
+
+    pub(crate) fn contains(&self, element: DynElement) -> bool {
+        self.elements.contains(element)
+    }
+
+    /// Schedules an element to recompute when it next needs an animation update.
+    pub fn schedule_animation_update(&mut self, element: DynElement) {
+        queue_animation_update(&mut self.pending_animation_updates, element, false);
+    }
+
+    /// Stores application state and returns a typed handle to it.
+    pub fn insert_state<T: 'static>(&mut self, value: T) -> State<T> {
+        State::insert(&mut self.states, self.elements.store_id(), value)
+    }
+
+    pub fn state<T: 'static>(&self, state: State<T>) -> &T {
+        state.read_from(&self.states, self.elements.store_id())
+    }
+
+    pub fn state_mut<T: 'static>(&mut self, state: State<T>) -> &mut T {
+        state.write_to(&mut self.states, self.elements.store_id())
     }
 }

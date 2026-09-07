@@ -45,11 +45,7 @@ impl ApplicationHandler for WinitDriver {
         let next_animation_update = self.app.on_about_to_wait(Some(event_loop));
         self.maybe_exit(event_loop);
 
-        let perf_stats_enabled = self
-            .app
-            .elements
-            .window_manager
-            .any_perf_stats_enabled(&self.app.elements);
+        let perf_stats_enabled = self.app.window_manager.any_perf_stats_enabled(&self.app.elements);
         #[cfg(not(target_arch = "wasm32"))]
         if perf_stats_enabled {
             event_loop.set_control_flow(ControlFlow::Poll);

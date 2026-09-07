@@ -5,7 +5,7 @@ use winit::event::{ButtonSource, ElementState, Ime, KeyEvent, MouseButton, Point
 
 use crate::app::{App, WindowEventResult};
 use crate::drivers::Driver;
-use crate::elements::{Element, Elements, Window};
+use crate::elements::{Element, Window, WindowElement};
 
 const MAX_SETTLE_PASSES: usize = 64;
 
@@ -77,23 +77,22 @@ pub struct HeadlessApp {
     windows: Vec<Window>,
 }
 
-pub fn run<T, F>(_name: &str, build: impl FnOnce(&mut Elements) -> T, test: F)
+pub fn run<T, F>(_name: &str, build: impl FnOnce(&mut App) -> T, test: F)
 where
     F: FnOnce(&mut HeadlessApp, T),
 {
-    let mut elements = Elements::new();
-    let test_state = build(&mut elements);
-    let app = App::new(elements);
+    let mut app = App::new();
+    let test_state = build(&mut app);
     HeadlessApp::run_with_app(app, |app| test(app, test_state));
 }
 
 impl HeadlessApp {
-    pub fn elements(&self) -> &Elements {
-        &self.driver.app.elements
+    pub fn app(&self) -> &App {
+        &self.driver.app
     }
 
-    pub fn elements_mut(&mut self) -> &mut Elements {
-        &mut self.driver.app.elements
+    pub fn app_mut(&mut self) -> &mut App {
+        &mut self.driver.app
     }
 
     pub(crate) fn new(app: App) -> Self {
@@ -198,7 +197,13 @@ impl HeadlessApp {
             let dirty_windows: Vec<Window> = self
                 .windows
                 .iter()
-                .filter(|window| window.redraw_requested(&self.driver.app.elements))
+                .filter(|window| {
+                    self.driver
+                        .app
+                        .elements
+                        .get_as::<WindowElement>(window.inner)
+                        .redraw_requested()
+                })
                 .copied()
                 .collect();
 
@@ -220,11 +225,16 @@ impl HeadlessApp {
     }
 
     pub fn screenshot(&mut self, window: &Window) -> retgui_renderer::renderer::Screenshot {
-        window.screenshot(&mut self.driver.app.elements)
+        window.screenshot(&mut self.driver.app)
     }
 
     fn enqueue_pointer_move(&self, window: &Window, point: Point) {
-        let scale_factor = window.effective_scale_factor(&self.driver.app.elements);
+        let scale_factor = self
+            .driver
+            .app
+            .elements
+            .get_as::<WindowElement>(window.inner)
+            .effective_scale_factor();
         self.driver.send_event(
             *window,
             WindowEvent::PointerMoved {
@@ -237,17 +247,15 @@ impl HeadlessApp {
     }
 
     fn enqueue_pointer_button(&self, window: &Window, state: ElementState) {
+        let window_element = self.driver.app.elements.get_as::<WindowElement>(window.inner);
+        let position = window_element.mouse_position().unwrap_or_default();
+        let scale_factor = window_element.effective_scale_factor();
         self.driver.send_event(
             *window,
             WindowEvent::PointerButton {
                 device_id: None,
                 state,
-                position: PhysicalPosition::new(
-                    window.mouse_position(&self.driver.app.elements).unwrap_or_default().x
-                        * window.effective_scale_factor(&self.driver.app.elements),
-                    window.mouse_position(&self.driver.app.elements).unwrap_or_default().y
-                        * window.effective_scale_factor(&self.driver.app.elements),
-                ),
+                position: PhysicalPosition::new(position.x * scale_factor, position.y * scale_factor),
                 primary: true,
                 button: ButtonSource::Mouse(MouseButton::Left),
                 is_macos_activation_click: false,

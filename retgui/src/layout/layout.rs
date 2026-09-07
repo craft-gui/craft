@@ -114,9 +114,7 @@ impl CssComputedBorder {
             side.apply_affine(scale_factor);
         }
     }
-}
 
-impl CssComputedBorder {
     pub(crate) fn new(css_rect: CssRoundedRect) -> Self {
         let top = css_rect.get_side(TOP);
         let right = css_rect.get_side(RIGHT);

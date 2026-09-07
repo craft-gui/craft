@@ -18,7 +18,8 @@ use retgui_primitives::geometry::Point;
 use winit::dpi::{LogicalPosition, PhysicalPosition};
 use winit::event::{ButtonSource, KeyEvent, PointerKind, PointerSource};
 
-use crate::elements::{DynElement, Elements};
+use crate::App;
+use crate::elements::DynElement;
 
 pub mod pointer_capture;
 
@@ -759,23 +760,23 @@ impl Event for CustomEvent {
     }
 }
 
-pub type CheckboxToggledHandler = Rc<dyn Fn(&mut CheckboxToggledEvent, &mut Elements)>;
-pub type ClickHandler = Rc<dyn Fn(&mut ClickEvent, &mut Elements)>;
-pub type CustomHandler = Rc<dyn Fn(&mut CustomEvent, &mut Elements)>;
-pub type DropdownItemSelectedHandler = Rc<dyn Fn(&mut DropdownItemSelectedEvent, &mut Elements)>;
-pub type FocusHandler = Rc<dyn Fn(&mut FocusEvent, &mut Elements)>;
-pub type KeyboardInputHandler = Rc<dyn Fn(&mut KeyboardEvent, &mut Elements)>;
-pub type PointerCaptureHandler = Rc<dyn Fn(&mut PointerCaptureEvent, &mut Elements)>;
-pub type PointerEnterHandler = Rc<dyn Fn(&mut PointerEnterEvent, &mut Elements)>;
-pub type PointerEventHandler = Rc<dyn Fn(&mut PointerButtonEvent, &mut Elements)>;
-pub type PointerLeaveHandler = Rc<dyn Fn(&mut PointerLeaveEvent, &mut Elements)>;
-pub type PointerMovedHandler = Rc<dyn Fn(&mut PointerMovedEvent, &mut Elements)>;
+pub type CheckboxToggledHandler = Rc<dyn Fn(&mut CheckboxToggledEvent, &mut App)>;
+pub type ClickHandler = Rc<dyn Fn(&mut ClickEvent, &mut App)>;
+pub type CustomHandler = Rc<dyn Fn(&mut CustomEvent, &mut App)>;
+pub type DropdownItemSelectedHandler = Rc<dyn Fn(&mut DropdownItemSelectedEvent, &mut App)>;
+pub type FocusHandler = Rc<dyn Fn(&mut FocusEvent, &mut App)>;
+pub type KeyboardInputHandler = Rc<dyn Fn(&mut KeyboardEvent, &mut App)>;
+pub type PointerCaptureHandler = Rc<dyn Fn(&mut PointerCaptureEvent, &mut App)>;
+pub type PointerEnterHandler = Rc<dyn Fn(&mut PointerEnterEvent, &mut App)>;
+pub type PointerEventHandler = Rc<dyn Fn(&mut PointerButtonEvent, &mut App)>;
+pub type PointerLeaveHandler = Rc<dyn Fn(&mut PointerLeaveEvent, &mut App)>;
+pub type PointerMovedHandler = Rc<dyn Fn(&mut PointerMovedEvent, &mut App)>;
 pub type PointerUpdateHandler = PointerMovedHandler;
-pub type RadioValueChangedHandler = Rc<dyn Fn(&mut RadioValueChangedEvent, &mut Elements)>;
-pub type ScrollHandler = Rc<dyn Fn(&mut ScrollEvent, &mut Elements)>;
-pub type SliderValueChangedHandler = Rc<dyn Fn(&mut SliderValueChangedEvent, &mut Elements)>;
-pub type TextInputChangedHandler = Rc<dyn Fn(&mut TextInputChangedEvent, &mut Elements)>;
-pub type UnfocusHandler = Rc<dyn Fn(&mut UnfocusEvent, &mut Elements)>;
+pub type RadioValueChangedHandler = Rc<dyn Fn(&mut RadioValueChangedEvent, &mut App)>;
+pub type ScrollHandler = Rc<dyn Fn(&mut ScrollEvent, &mut App)>;
+pub type SliderValueChangedHandler = Rc<dyn Fn(&mut SliderValueChangedEvent, &mut App)>;
+pub type TextInputChangedHandler = Rc<dyn Fn(&mut TextInputChangedEvent, &mut App)>;
+pub type UnfocusHandler = Rc<dyn Fn(&mut UnfocusEvent, &mut App)>;
 pub type UserEventData = dyn Any;
 
 #[derive(Clone)]
@@ -932,20 +933,20 @@ impl Event for EventKind {
 
 #[cfg(test)]
 mod tests {
-    use crate::elements::{Container, Element, Elements};
-    use crate::text::text_context::TextContext;
     use super::event_dispatch::dispatch_event;
     use super::helpers::freeze_target_list;
     use super::{ClickEvent, ClickTrigger, DynElement, Event, EventKind, FocusEvent};
+    use crate::App;
+    use crate::elements::{Container, Element};
 
-    fn event_target(elements: &mut Elements) -> DynElement {
-        DynElement::new(Container::new(elements).inner)
+    fn event_target(app: &mut App) -> DynElement {
+        DynElement::new(Container::new(app).inner)
     }
 
     #[test]
     fn event_controls_track_dispatch_state() {
-        let mut elements = Elements::new();
-        let target = event_target(&mut elements);
+        let mut app = App::new();
+        let target = event_target(&mut app);
         let mut event = FocusEvent::new(target);
 
         assert!(event.target() == target);
@@ -962,9 +963,9 @@ mod tests {
 
     #[test]
     fn retarget_updates_both_targets() {
-        let mut elements = Elements::new();
-        let original = event_target(&mut elements);
-        let replacement = event_target(&mut elements);
+        let mut app = App::new();
+        let original = event_target(&mut app);
+        let replacement = event_target(&mut app);
         assert!(original != replacement);
         let mut event = EventKind::Focus(FocusEvent::new(original));
 
@@ -976,18 +977,18 @@ mod tests {
 
     #[test]
     fn deleting_an_event_target_during_dispatch_is_safe() {
-        let mut elements = Elements::new();
-        let parent = Container::new(&mut elements);
-        let child = Container::new(&mut elements);
-        child.add_click_listener(&mut elements, move |_event, elements| {
-            parent.delete_all_children(elements);
+        let mut app = App::new();
+        let parent = Container::new(&mut app);
+        let child = Container::new(&mut app);
+        child.add_click_listener(&mut app, move |_event, app| {
+            parent.delete_all_children(app);
         });
-        parent.push(&mut elements, child);
-        let targets = freeze_target_list(child.inner, &elements);
+        parent.push(&mut app, child);
+        let targets = freeze_target_list(child.inner, &app.elements);
         let mut event = EventKind::Click(ClickEvent::new(child.inner, ClickTrigger::Programmatic));
 
-        dispatch_event(&mut event, &targets, &mut TextContext::new(), &mut elements);
+        dispatch_event(&mut event, &targets, &mut app);
 
-        assert!(!elements.contains(child.inner));
+        assert!(!app.contains(child.inner));
     }
 }

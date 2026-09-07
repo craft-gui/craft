@@ -1,13 +1,14 @@
-use retgui::elements::{Container, Element, Elements};
+use retgui::App;
+use retgui::elements::{Container, Element};
 use retgui::events::PointerButton;
 
 #[allow(non_snake_case)]
-pub fn WebLink(elements: &mut Elements, href: &str) -> Container {
+pub fn WebLink(app: &mut App, href: &str) -> Container {
     let href = href.to_string();
 
-    Container::new(elements)
-        .edit(elements)
-        .add_pointer_button_up_listener(move |event, _elements| {
+    Container::new(app)
+        .edit(app)
+        .add_pointer_button_up_listener(move |event, _app| {
             if event.button == Some(PointerButton::Left) {
                 #[cfg(target_arch = "wasm32")]
                 {

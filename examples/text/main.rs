@@ -1,6 +1,6 @@
-use retgui::elements::{Container, Element, Elements, TextInput, Window};
-use retgui::rgb;
+use retgui::elements::{Container, Element, TextInput, Window};
 use retgui::style::{AlignItems, Display, FlexDirection, JustifyContent, Overflow, Unit};
+use retgui::{App, rgb};
 
 const LOREM_IPSUM: &str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. In dolor tortor, congue eu lacus eget, faucibus aliquet nunc. Suspendisse aliquet ullamcorper fermentum. Pellentesque eu nibh sit amet nisi maximus pulvinar quis eget lectus. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur efficitur metus maximus libero maximus pharetra. Sed fringilla ac velit nec hendrerit. Mauris vulputate ante non tempor iaculis. In a diam eros. Mauris vehicula, lacus rhoncus consequat laoreet, lectus ligula venenatis leo, a aliquam odio ex ut lorem. Phasellus quis fermentum erat, ut pellentesque diam. Suspendisse pulvinar eros magna, vel ultricies metus luctus at. Pellentesque consequat a magna ut cursus. Nunc nisl velit, maximus blandit mauris quis, convallis cursus leo. Donec ut ultrices dui, a efficitur sem. Cras ac diam non orci sagittis tincidunt. Etiam auctor ultrices leo vitae vestibulum.
 
@@ -12,16 +12,16 @@ Morbi tincidunt porta scelerisque. Etiam sodales, leo eget molestie imperdiet, l
 
 Nunc tellus magna, varius eu ornare et, sodales hendrerit quam. Praesent nec magna finibus, elementum orci nec, facilisis nisi. Duis ligula mi, dapibus eget nibh a, posuere viverra ante. Aliquam efficitur mauris id quam faucibus, eget posuere turpis imperdiet. Nam vulputate sed urna vitae tincidunt. Nulla ligula urna, iaculis id urna sit amet, porta iaculis ligula. Maecenas volutpat odio at pretium commodo. Nullam faucibus efficitur neque, vitae elementum sem sollicitudin eu. Nullam rutrum nulla eu erat dignissim varius. ";
 
-pub fn text(elements: &mut Elements) -> Container {
-    let input = TextInput::new(elements, LOREM_IPSUM)
-        .edit(elements)
+pub fn text(app: &mut App) -> Container {
+    let input = TextInput::new(app, LOREM_IPSUM)
+        .edit(app)
         .overflow_y(Overflow::Scroll)
         .width(Unit::Px(600.0))
         .height(Unit::Px(600.0))
         .display(Display::Block)
         .finish();
-    Container::new(elements)
-        .edit(elements)
+    Container::new(app)
+        .edit(app)
         .display(Display::Flex)
         .flex_direction(FlexDirection::Column)
         .justify_content(JustifyContent::Center)
@@ -36,14 +36,11 @@ pub fn text(elements: &mut Elements) -> Container {
 }
 
 pub fn main() {
-    let mut elements = Elements::new();
-    let content = text(&mut elements);
-    Window::new(&mut elements, "Text")
-        .edit(&mut elements)
-        .push(content)
-        .finish();
+    let mut app = App::new();
+    let content = text(&mut app);
+    Window::new(&mut app, "Text").edit(&mut app).push(content).finish();
     use retgui::RetGuiOptions;
 
     util::setup_logging();
-    retgui::retgui_main(elements, RetGuiOptions::basic("text"));
+    retgui::retgui_main(app, RetGuiOptions::basic("text"));
 }

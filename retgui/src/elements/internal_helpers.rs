@@ -4,13 +4,18 @@ use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::ResourceManager;
 
-use crate::elements::{DynElement, ElementInternals, Elements};
+use crate::elements::element_data::ElementData;
+use crate::elements::{DynElement, ElementInternals, ElementStates, RetainedElements};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
-use crate::elements::element_data::ElementData;
 
 /// A helper to push children.
-pub fn push_child_to_element(elements: &mut Elements, parent_handle: DynElement, child: DynElement) {
+pub fn push_child_to_element(
+    elements: &mut RetainedElements,
+    gummy_tree: &mut GummyTree,
+    parent_handle: DynElement,
+    child: DynElement,
+) {
     if !elements.contains(parent_handle) || !elements.contains(child) {
         return;
     }
@@ -33,13 +38,13 @@ pub fn push_child_to_element(elements: &mut Elements, parent_handle: DynElement,
         child_element.element_data_mut().window = me_window;
         child_element.element_data_mut().redraw_signal = redraw_signal;
         child_element.propagate_window_down(elements);
-        child_element.set_scale_factor(elements, scale_factor);
+        child_element.set_scale_factor(elements, gummy_tree, scale_factor);
         elements.get_mut(parent_handle).element_data_mut().children.push(child);
 
         if let Some(child_id) = child_element.element_data().layout.gummy_node_id {
-            elements.gummy_tree.add_child(parent_id.unwrap(), child_id);
+            gummy_tree.add_child(parent_id.unwrap(), child_id);
         }
-        child_element.on_post_add_layout_tree(&mut elements.gummy_tree);
+        child_element.on_post_add_layout_tree(gummy_tree);
 
         if let Some((tree, (parent_node, root))) = access {
             crate::accessibility::reparent_subtree(elements, child_element, &tree, parent_node, root, scale_factor);
@@ -129,7 +134,8 @@ pub fn apply_generic_leaf_layout(
 
 pub fn draw_generic_container(
     element: &dyn ElementInternals,
-    elements: &Elements,
+    elements: &RetainedElements,
+    states: &ElementStates,
     renderer: &mut dyn Renderer,
     resource_manager: Arc<ResourceManager>,
     text_context: &mut TextContext,
@@ -144,9 +150,24 @@ pub fn draw_generic_container(
     element.add_hit_testable(renderer, true, scale_factor);
     element.draw_borders(renderer, scale_factor);
     element.maybe_start_layer(renderer, scale_factor);
-    element.draw_children(elements, renderer, resource_manager.clone(), scale_factor, text_context);
+    element.draw_children(
+        elements,
+        states,
+        renderer,
+        resource_manager.clone(),
+        scale_factor,
+        text_context,
+    );
     element.maybe_end_layer(renderer);
     element.draw_scrollbar(renderer, scale_factor);
 
     element.maybe_end_overlay(renderer);
+}
+
+pub(crate) fn queue_animation_update(pending: &mut Vec<(DynElement, bool)>, element: DynElement, reset_clock: bool) {
+    if let Some((_, reset)) = pending.iter_mut().find(|(handle, _)| *handle == element) {
+        *reset |= reset_clock;
+    } else {
+        pending.push((element, reset_clock));
+    }
 }

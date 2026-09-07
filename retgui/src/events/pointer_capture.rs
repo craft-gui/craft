@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use crate::events::PointerId;
-use crate::elements::{DynElement, Elements};
+use crate::App;
+use crate::elements::{DynElement, WindowElement};
 use crate::events::event_dispatch::dispatch_event;
-use crate::events::{EventKind, PointerCaptureEvent};
-use crate::text::text_context::TextContext;
+use crate::events::helpers::freeze_target_list;
+use crate::events::{EventKind, PointerCaptureEvent, PointerId};
 
 /// Stores window specific information like pointer captures, focus (soon), etc.
 #[derive(Default, Clone)]
@@ -45,18 +45,14 @@ impl PointerCapture {
     }
 
     /// Checks if Got or Lost events need to be dispatched and updates the current pointer capture.
-    pub(super) fn process_pending_pointer_capture(
-        &mut self,
-        elements: &mut Elements,
-        text_context: &mut TextContext,
-        pointer_id: &PointerId,
-    ) -> bool {
+    pub(super) fn process_pending_pointer_capture(app: &mut App, window: DynElement, pointer_id: &PointerId) -> bool {
         let mut did_pointer_capture_change = false;
 
         // 4.1.3.2 Process pending pointer capture
         let (pointer_capture_val, pending_pointer_capture_val) = {
-            let pointer_capture_val = self.pointer_captures.get(pointer_id);
-            let pending_pointer_capture_val = self.pending_pointer_captures.get(pointer_id);
+            let capture = &app.elements.get_as::<WindowElement>(window).pointer_capture;
+            let pointer_capture_val = capture.pointer_captures.get(pointer_id);
+            let pending_pointer_capture_val = capture.pending_pointer_captures.get(pointer_id);
 
             (pointer_capture_val.cloned(), pending_pointer_capture_val.cloned())
         };
@@ -66,9 +62,9 @@ impl PointerCapture {
         if let Some(pointer_capture_val) = pointer_capture_val
             && Some(pointer_capture_val) != pending_pointer_capture_val
         {
-            let targets = crate::events::helpers::freeze_target_list(pointer_capture_val, elements);
+            let targets = freeze_target_list(pointer_capture_val, &app.elements);
             let mut event = EventKind::LostPointerCapture(PointerCaptureEvent::new(pointer_capture_val, *pointer_id));
-            dispatch_event(&mut event, &targets, text_context, elements);
+            dispatch_event(&mut event, &targets, app);
 
             did_pointer_capture_change = true;
         }
@@ -78,10 +74,10 @@ impl PointerCapture {
         if let Some(pending_pointer_capture_val) = pending_pointer_capture_val
             && Some(pending_pointer_capture_val) != pointer_capture_val
         {
-            let targets = crate::events::helpers::freeze_target_list(pending_pointer_capture_val, elements);
+            let targets = freeze_target_list(pending_pointer_capture_val, &app.elements);
             let mut event =
                 EventKind::GotPointerCapture(PointerCaptureEvent::new(pending_pointer_capture_val, *pointer_id));
-            dispatch_event(&mut event, &targets, text_context, elements);
+            dispatch_event(&mut event, &targets, app);
 
             did_pointer_capture_change = true;
         }
@@ -89,20 +85,22 @@ impl PointerCapture {
         // 3. Set the pointer capture target override to the pending pointer capture target override, if set.
         // Otherwise, clear the pointer capture target override.
 
+        let capture = &mut app.elements.get_as_mut::<WindowElement>(window).pointer_capture;
         if let Some(pending_pointer_capture_val) = pending_pointer_capture_val {
-            self.pointer_captures.insert(*pointer_id, pending_pointer_capture_val);
+            capture
+                .pointer_captures
+                .insert(*pointer_id, pending_pointer_capture_val);
         } else {
-            self.pointer_captures.remove(pointer_id);
+            capture.pointer_captures.remove(pointer_id);
         }
 
         did_pointer_capture_change
     }
 
     pub(super) fn maybe_handle_implicit_pointer_capture_release(
-        &mut self,
-        elements: &mut Elements,
+        app: &mut App,
+        window: DynElement,
         message: &EventKind,
-        text_context: &mut TextContext,
         pointer_id: &PointerId,
     ) -> bool {
         // 9.5 Implicit release of pointer capture
@@ -114,11 +112,16 @@ impl PointerCapture {
         {
             // Immediately after firing the pointerup or pointercancel events, the user agent MUST clear the pending pointer capture target override
             // for the pointerId of the pointerup or pointercancel event that was just dispatched
-            let _ = self.pending_pointer_captures.remove(pointer_id);
+            let _ = app
+                .elements
+                .get_as_mut::<WindowElement>(window)
+                .pointer_capture
+                .pending_pointer_captures
+                .remove(pointer_id);
 
-            did_pointer_capture_change = self.process_pending_pointer_capture(elements, text_context, pointer_id);
+            did_pointer_capture_change = Self::process_pending_pointer_capture(app, window, pointer_id);
         } else if message.is_system_pointer_event() {
-            did_pointer_capture_change = self.process_pending_pointer_capture(elements, text_context, pointer_id);
+            did_pointer_capture_change = Self::process_pending_pointer_capture(app, window, pointer_id);
         }
 
         did_pointer_capture_change

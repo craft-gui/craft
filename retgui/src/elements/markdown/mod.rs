@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -6,11 +7,15 @@ use pulldown_cmark::{Event, HeadingLevel, Tag, TagEnd};
 use retgui_primitives::brush::Brush;
 
 use retgui_resource_manager::ResourceId;
+use retgui_resource_manager::resource_type::ResourceType;
 
-use crate::elements::{CodeEditor, Container, DynElement, Element, Elements, Image, Text, TextInput};
+use crate::elements::codeeditor::CodeEditorElement;
+use crate::elements::internal_helpers::push_child_to_element;
+use crate::elements::{ContainerElement, DynElement, ElementIds, ElementInternals, ImageElement, RetGuiAccessTree, RetainedElements, TextElement, TextInputElement};
+use crate::layout::GummyTree;
 use crate::style::{Display, FlexDirection, FontStyle, FontWeight, TextStyleProperty, Unit};
 use crate::text::RangedStyles;
-use crate::{Color, pct, px, rgb};
+use crate::{App, Color, pct, px, rgb};
 
 struct StyledText {
     pub text: String,
@@ -27,7 +32,11 @@ impl StyledText {
 }
 
 struct MarkdownRenderer<'a, 'elements> {
-    elements: &'elements mut Elements,
+    elements: &'elements mut RetainedElements,
+    gummy_tree: &'elements mut GummyTree,
+    access_tree: &'elements RetGuiAccessTree,
+    by_internal_id: &'elements mut ElementIds,
+    pending_resources: &'elements mut VecDeque<(ResourceId, ResourceType)>,
     element_stack: Vec<DynElement>,
     list_ids: Vec<Option<u64>>,
     styled_text: StyledText,
@@ -39,12 +48,22 @@ struct MarkdownRenderer<'a, 'elements> {
 }
 
 impl<'a, 'elements> MarkdownRenderer<'a, 'elements> {
-    pub fn new(elements: &'elements mut Elements) -> Self {
-        let root = Container::new(elements);
-        root.set_display(elements, Display::Block);
+    pub fn new(
+        elements: &'elements mut RetainedElements,
+        gummy_tree: &'elements mut GummyTree,
+        access_tree: &'elements RetGuiAccessTree,
+        by_internal_id: &'elements mut ElementIds,
+        pending_resources: &'elements mut VecDeque<(ResourceId, ResourceType)>,
+    ) -> Self {
+        let root = ContainerElement::create(elements, gummy_tree, access_tree, by_internal_id);
+        elements.get_mut(root).set_display(gummy_tree, Display::Block);
         MarkdownRenderer {
             elements,
-            element_stack: vec![root.as_dyn_element()],
+            gummy_tree,
+            access_tree,
+            by_internal_id,
+            pending_resources,
+            element_stack: vec![root],
             list_ids: Vec::new(),
             styled_text: StyledText {
                 text: String::new(),
@@ -60,7 +79,7 @@ impl<'a, 'elements> MarkdownRenderer<'a, 'elements> {
 
     pub fn push(&mut self, component_specification: DynElement) {
         let parent = self.current_element();
-        crate::elements::internal_helpers::push_child_to_element(self.elements, parent, component_specification);
+        push_child_to_element(self.elements, self.gummy_tree, parent, component_specification);
     }
 
     pub fn push_list_id(&mut self, id: Option<u64>) {
@@ -92,24 +111,35 @@ impl<'a, 'elements> MarkdownRenderer<'a, 'elements> {
         self.styled_text.text.push_str(text);
     }
 
-    pub fn push_rich_text(&mut self, text_input: Option<TextInput>) {
+    pub fn push_rich_text(&mut self, text_input: Option<DynElement>) {
         if self.styled_text.text.is_empty() {
             return;
         }
 
         let text = if let Some(text_input) = text_input {
-            text_input.set_text(self.elements, self.styled_text.text.as_str());
+            self.elements
+                .get_as_mut::<TextInputElement>(text_input)
+                .set_text(self.gummy_tree, &self.styled_text.text);
             text_input
         } else {
-            let text_input = TextInput::new(self.elements, &self.styled_text.text);
-            text_input.set_display(self.elements, Display::Block);
-            text_input.set_border_width_all(self.elements, px(0));
-            text_input.set_disabled(self.elements, true);
+            let text_input = TextInputElement::create(
+                self.elements,
+                self.gummy_tree,
+                self.access_tree,
+                self.by_internal_id,
+                &self.styled_text.text,
+            );
+            let text = self.elements.get_as_mut::<TextInputElement>(text_input);
+            text.set_display(self.gummy_tree, Display::Block);
+            text.set_border_width_all(self.gummy_tree, px(0));
+            text.disabled(true);
             text_input
         };
 
-        text.set_ranged_styles(self.elements, self.styled_text.style.clone());
-        self.push(text.as_dyn_element());
+        self.elements
+            .get_as_mut::<TextInputElement>(text)
+            .set_ranged_styles(self.gummy_tree, self.styled_text.style.clone());
+        self.push(text);
         self.styled_text = StyledText::new();
     }
 
@@ -163,9 +193,15 @@ impl<'a, 'elements> MarkdownRenderer<'a, 'elements> {
     }
 }
 
-pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
+pub fn render_markdown(app: &mut App, markdown: &str) -> DynElement {
     let parser = pulldown_cmark::Parser::new(markdown);
-    let mut renderer = MarkdownRenderer::new(elements);
+    let mut renderer = MarkdownRenderer::new(
+        &mut app.elements,
+        &mut app.gummy_tree,
+        &app.access_tree,
+        &mut app.by_internal_id,
+        &mut app.pending_resources,
+    );
 
     for event in parser {
         match event {
@@ -185,11 +221,25 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                     let children_count = renderer.list_ids.len();
                     renderer.push_list_id(item);
                     let padding = if children_count == 0 { 0 } else { 20 };
-                    let list = Container::new(renderer.elements);
-                    list.set_display(renderer.elements, Display::Flex);
-                    list.set_flex_direction(renderer.elements, FlexDirection::Column);
-                    list.set_margin(renderer.elements, px(0), px(0), px(0), px(padding));
-                    renderer.push_container(list.as_dyn_element())
+                    let list = ContainerElement::create(
+                        renderer.elements,
+                        renderer.gummy_tree,
+                        renderer.access_tree,
+                        renderer.by_internal_id,
+                    );
+                    renderer
+                        .elements
+                        .get_mut(list)
+                        .set_display(renderer.gummy_tree, Display::Flex);
+                    renderer
+                        .elements
+                        .get_mut(list)
+                        .set_flex_direction(renderer.gummy_tree, FlexDirection::Column);
+                    renderer
+                        .elements
+                        .get_mut(list)
+                        .set_margin(renderer.gummy_tree, px(0), px(0), px(0), px(padding));
+                    renderer.push_container(list)
                 }
                 Tag::Item => {
                     if let Some(id) = renderer.list_id() {
@@ -199,10 +249,21 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                     } else {
                         renderer.push_text("• ");
                     }
-                    let item_container = Container::new(renderer.elements);
-                    item_container.set_display(renderer.elements, Display::Block);
-                    item_container.set_border_width_all(renderer.elements, px(0));
-                    renderer.push_container(item_container.as_dyn_element());
+                    let item_container = ContainerElement::create(
+                        renderer.elements,
+                        renderer.gummy_tree,
+                        renderer.access_tree,
+                        renderer.by_internal_id,
+                    );
+                    renderer
+                        .elements
+                        .get_mut(item_container)
+                        .set_display(renderer.gummy_tree, Display::Block);
+                    renderer
+                        .elements
+                        .get_mut(item_container)
+                        .set_border_width_all(renderer.gummy_tree, px(0));
+                    renderer.push_container(item_container);
                 }
                 Tag::Emphasis => {
                     renderer.push_italic();
@@ -222,12 +283,30 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                     } else {
                         ResourceId::File(PathBuf::from_str(&dest_url).expect("Invalid file path for image"))
                     };
-                    let image = Image::new(renderer.elements, resource);
-                    image.set_width(renderer.elements, Unit::Auto);
-                    image.set_height(renderer.elements, Unit::Auto);
-                    let image_container = Container::new(renderer.elements);
-                    image_container.push(renderer.elements, image);
-                    renderer.push(image_container.as_dyn_element())
+                    let image = ImageElement::insert(
+                        renderer.elements,
+                        renderer.gummy_tree,
+                        renderer.access_tree,
+                        renderer.by_internal_id,
+                        renderer.pending_resources,
+                        resource,
+                    );
+                    renderer
+                        .elements
+                        .get_mut(image)
+                        .set_width(renderer.gummy_tree, Unit::Auto);
+                    renderer
+                        .elements
+                        .get_mut(image)
+                        .set_height(renderer.gummy_tree, Unit::Auto);
+                    let image_container = ContainerElement::create(
+                        renderer.elements,
+                        renderer.gummy_tree,
+                        renderer.access_tree,
+                        renderer.by_internal_id,
+                    );
+                    push_child_to_element(renderer.elements, renderer.gummy_tree, image_container, image);
+                    renderer.push(image_container)
                 }
                 _ => {}
             },
@@ -261,10 +340,28 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                             HeadingLevel::H5 => 15,
                             HeadingLevel::H6 => 10,
                         };
-                        let text_input = TextInput::new(renderer.elements, "");
-                        text_input.set_margin(renderer.elements, px(margin), px(0), px(margin), px(0));
-                        text_input.set_border_width_all(renderer.elements, px(0));
-                        text_input.set_disabled(renderer.elements, true);
+                        let text_input = TextInputElement::create(
+                            renderer.elements,
+                            renderer.gummy_tree,
+                            renderer.access_tree,
+                            renderer.by_internal_id,
+                            "",
+                        );
+                        renderer.elements.get_mut(text_input).set_margin(
+                            renderer.gummy_tree,
+                            px(margin),
+                            px(0),
+                            px(margin),
+                            px(0),
+                        );
+                        renderer
+                            .elements
+                            .get_mut(text_input)
+                            .set_border_width_all(renderer.gummy_tree, px(0));
+                        renderer
+                            .elements
+                            .get_as_mut::<TextInputElement>(text_input)
+                            .disabled(true);
                         renderer.push_rich_text(Some(text_input));
                         renderer.font_size = None;
                     }
@@ -277,13 +374,16 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                                 pulldown_cmark::CodeBlockKind::Fenced(lang) => lang.to_string(),
                                 pulldown_cmark::CodeBlockKind::Indented => "plaintext".to_string(),
                             };
-                            let code_editor = CodeEditor::new(
+                            let code_editor = CodeEditorElement::insert(
                                 renderer.elements,
+                                renderer.gummy_tree,
+                                renderer.access_tree,
+                                renderer.by_internal_id,
                                 &renderer.styled_text.text,
                                 &language,
                                 "base16-ocean.dark",
                             );
-                            renderer.push(code_editor.as_dyn_element());
+                            renderer.push(code_editor);
                             renderer.styled_text = StyledText::new();
                         }
                     }
@@ -310,8 +410,14 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                     }
                     TagEnd::Image => {
                         let text = &renderer.styled_text.text;
-                        let text = Text::new(renderer.elements, text);
-                        renderer.push(text.as_dyn_element());
+                        let text = TextElement::insert(
+                            renderer.elements,
+                            renderer.gummy_tree,
+                            renderer.access_tree,
+                            renderer.by_internal_id,
+                            text,
+                        );
+                        renderer.push(text);
                         renderer.styled_text = StyledText::new();
                     }
                     TagEnd::MetadataBlock(_) => {}
@@ -358,17 +464,70 @@ pub fn render_markdown(elements: &mut Elements, markdown: &str) -> DynElement {
                 renderer.push_text("\n");
             }
             Event::Rule => {
-                let rule = Container::new(renderer.elements);
-                rule.set_display(renderer.elements, Display::Block);
-                rule.set_width(renderer.elements, pct(100));
-                rule.set_height(renderer.elements, px(1));
-                rule.set_background_color(renderer.elements, rgb(0xD3, 0xD3, 0xD3));
-                rule.set_margin(renderer.elements, px(20), px(0), px(20), px(0));
-                renderer.push(rule.as_dyn_element());
+                let rule = ContainerElement::create(
+                    renderer.elements,
+                    renderer.gummy_tree,
+                    renderer.access_tree,
+                    renderer.by_internal_id,
+                );
+                renderer
+                    .elements
+                    .get_mut(rule)
+                    .set_display(renderer.gummy_tree, Display::Block);
+                renderer.elements.get_mut(rule).set_width(renderer.gummy_tree, pct(100));
+                renderer.elements.get_mut(rule).set_height(renderer.gummy_tree, px(1));
+                renderer
+                    .elements
+                    .get_mut(rule)
+                    .set_background_brush(Brush::Color(rgb(0xD3, 0xD3, 0xD3)));
+                renderer
+                    .elements
+                    .get_mut(rule)
+                    .set_margin(renderer.gummy_tree, px(20), px(0), px(20), px(0));
+                renderer.push(rule);
             }
             _ => {}
         }
     }
 
     renderer.element_stack.remove(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::any::Any;
+
+    use super::*;
+
+    #[test]
+    fn markdown_builds_nested_content_and_queues_images() {
+        let mut app = App::new();
+        let root = render_markdown(
+            &mut app,
+            "# Heading\n\nPlain **bold** text.\n\n1. first\n2. second\n\n![alt](image.png)\n\n```rust\nfn main() {}\n```\n\n---",
+        );
+        let mut pending = vec![root];
+        let mut text = Vec::new();
+        let mut code_editors = 0;
+        while let Some(handle) = pending.pop() {
+            let element = app.elements.get(handle);
+            pending.extend(element.element_data().children.iter().copied());
+            let element = element as &dyn Any;
+            if let Some(input) = element.downcast_ref::<TextInputElement>() {
+                text.push(input.state.editor().text().into_iter().collect::<String>());
+            }
+            if element.is::<CodeEditorElement>() {
+                code_editors += 1;
+            }
+        }
+
+        for expected in ["Heading", "Plain bold text.", "1. first", "2. second", "fn main() {}\n"] {
+            assert!(text.iter().any(|text| text == expected), "missing {expected:?}");
+        }
+        assert_eq!(code_editors, 1);
+        assert!(
+            app.pending_resources
+                .contains(&(ResourceId::File(PathBuf::from("image.png")), ResourceType::Image,))
+        );
+    }
 }

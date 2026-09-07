@@ -1,14 +1,21 @@
 use crate::elements::element_id::create_unique_element_id;
-use crate::elements::{DynElement, ElementInternals, Elements};
+use crate::elements::{DynElement, ElementIds, ElementInternals, RetGuiAccessTree, RetainedElements};
 
-pub fn clone_element<T, F>(source: &T, elements: &mut Elements, remap: F) -> DynElement
+pub fn clone_element<T, F>(
+    source: &T,
+    elements: &mut RetainedElements,
+    gummy_tree: &mut crate::layout::GummyTree,
+    access_tree: &RetGuiAccessTree,
+    by_internal_id: &mut ElementIds,
+    remap: F,
+) -> DynElement
 where
     T: ElementInternals + Clone + 'static,
     F: FnOnce(&mut T, &mut crate::layout::GummyTree) -> Option<gummy::NodeId>,
 {
     let source_children = source.element_data().children.clone();
     let mut clone = source.clone();
-    let new_element = elements.insert_with(|me, tree| {
+    let new_element = elements.insert_with(access_tree, by_internal_id, |me, tree| {
         let data = clone.element_data_mut();
         data.internal_id = create_unique_element_id();
         data.me = me;
@@ -34,8 +41,8 @@ where
         Box::new(clone)
     });
 
-    let (access_tree, access_key, access_scale_factor, node_id) = {
-        let (tree, elements) = elements.disjoint_borrow_layout_and_elements();
+    let (cloned_access_tree, access_key, access_scale_factor, node_id) = {
+        let tree = &mut *gummy_tree;
         let element = elements.get_as_mut::<T>(new_element);
         let data = element.element_data_mut();
         let node_id = data.layout.gummy_node_id_mut();
@@ -51,29 +58,31 @@ where
     };
 
     let child_layout_parent = {
-        let (tree, elements) = elements.disjoint_borrow_layout_and_elements();
+        let tree = &mut *gummy_tree;
         remap(elements.get_as_mut::<T>(new_element), tree).unwrap_or(node_id)
     };
 
     let mut children = Vec::with_capacity(source_children.len());
     for child in source_children {
-        let cloned_child = elements.dispatch_mut(child, |child, elements| child.deep_clone(elements));
+        let cloned_child = elements.dispatch_mut(child, |child, elements| {
+            child.deep_clone(elements, gummy_tree, access_tree, by_internal_id)
+        });
         elements.get_mut(cloned_child).element_data_mut().parent = Some(new_element);
         elements.dispatch_mut(cloned_child, |child, elements| {
             crate::accessibility::reparent_subtree(
                 elements,
                 child,
-                &access_tree,
+                &cloned_access_tree,
                 access_key,
                 access_key,
                 access_scale_factor,
             )
         });
         let child_node = elements.get(cloned_child).element_data().layout.gummy_node_id.unwrap();
-        elements.gummy_tree.add_child(child_layout_parent, child_node);
+        gummy_tree.add_child(child_layout_parent, child_node);
         children.push(cloned_child);
     }
     elements.get_mut(new_element).element_data_mut().children = children;
-    elements.gummy_tree.request_apply_layout(node_id);
+    gummy_tree.request_apply_layout(node_id);
     new_element
 }

@@ -38,8 +38,6 @@ pub enum AvailableSpaceKey {
     MaxContent,
 }
 
-impl GummyTextContext {}
-
 #[derive(Clone)]
 pub(crate) struct ImageContext {
     pub(crate) resource_id: ResourceId,

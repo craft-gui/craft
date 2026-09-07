@@ -35,14 +35,14 @@ opt-level = 1
 
 ```rust
 use retgui::elements::{Element, Text, Window};
-use retgui::{Elements, RetGuiOptions, retgui_main};
+use retgui::{App, RetGuiOptions, retgui_main};
 
 fn main() {
-    let mut elements = Elements::new();
-    Window::new(&mut elements, "Hello World App")
-        .edit(&mut elements)
-        .push_with(|elements| Text::new(elements, "Hello World!"))
+    let mut app = App::new();
+    Window::new(&mut app, "Hello World App")
+        .edit(&mut app)
+        .push_with(|app| Text::new(app, "Hello World!"))
         .finish();
-    retgui_main(elements, RetGuiOptions::basic("hello_world_app"));
+    retgui_main(app, RetGuiOptions::basic("hello_world_app"));
 }
 ```

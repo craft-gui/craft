@@ -1,5 +1,5 @@
 use std::cell::Cell;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::num::NonZeroUsize;
 use std::ops::Range;
 use std::rc::Rc;
@@ -17,13 +17,13 @@ use retgui_renderer::text_renderer_data::{TextData, TextRender, TextSnapshot};
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 
+use winit::dpi;
 use winit::keyboard::{Key, ModifiersState, NamedKey};
 use winit::window::ImeSurroundingText;
-use winit::dpi;
 
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::parley_box_to_rect;
-use crate::elements::{ElementInternals, Elements, TextInputElement};
+use crate::elements::{ElementInternals, TextInputElement};
 use crate::events::{EventKind, KeyboardEvent, TextInputChangedEvent};
 use crate::layout::layout_context::TextHashKey;
 use crate::style::{Style, TextStyleProperty};
@@ -447,9 +447,13 @@ impl TextInputState {
         self.pointer_down
     }
 
-    pub(super) fn generate_text_changed_event(&self, elements: &mut Elements, element_data: &ElementData) {
+    pub(super) fn generate_text_changed_event(
+        &self,
+        event_queue: &mut VecDeque<EventKind>,
+        element_data: &ElementData,
+    ) {
         let target = element_data.me;
-        elements.queue_event(EventKind::TextInputChanged(TextInputChangedEvent::new(
+        event_queue.push_back(EventKind::TextInputChanged(TextInputChangedEvent::new(
             target,
             self.editor.raw_text().to_string(),
         )));
@@ -457,7 +461,7 @@ impl TextInputState {
 
     pub fn key_press(
         &mut self,
-        elements: &mut Elements,
+        event_queue: &mut VecDeque<EventKind>,
         text_context: &mut TextContext,
         keyboard_event: &KeyboardEvent,
         element_data: &mut ElementData,
@@ -488,7 +492,7 @@ impl TextInputState {
             Key::Character(c) if action_mod && c.to_lowercase() == "y" => {
                 driver.redo();
                 self.clear_cache();
-                self.generate_text_changed_event(elements, element_data);
+                self.generate_text_changed_event(event_queue, element_data);
             }
             Key::Character(c) if action_mod && c.to_lowercase() == "z" => {
                 if shift {
@@ -497,7 +501,7 @@ impl TextInputState {
                     driver.undo();
                 }
                 self.clear_cache();
-                self.generate_text_changed_event(elements, element_data);
+                self.generate_text_changed_event(event_queue, element_data);
             }
             Key::Character(c) if action_mod && matches!(c.as_str(), "c" | "x" | "v") => {
                 match c.to_lowercase().as_str() {
@@ -505,12 +509,12 @@ impl TextInputState {
                     "x" => {
                         cut(&mut driver);
                         self.clear_cache();
-                        self.generate_text_changed_event(elements, element_data);
+                        self.generate_text_changed_event(event_queue, element_data);
                     }
                     "v" => {
                         paste(&mut driver);
                         self.clear_cache();
-                        self.generate_text_changed_event(elements, element_data);
+                        self.generate_text_changed_event(event_queue, element_data);
                     }
                     _ => (),
                 }
@@ -649,7 +653,7 @@ impl TextInputState {
                     driver.delete(true);
                 }
                 self.clear_cache();
-                self.generate_text_changed_event(elements, element_data);
+                self.generate_text_changed_event(event_queue, element_data);
             }
             Key::Named(NamedKey::Backspace) => {
                 if IS_MAC && action_mod {
@@ -667,17 +671,17 @@ impl TextInputState {
                 }
 
                 self.clear_cache();
-                self.generate_text_changed_event(elements, element_data);
+                self.generate_text_changed_event(event_queue, element_data);
             }
             Key::Named(NamedKey::Enter) => {
                 driver.insert_or_replace_selection("\n", true);
                 self.clear_cache();
-                self.generate_text_changed_event(elements, element_data);
+                self.generate_text_changed_event(event_queue, element_data);
             }
             Key::Character(character) => {
                 driver.insert_or_replace_selection(character, true);
                 self.clear_cache();
-                self.generate_text_changed_event(elements, element_data);
+                self.generate_text_changed_event(event_queue, element_data);
             }
             _ => (),
         }

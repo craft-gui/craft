@@ -1,11 +1,18 @@
 //! Stores one or more elements.
 
+use std::any::Any;
+use std::collections::VecDeque;
+use std::mem::replace;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(target_arch = "wasm32")]
+use std::sync::mpsc::Sender;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
 
-use gummy::AvailableSpace;
+use gummy::{AvailableSpace, Size as GummySize};
+
+use issho::Role;
 
 use retgui_logging::info;
 
@@ -17,30 +24,35 @@ use retgui_renderer::renderer::{Renderer, Screenshot};
 
 use retgui_resource_manager::ResourceManager;
 
+use retgui_runtime::RetGuiRuntime;
+
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::JsCast;
 
 #[cfg(target_arch = "wasm32")]
 use web_time::{Duration, Instant};
 
-#[cfg(target_arch = "wasm32")]
-use winit::platform::web::WindowAttributesWeb;
 use winit::event::MouseScrollDelta;
 use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::{Key, ModifiersState, NamedKey};
+#[cfg(target_arch = "wasm32")]
+use winit::platform::web::WindowAttributesWeb;
 use winit::window::{Window as WinitWindow, WindowAttributes};
 
 use crate::Color;
 use crate::accessibility::RetGuiAccessTree;
 use crate::app::App;
+#[cfg(target_arch = "wasm32")]
+use crate::app::CreatedRenderer;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container};
-use crate::elements::{DynElement, Element, ElementInternals, Elements, scrollable};
+use crate::elements::{DynElement, Element, ElementIds, ElementInternals, ElementStates, HasElementData, RetainedElements, scrollable};
 use crate::events::pointer_capture::PointerCapture;
 use crate::events::{EventKind, KeyboardEvent, PointerScrollEvent, PointerType};
 use crate::layout::GummyTree;
 use crate::perf_stats::{LayoutStats, PerfStats, RenderStats};
 use crate::text::text_context::TextContext;
+use crate::window_manager::WindowManager;
 
 pub type WindowConstructor = Box<dyn FnMut(&dyn ActiveEventLoop) -> Box<dyn WinitWindow>>;
 
@@ -95,7 +107,7 @@ impl Element for Window {
     }
 }
 
-impl crate::elements::HasElementData for WindowElement {
+impl HasElementData for WindowElement {
     fn element_data(&self) -> &ElementData {
         &self.element_data
     }
@@ -126,37 +138,78 @@ impl ElementInternals for WindowElement {
 
     fn draw(
         &self,
-        elements: &Elements,
+        elements: &RetainedElements,
+        states: &ElementStates,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
         text_context: &mut TextContext,
     ) {
-        draw_generic_container(self, elements, renderer, resource_manager, text_context, scale_factor);
+        draw_generic_container(
+            self,
+            elements,
+            states,
+            renderer,
+            resource_manager,
+            text_context,
+            scale_factor,
+        );
     }
 
-    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
-        scrollable::handle_scroll_logic(elements, self, event);
+    fn on_event(
+        &mut self,
+        elements: &mut RetainedElements,
+        _gummy_tree: &mut GummyTree,
+        _access_tree: &RetGuiAccessTree,
+        _by_internal_id: &mut ElementIds,
+        event_queue: &mut VecDeque<EventKind>,
+        focus: &mut Option<DynElement>,
+        focus_outline_visible: bool,
+        _pending_animation_updates: &mut Vec<(DynElement, bool)>,
+        _states: &mut ElementStates,
+        event: &mut EventKind,
+        _text_context: &mut TextContext,
+    ) {
+        scrollable::handle_scroll_logic(elements, event_queue, focus, focus_outline_visible, self, event);
     }
 
-    fn deep_clone(&self, _elements: &mut Elements) -> DynElement {
+    fn deep_clone(
+        &self,
+        _elements: &mut RetainedElements,
+        _gummy_tree: &mut GummyTree,
+        _access_tree: &RetGuiAccessTree,
+        _by_internal_id: &mut ElementIds,
+    ) -> DynElement {
         todo!()
     }
 }
 
 impl Window {
-    pub fn new_advanced<F>(elements: &mut Elements, window_fn: F, renderer_type: RendererType) -> Self
+    pub fn new_advanced<F>(app: &mut App, window_fn: F, renderer_type: RendererType) -> Self
     where
         F: FnMut(&dyn ActiveEventLoop) -> Box<dyn WinitWindow> + 'static,
     {
-        let inner = WindowElement::insert(elements, Some(window_fn), None, renderer_type);
+        let inner = WindowElement::insert(
+            &mut app.elements,
+            &mut app.gummy_tree,
+            &app.access_tree,
+            &mut app.by_internal_id,
+            &mut app.window_manager,
+            Some(window_fn),
+            None,
+            renderer_type,
+        );
 
         Window { inner }
     }
 
-    pub fn new(elements: &mut Elements, title: &str) -> Self {
+    pub fn new(app: &mut App, title: &str) -> Self {
         let inner = WindowElement::insert(
-            elements,
+            &mut app.elements,
+            &mut app.gummy_tree,
+            &app.access_tree,
+            &mut app.by_internal_id,
+            &mut app.window_manager,
             None::<fn(&dyn ActiveEventLoop) -> Box<dyn WinitWindow>>,
             Some(title),
             RendererType::default(),
@@ -165,9 +218,13 @@ impl Window {
         Window { inner }
     }
 
-    pub fn new_with_renderer(elements: &mut Elements, title: &str, renderer_type: RendererType) -> Self {
+    pub fn new_with_renderer(app: &mut App, title: &str, renderer_type: RendererType) -> Self {
         let inner = WindowElement::insert(
-            elements,
+            &mut app.elements,
+            &mut app.gummy_tree,
+            &app.access_tree,
+            &mut app.by_internal_id,
+            &mut app.window_manager,
             None::<fn(&dyn ActiveEventLoop) -> Box<dyn WinitWindow>>,
             Some(title),
             renderer_type,
@@ -176,145 +233,129 @@ impl Window {
         Window { inner }
     }
 
-    pub fn screenshot(&self, elements: &mut Elements) -> Screenshot {
-        elements.get_as_mut::<WindowElement>(self.inner).screenshot()
+    pub fn screenshot(&self, app: &mut App) -> Screenshot {
+        app.elements.get_as_mut::<WindowElement>(self.inner).screenshot()
     }
 
-    pub fn close(&self, elements: &Elements) {
-        elements.get_as::<WindowElement>(self.inner).close();
+    pub fn close(&self, app: &App) {
+        app.elements.get_as::<WindowElement>(self.inner).close();
     }
 
-    pub fn winit_window(&self, elements: &Elements) -> Option<Arc<dyn winit::window::Window>> {
-        elements.get_as::<WindowElement>(self.inner).winit_window()
+    pub fn winit_window(&self, app: &App) -> Option<Arc<dyn WinitWindow>> {
+        app.elements.get_as::<WindowElement>(self.inner).winit_window()
     }
 
-    pub fn set_winit_window(&self, elements: &mut Elements, window: Option<Arc<dyn WinitWindow>>) {
-        elements
+    pub fn set_winit_window(&self, app: &mut App, window: Option<Arc<dyn WinitWindow>>) {
+        app.elements
             .get_as_mut::<WindowElement>(self.inner)
-            .set_winit_window(window)
+            .set_winit_window(window);
     }
 
-    pub fn set_scale_factor(&self, elements: &mut Elements, scale_factor: f64) {
-        elements.dispatch_mut(self.inner, |window, elements| {
-            window.set_scale_factor(elements, scale_factor)
+    pub fn set_scale_factor(&self, app: &mut App, scale_factor: f64) {
+        app.elements.dispatch_mut(self.inner, |window, retained_elements| {
+            window.set_scale_factor(retained_elements, &mut app.gummy_tree, scale_factor);
         });
     }
 
     /// Get the effective scale factor factoring window scale factor and zoom.
-    pub fn effective_scale_factor(&self, elements: &Elements) -> f64 {
-        elements.get_as::<WindowElement>(self.inner).effective_scale_factor()
+    pub fn effective_scale_factor(&self, app: &App) -> f64 {
+        app.elements
+            .get_as::<WindowElement>(self.inner)
+            .effective_scale_factor()
     }
 
     /// Get the logical size of the window.
-    pub fn window_size(&self, elements: &Elements) -> Size<f32> {
-        elements.get_as::<WindowElement>(self.inner).window_size()
+    pub fn window_size(&self, app: &App) -> Size<f32> {
+        app.elements.get_as::<WindowElement>(self.inner).window_size()
     }
 
-    pub fn zoom_scale_factor(&self, elements: &Elements) -> f64 {
-        elements.get_as::<WindowElement>(self.inner).zoom_scale_factor()
+    pub fn zoom_scale_factor(&self, app: &App) -> f64 {
+        app.elements.get_as::<WindowElement>(self.inner).zoom_scale_factor()
     }
 
     pub fn on_request_redraw(&self, retgui_app: &mut App) {
-        let mut elements = std::mem::take(&mut retgui_app.elements);
-        elements.dispatch_mut(self.inner, |window, elements| {
-            (window as &mut dyn std::any::Any)
+        WindowElement::on_request_redraw(
+            &mut retgui_app.elements,
+            &mut retgui_app.gummy_tree,
+            &retgui_app.states,
+            &mut retgui_app.text_context,
+            retgui_app.resource_manager.clone(),
+            self.inner,
+        );
+    }
+
+    pub fn zoom_in(&self, app: &mut App) {
+        app.elements.dispatch_mut(self.inner, |window, retained_elements| {
+            (window as &mut dyn Any)
                 .downcast_mut::<WindowElement>()
                 .unwrap()
-                .on_request_redraw(retgui_app, elements)
-        });
-        retgui_app.elements = elements;
-    }
-
-    pub(crate) fn request_redraw(&self, elements: &Elements) {
-        elements.get_as::<WindowElement>(self.inner).request_redraw();
-    }
-
-    pub(crate) fn redraw_requested(&self, elements: &Elements) -> bool {
-        elements.get_as::<WindowElement>(self.inner).redraw_requested()
-    }
-
-    pub fn zoom_in(&self, elements: &mut Elements) {
-        elements.dispatch_mut(self.inner, |window, elements| {
-            (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowElement>()
-                .unwrap()
-                .zoom_in(elements)
-        })
-    }
-
-    pub fn zoom_out(&self, elements: &mut Elements) {
-        elements.dispatch_mut(self.inner, |window, elements| {
-            (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowElement>()
-                .unwrap()
-                .zoom_out(elements)
-        })
-    }
-
-    pub(crate) fn mouse_position(&self, elements: &Elements) -> Option<Point> {
-        elements.get_as::<WindowElement>(self.inner).mouse_position()
-    }
-
-    pub(crate) fn on_resize(&self, elements: &mut Elements, new_size: Size<f32>) {
-        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
-        elements
-            .get_as_mut::<WindowElement>(self.inner)
-            .on_resize(gummy_tree, new_size)
-    }
-
-    pub(crate) fn set_mouse_position(&self, elements: &mut Elements, point: Option<Point>) {
-        elements
-            .get_as_mut::<WindowElement>(self.inner)
-            .set_mouse_position(point)
-    }
-
-    pub(crate) fn on_redraw(
-        &self,
-        elements: &mut Elements,
-        text_context: &mut TextContext,
-        resource_manager: Arc<ResourceManager>,
-    ) {
-        elements.dispatch_mut(self.inner, |window, elements| {
-            (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowElement>()
-                .unwrap()
-                .on_redraw(elements, text_context, resource_manager)
-        })
-    }
-
-    pub(crate) fn create(
-        &self,
-        retgui_app: &mut App,
-        elements: &mut Elements,
-        event_loop: Option<&dyn ActiveEventLoop>,
-    ) {
-        elements.dispatch_mut(self.inner, |window, elements| {
-            (window as &mut dyn std::any::Any)
-                .downcast_mut::<WindowElement>()
-                .unwrap()
-                .create(retgui_app, elements, event_loop, self.inner)
+                .zoom_in(retained_elements, &mut app.gummy_tree);
         });
     }
 
-    pub(crate) fn on_scale_factor_changed(&self, elements: &mut Elements, scale_factor: f64) {
-        elements.dispatch_mut(self.inner, |window, elements| {
-            (window as &mut dyn std::any::Any)
+    pub fn zoom_out(&self, app: &mut App) {
+        app.elements.dispatch_mut(self.inner, |window, retained_elements| {
+            (window as &mut dyn Any)
                 .downcast_mut::<WindowElement>()
                 .unwrap()
-                .on_scale_factor_changed(elements, scale_factor)
+                .zoom_out(retained_elements, &mut app.gummy_tree);
         });
-    }
-
-    pub(crate) fn on_focused(&self, elements: &Elements, focused: bool) {
-        elements
-            .get_as::<WindowElement>(self.inner)
-            .on_focused(elements, focused);
     }
 }
 
 impl WindowElement {
+    pub(crate) fn on_request_redraw(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        states: &ElementStates,
+        text_context: &mut TextContext,
+        resource_manager: Arc<ResourceManager>,
+        window: DynElement,
+    ) {
+        elements.dispatch_mut(window, |window, elements| {
+            (window as &mut dyn Any).downcast_mut::<Self>().unwrap().on_redraw(
+                elements,
+                gummy_tree,
+                states,
+                text_context,
+                resource_manager,
+            );
+        });
+    }
+
+    pub(crate) fn create_window(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        states: &ElementStates,
+        text_context: &mut TextContext,
+        resource_manager: Arc<ResourceManager>,
+        runtime: &mut RetGuiRuntime,
+        #[cfg(target_arch = "wasm32")] created_renderer_sender: &Sender<CreatedRenderer>,
+        event_loop: Option<&dyn ActiveEventLoop>,
+        handle: DynElement,
+    ) {
+        elements.dispatch_mut(handle, |window, elements| {
+            (window as &mut dyn Any).downcast_mut::<Self>().unwrap().create(
+                elements,
+                gummy_tree,
+                states,
+                text_context,
+                resource_manager,
+                runtime,
+                #[cfg(target_arch = "wasm32")]
+                created_renderer_sender,
+                event_loop,
+                handle,
+            );
+        });
+    }
+
     pub fn insert<F>(
-        elements: &mut Elements,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        window_manager: &mut WindowManager,
         f: Option<F>,
         title: Option<&str>,
         renderer_type: RendererType,
@@ -322,8 +363,8 @@ impl WindowElement {
     where
         F: FnMut(&dyn ActiveEventLoop) -> Box<dyn WinitWindow> + 'static,
     {
-        let perf_stats = PerfStats::new(elements);
-        let inner = elements.insert_with(|me, access_tree| {
+        let perf_stats = PerfStats::new(elements, gummy_tree, access_tree, by_internal_id);
+        let inner = elements.insert_with(access_tree, by_internal_id, |me, access_tree| {
             Box::new(Self {
                 element_data: ElementData::new(me, true, access_tree.clone()),
                 window_size: Default::default(),
@@ -349,14 +390,17 @@ impl WindowElement {
             let inner_mut = elements.get_as_mut::<Self>(inner);
             inner_mut.element_data.window = Some(inner);
             inner_mut.element_data.redraw_signal = Some(inner_mut.redraw_requested.clone());
-            inner_mut.element_data.set_accessibility_role(issho::Role::Window);
+            inner_mut.element_data.set_accessibility_role(Role::Window);
             if let Some(title) = inner_mut.title.clone() {
                 inner_mut.element_data.set_accessibility_name(title);
             }
         }
-        elements.create_layout_node(inner, None);
+        elements
+            .get_mut(inner)
+            .element_data_mut()
+            .create_layout_node(gummy_tree, None);
 
-        elements.window_manager.add_window(Window { inner });
+        window_manager.add_window(Window { inner });
 
         inner
     }
@@ -372,14 +416,14 @@ impl WindowElement {
         self.redraw_requested.load(Ordering::Relaxed)
     }
 
-    pub(crate) fn on_focused(&self, elements: &Elements, focused: bool) {
+    pub(crate) fn on_focused(&self, elements: &RetainedElements, focus: Option<DynElement>, focused: bool) {
         {
             let root = self
                 .element_data
                 .access_root
                 .expect("window accessibility root is not attached");
             if focused {
-                let focus = elements.focus.and_then(|focus| {
+                let focus = focus.and_then(|focus| {
                     elements
                         .contains(focus)
                         .then(|| {
@@ -398,7 +442,7 @@ impl WindowElement {
         }
     }
 
-    pub fn winit_window(&self) -> Option<Arc<dyn winit::window::Window>> {
+    pub fn winit_window(&self) -> Option<Arc<dyn WinitWindow>> {
         self.winit_window.clone()
     }
 
@@ -419,34 +463,31 @@ impl WindowElement {
         )
     }
 
-    pub fn update_zoom(&mut self, elements: &mut Elements) {
+    pub fn update_zoom(&mut self, elements: &mut RetainedElements, gummy_tree: &mut GummyTree) {
         let scale_factor = self.effective_scale_factor();
-        self.set_scale_factor(elements, scale_factor);
+        self.set_scale_factor(elements, gummy_tree, scale_factor);
     }
 
-    pub fn on_request_redraw(&mut self, retgui_app: &mut App, elements: &mut Elements) {
-        self.on_redraw(
-            elements,
-            &mut retgui_app.text_context,
-            retgui_app.resource_manager.clone(),
-        );
-    }
-
-    pub(crate) fn zoom_in(&mut self, elements: &mut Elements) {
+    pub(crate) fn zoom_in(&mut self, elements: &mut RetainedElements, gummy_tree: &mut GummyTree) {
         self.zoom_scale_factor += 0.01;
-        self.update_zoom(elements);
+        self.update_zoom(elements, gummy_tree);
     }
 
-    pub(crate) fn zoom_out(&mut self, elements: &mut Elements) {
+    pub(crate) fn zoom_out(&mut self, elements: &mut RetainedElements, gummy_tree: &mut GummyTree) {
         let zoom_scale_factor = (self.zoom_scale_factor - 0.01).max(1.0);
         if self.zoom_scale_factor == zoom_scale_factor {
             return;
         }
         self.zoom_scale_factor = zoom_scale_factor;
-        self.update_zoom(elements);
+        self.update_zoom(elements, gummy_tree);
     }
 
-    pub(crate) fn maybe_zoom(&mut self, elements: &mut Elements, pointer_scroll_update: &PointerScrollEvent) -> bool {
+    pub(crate) fn maybe_zoom(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        pointer_scroll_update: &PointerScrollEvent,
+    ) -> bool {
         if self.modifiers.control_key() && pointer_scroll_update.pointer.pointer_type == PointerType::Mouse {
             let y: f32 = match pointer_scroll_update.delta {
                 MouseScrollDelta::LineDelta(_, y) => y,
@@ -454,9 +495,9 @@ impl WindowElement {
                 _ => 0.0,
             };
             if y < 0.0 {
-                self.zoom_out(elements);
+                self.zoom_out(elements, gummy_tree);
             } else {
-                self.zoom_in(elements);
+                self.zoom_in(elements, gummy_tree);
             }
             true
         } else {
@@ -464,13 +505,18 @@ impl WindowElement {
         }
     }
 
-    pub(crate) fn maybe_zoom_keyboard(&mut self, elements: &mut Elements, keyboard_input: &KeyboardEvent) -> bool {
+    pub(crate) fn maybe_zoom_keyboard(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        keyboard_input: &KeyboardEvent,
+    ) -> bool {
         if keyboard_input.modifiers.control_key() {
             if keyboard_input.key == "=" {
-                self.zoom_in(elements);
+                self.zoom_in(elements, gummy_tree);
                 return true;
             } else if keyboard_input.key == "-" {
-                self.zoom_out(elements);
+                self.zoom_out(elements, gummy_tree);
                 return true;
             }
         }
@@ -479,7 +525,8 @@ impl WindowElement {
 
     pub(crate) fn tab_navigation_target(
         &self,
-        elements: &Elements,
+        elements: &RetainedElements,
+        focus: Option<DynElement>,
         keyboard_input: &KeyboardEvent,
     ) -> Option<DynElement> {
         if !keyboard_input.state.is_pressed()
@@ -497,7 +544,7 @@ impl WindowElement {
             return None;
         }
 
-        let current_focus = elements.focus;
+        let current_focus = focus;
         let current_index = current_focus
             .as_ref()
             .and_then(|current| navigation_elements.iter().position(|(element, _)| element == current));
@@ -520,7 +567,12 @@ impl WindowElement {
         next_index.map(|index| navigation_elements[index].0)
     }
 
-    pub(crate) fn maybe_toggle_perf_stats(&mut self, elements: &mut Elements, keyboard_input: &KeyboardEvent) -> bool {
+    pub(crate) fn maybe_toggle_perf_stats(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        keyboard_input: &KeyboardEvent,
+    ) -> bool {
         if keyboard_input.repeat || !keyboard_input.state.is_pressed() {
             return false;
         }
@@ -529,7 +581,7 @@ impl WindowElement {
             return false;
         }
 
-        self.perf_stats.toggle(elements, &mut *self.renderer);
+        self.perf_stats.toggle(elements, gummy_tree, &mut *self.renderer);
         self.request_redraw();
         true
     }
@@ -590,7 +642,9 @@ impl WindowElement {
 
     pub(crate) fn on_redraw(
         &mut self,
-        elements: &mut Elements,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        states: &ElementStates,
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
     ) {
@@ -599,25 +653,35 @@ impl WindowElement {
         let frame_start = Instant::now();
         self.renderer.surface_set_clear_color(Color::WHITE);
 
-        let layout_stats = self.layout_window(elements, text_context, resource_manager.clone());
+        let layout_stats = self.layout_window(elements, gummy_tree, text_context, resource_manager.clone());
 
-        let render_stats = self.draw_window(elements, text_context, resource_manager);
+        let render_stats = self.draw_window(elements, gummy_tree, states, text_context, resource_manager);
         self.perf_stats
             .update_stats(frame_start.elapsed(), layout_stats, render_stats);
     }
 
-    pub(crate) fn on_scale_factor_changed(&mut self, elements: &mut Elements, scale_factor: f64) {
+    pub(crate) fn on_scale_factor_changed(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        scale_factor: f64,
+    ) {
         if self.scale_factor == scale_factor {
             return;
         }
         self.scale_factor = scale_factor;
-        self.set_scale_factor(elements, self.effective_scale_factor());
+        self.set_scale_factor(elements, gummy_tree, self.effective_scale_factor());
     }
 
     pub(crate) fn create(
         &mut self,
-        retgui_app: &mut App,
-        elements: &mut Elements,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        states: &ElementStates,
+        text_context: &mut TextContext,
+        resource_manager: Arc<ResourceManager>,
+        runtime: &mut RetGuiRuntime,
+        #[cfg(target_arch = "wasm32")] created_renderer_sender: &Sender<CreatedRenderer>,
         event_loop: Option<&dyn ActiveEventLoop>,
         window: DynElement,
     ) {
@@ -631,7 +695,7 @@ impl WindowElement {
                 .renderer_type
                 .create_headless(self.window_size.width, self.window_size.height);
             self.resize_renderer_surface();
-            self.on_request_redraw(retgui_app, elements);
+            self.on_redraw(elements, gummy_tree, states, text_context, resource_manager);
             return;
         };
 
@@ -663,13 +727,13 @@ impl WindowElement {
                 .expect("Failed to create window")
         });
         self.set_winit_window(Some(winit_window.clone()));
-        self.on_scale_factor_changed(elements, winit_window.scale_factor());
+        self.on_scale_factor_changed(elements, gummy_tree, winit_window.scale_factor());
 
         let renderer_type = self.renderer_type;
         cfg_select! {
             not(target_arch = "wasm32") => {
                 let _ = window;
-                let renderer = retgui_app.runtime.tokio_runtime_mut().block_on(async {
+                let renderer = runtime.tokio_runtime_mut().block_on(async {
                     let renderer: Box<dyn Renderer> = renderer_type.create(winit_window.clone()).await;
                     renderer
                 });
@@ -678,14 +742,14 @@ impl WindowElement {
             }
             _ => {
                 let window_copy_2 = winit_window.clone();
-                let created_renderer_sender = retgui_app.created_renderer_sender.clone();
-                retgui_app.runtime.runtime_spawn(async move {
+                let created_renderer_sender = created_renderer_sender.clone();
+                runtime.runtime_spawn(async move {
                     let renderer: Box<dyn Renderer> = renderer_type.create(window_copy_2.clone()).await;
                     let size = Size::new(
                         window_copy_2.surface_size().width as f32,
                         window_copy_2.surface_size().height as f32,
                     );
-                    let _ = created_renderer_sender.send(crate::app::CreatedRenderer {
+                    let _ = created_renderer_sender.send(CreatedRenderer {
                         window,
                         renderer,
                         size,
@@ -696,7 +760,7 @@ impl WindowElement {
         }
 
         {
-            self.on_request_redraw(retgui_app, elements);
+            self.on_redraw(elements, gummy_tree, states, text_context, resource_manager);
             let root = self
                 .element_data
                 .access_root
@@ -711,7 +775,8 @@ impl WindowElement {
 
     fn layout_window(
         &mut self,
-        elements: &mut Elements,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
     ) -> LayoutStats {
@@ -726,12 +791,11 @@ impl WindowElement {
             .expect("A root element must have a layout node.");
 
         let window_size = self.window_size();
-        let available_space: gummy::Size<AvailableSpace> = gummy::Size {
+        let available_space: GummySize<AvailableSpace> = GummySize {
             width: AvailableSpace::Definite(window_size.width),
             height: AvailableSpace::Definite(window_size.height),
         };
 
-        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
         let root_dirty = gummy_tree.is_layout_dirty(root_node);
 
         if root_dirty {
@@ -769,12 +833,14 @@ impl WindowElement {
 
     fn draw_window(
         &mut self,
-        elements: &mut Elements,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        states: &ElementStates,
         text_context: &mut TextContext,
         resource_manager: Arc<ResourceManager>,
     ) -> RenderStats {
         let total_start = Instant::now();
-        let mut renderer = std::mem::replace(&mut self.renderer, Box::new(BlankRenderer::default()));
+        let mut renderer = replace(&mut self.renderer, Box::new(BlankRenderer::default()));
 
         let build_list_start = Instant::now();
         renderer.clear();
@@ -782,6 +848,7 @@ impl WindowElement {
 
         self.draw_transformed(
             elements,
+            states,
             &mut *renderer,
             resource_manager.clone(),
             scale_factor,
@@ -791,7 +858,7 @@ impl WindowElement {
 
         let debug_overlay_start = Instant::now();
         self.perf_stats
-            .draw(elements, &mut *renderer, text_context, scale_factor);
+            .draw(elements, gummy_tree, &mut *renderer, text_context, scale_factor);
         let debug_overlay = debug_overlay_start.elapsed();
 
         if let Some(winit_window) = &self.winit_window {
@@ -832,7 +899,7 @@ impl WindowElement {
 }
 
 fn collect_tab_navigation_elements(
-    elements: &Elements,
+    elements: &RetainedElements,
     children: &[DynElement],
     navigation_elements: &mut Vec<(DynElement, bool)>,
 ) {

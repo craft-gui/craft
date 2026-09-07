@@ -1,6 +1,7 @@
 //! A selectable circle.
 
 use std::any::Any;
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use issho::{AccessEvent, IsshoError, SelectionData, SelectionGroupItem};
@@ -18,12 +19,12 @@ use crate::elements::element_data::ElementData;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementInternals, Elements, State, scrollable};
+use crate::elements::{DynElement, Element, ElementIds, ElementInternals, ElementStates, RetGuiAccessTree, RetainedElements, State, scrollable};
 use crate::events::{Event, EventKind, RadioValueChangedEvent};
 use crate::layout::GummyTree;
 use crate::style::Unit;
 use crate::text::text_context::TextContext;
-use crate::{auto, px, rgb};
+use crate::{App, auto, px, rgb};
 
 #[derive(Clone, Copy)]
 pub struct Radio {
@@ -61,19 +62,32 @@ impl crate::elements::HasElementData for RadioElement {
 }
 
 impl ElementInternals for RadioElement {
-    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
-            let owner_id = element.element_data.internal_id;
-            let owner = element.element_data.me;
-            let parent = element.element_data.layout.gummy_node_id();
-            let circle_node = gummy_tree.clone_node(element.circle_layout.layout.gummy_node_id());
-            element.circle_layout.layout.gummy_node_id = Some(circle_node);
-            element.circle_layout.internal_id = create_unique_element_id();
-            element.circle_layout.me = owner;
-            gummy_tree.add_child(parent, circle_node);
-            gummy_tree.register_owner(circle_node, owner_id, owner);
-            Some(parent)
-        }))
+    fn deep_clone(
+        &self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(
+            self,
+            elements,
+            gummy_tree,
+            access_tree,
+            by_internal_id,
+            |element, gummy_tree| {
+                let owner_id = element.element_data.internal_id;
+                let owner = element.element_data.me;
+                let parent = element.element_data.layout.gummy_node_id();
+                let circle_node = gummy_tree.clone_node(element.circle_layout.layout.gummy_node_id());
+                element.circle_layout.layout.gummy_node_id = Some(circle_node);
+                element.circle_layout.internal_id = create_unique_element_id();
+                element.circle_layout.me = owner;
+                gummy_tree.add_child(parent, circle_node);
+                gummy_tree.register_owner(circle_node, owner_id, owner);
+                Some(parent)
+            },
+        ))
     }
 
     fn apply_layout(
@@ -92,7 +106,8 @@ impl ElementInternals for RadioElement {
 
     fn draw(
         &self,
-        elements: &Elements,
+        elements: &RetainedElements,
+        states: &ElementStates,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -113,7 +128,7 @@ impl ElementInternals for RadioElement {
         renderer.set_transform(container_transform * Affine::translate((0.0, -scroll_y)));
 
         if !self.hide_radio {
-            if self.is_selected(elements) {
+            if self.is_selected(elements.store_id(), states) {
                 renderer.draw_circle_outline(
                     self.circle.scale(_scale_factor),
                     Brush::Color(rgb(0, 100, 255)),
@@ -134,40 +149,73 @@ impl ElementInternals for RadioElement {
 
         renderer.set_transform(container_transform);
 
-        self.draw_children(elements, renderer, resource_manager, _scale_factor, _text_context);
+        self.draw_children(
+            elements,
+            states,
+            renderer,
+            resource_manager,
+            _scale_factor,
+            _text_context,
+        );
         self.maybe_end_layer(renderer);
         self.draw_scrollbar(renderer, _scale_factor);
 
         self.maybe_end_overlay(renderer);
     }
 
-    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
-        scrollable::handle_scroll_logic(elements, self, event);
+    fn on_event(
+        &mut self,
+        elements: &mut RetainedElements,
+        _gummy_tree: &mut GummyTree,
+        _access_tree: &RetGuiAccessTree,
+        _by_internal_id: &mut ElementIds,
+        event_queue: &mut VecDeque<EventKind>,
+        focus: &mut Option<DynElement>,
+        focus_outline_visible: bool,
+        _pending_animation_updates: &mut Vec<(DynElement, bool)>,
+        states: &mut ElementStates,
+        event: &mut EventKind,
+        _text_context: &mut TextContext,
+    ) {
+        scrollable::handle_scroll_logic(elements, event_queue, focus, focus_outline_visible, self, event);
         if let EventKind::PointerUp(_) = event {
-            self.focus(elements);
-            self.set_value(elements);
+            self.focus(elements, event_queue, focus, focus_outline_visible);
+            self.set_value(elements, event_queue, states);
         } else if self.is_focused()
             && let EventKind::KeyDown(keyboard_event) = event
             && keyboard_event.code == KeyCode::Space
             && !keyboard_event.repeat
         {
-            self.set_value(elements);
+            self.set_value(elements, event_queue, states);
             keyboard_event.stop_propagation();
             keyboard_event.prevent_default();
         }
     }
 
-    fn on_access_event(&mut self, elements: &mut Elements, event: AccessEvent) -> Result<(), IsshoError> {
-        if matches!(event, AccessEvent::Select | AccessEvent::AddToSelection) && !self.is_selected(elements) {
-            self.set_value(elements);
+    fn on_access_event(
+        &mut self,
+        elements: &mut RetainedElements,
+        event_queue: &mut VecDeque<EventKind>,
+        states: &mut ElementStates,
+        event: AccessEvent,
+    ) -> Result<(), IsshoError> {
+        if matches!(event, AccessEvent::Select | AccessEvent::AddToSelection)
+            && !self.is_selected(elements.store_id(), states)
+        {
+            self.set_value(elements, event_queue, states);
         }
         Ok(())
     }
 }
 
 impl RadioElement {
-    fn set_value(&mut self, elements: &mut Elements) {
-        self.set_value_from_group(elements);
+    fn set_value(
+        &mut self,
+        elements: &mut RetainedElements,
+        event_queue: &mut VecDeque<EventKind>,
+        states: &mut ElementStates,
+    ) {
+        self.set_value_from_group(elements.store_id(), event_queue, states);
 
         let me = self.element_data.me;
         let parent = self.element_data.parent;
@@ -177,7 +225,7 @@ impl RadioElement {
                     continue;
                 }
                 if (elements.get(sibling) as &dyn Any).is::<RadioElement>() {
-                    let selected = elements.state(self.active_value).clone();
+                    let selected = self.active_value.read_from(states, elements.store_id()).clone();
                     elements
                         .get_as_mut::<RadioElement>(sibling)
                         .set_accessibility_selection(&selected);
@@ -186,13 +234,18 @@ impl RadioElement {
         }
     }
 
-    pub(super) fn set_value_from_group(&mut self, elements: &mut Elements) {
-        let selection_changed = !self.is_selected(elements);
-        *elements.state_mut(self.active_value) = self.value.clone();
-        let selected = elements.state(self.active_value).clone();
+    pub(super) fn set_value_from_group(
+        &mut self,
+        store_id: u64,
+        event_queue: &mut VecDeque<EventKind>,
+        states: &mut ElementStates,
+    ) {
+        let selection_changed = !self.is_selected(store_id, states);
+        *self.active_value.write_to(states, store_id) = self.value.clone();
+        let selected = self.active_value.read_from(states, store_id).clone();
         self.set_accessibility_selection(&selected);
         let target = self.element_data.me;
-        elements.queue_event(EventKind::RadioValueChanged(RadioValueChangedEvent::new(
+        event_queue.push_back(EventKind::RadioValueChanged(RadioValueChangedEvent::new(
             target, selected,
         )));
         if selection_changed {
@@ -200,8 +253,8 @@ impl RadioElement {
         }
     }
 
-    fn is_selected(&self, elements: &Elements) -> bool {
-        elements.state(self.active_value).as_str() == self.value
+    fn is_selected(&self, store_id: u64, states: &ElementStates) -> bool {
+        self.active_value.read_from(states, store_id).as_str() == self.value
     }
 
     pub(super) fn set_accessibility_selection(&mut self, selected: &str) {
@@ -211,12 +264,19 @@ impl RadioElement {
                 is_selected,
             })));
     }
-}
 
-impl Radio {
-    pub fn new(elements: &mut Elements, value: &str, label: &str, active_value: State<String>) -> Self {
+    pub(crate) fn insert(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        states: &ElementStates,
+        value: &str,
+        label: &str,
+        active_value: State<String>,
+    ) -> DynElement {
         let radius = 7.0;
-        let inner = elements.insert_with(|me, access_tree| {
+        let inner = elements.insert_with(access_tree, by_internal_id, |me, access_tree| {
             Box::new(RadioElement {
                 element_data: ElementData::new(me, true, access_tree.clone()),
                 circle_layout: ElementData::new_pseudo(me, false, access_tree),
@@ -227,7 +287,7 @@ impl Radio {
                 active_value,
             })
         });
-        let selected = elements.state(active_value).clone();
+        let selected = active_value.read_from(states, elements.store_id()).clone();
         {
             let inner_mut = elements.get_as_mut::<RadioElement>(inner);
             inner_mut.circle_layout.style.set_min_width(Unit::Px(radius * 2.0));
@@ -239,10 +299,6 @@ impl Radio {
             inner_mut.element_data.set_accessibility_role(issho::Role::RadioButton);
             inner_mut.element_data.set_accessibility_name(label.to_string());
             inner_mut.set_accessibility_selection(&selected);
-        }
-        {
-            let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
-            let inner_mut = elements.get_as_mut::<RadioElement>(inner);
             inner_mut.element_data.create_layout_node(gummy_tree, None);
             inner_mut.circle_layout.create_layout_node(gummy_tree, None);
             let node_id = inner_mut.circle_layout.layout.gummy_node_id();
@@ -250,32 +306,47 @@ impl Radio {
             gummy_tree.register_owner(node_id, inner_mut.element_data.internal_id, inner);
         }
 
-        Self { inner }
+        inner
+    }
+}
+
+impl Radio {
+    pub fn new(app: &mut App, value: &str, label: &str, active_value: State<String>) -> Self {
+        Self {
+            inner: RadioElement::insert(
+                &mut app.elements,
+                &mut app.gummy_tree,
+                &app.access_tree,
+                &mut app.by_internal_id,
+                &app.states,
+                value,
+                label,
+                active_value,
+            ),
+        }
     }
 
     /// Hide the default circle radio button.
-    pub fn set_hide_radio(&self, elements: &mut Elements, value: bool) {
+    pub fn set_hide_radio(&self, app: &mut App, value: bool) {
         // TODO: Hide in gummy.
-        if let Some(inner) = elements.try_get_as_mut::<RadioElement>(self.inner) {
+        if let Some(inner) = app.try_get_as_mut::<RadioElement>(self.inner) {
             inner.hide_radio = value;
             inner.request_window_redraw();
         }
     }
 
     /// Hide the default circle radio button.
-    pub fn hide_radio(&self, elements: &mut Elements) {
-        self.set_hide_radio(elements, true);
+    pub fn hide_radio(&self, app: &mut App) {
+        self.set_hide_radio(app, true);
     }
 
-    pub fn label(&self, elements: &Elements) -> String {
-        elements
-            .try_get_as::<RadioElement>(self.inner)
+    pub fn label(&self, app: &App) -> String {
+        app.try_get_as::<RadioElement>(self.inner)
             .map_or_else(String::new, |radio| radio.label.clone())
     }
 
-    pub fn value(&self, elements: &Elements) -> String {
-        elements
-            .try_get_as::<RadioElement>(self.inner)
+    pub fn value(&self, app: &App) -> String {
+        app.try_get_as::<RadioElement>(self.inner)
             .map_or_else(String::new, |radio| radio.value.clone())
     }
 }

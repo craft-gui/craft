@@ -136,20 +136,7 @@ impl<K: Clone + Hash + PartialEq, V> LockFreeMap<K, V> {
             None
         })
     }
-}
 
-impl<K: Clone + Hash + PartialEq, V> Drop for LockFreeMap<K, V> {
-    fn drop(&mut self) {
-        let ptr = self.root.load(Ordering::Relaxed);
-        if !ptr.is_null() {
-            unsafe {
-                drop(Arc::from_raw(ptr));
-            }
-        }
-    }
-}
-
-impl<K: Clone + Hash + PartialEq, V> LockFreeMap<K, V> {
     pub fn contains(&self, key: &K) -> bool {
         // Todo speedup with cache
         self.with_root(|inner| {
@@ -166,5 +153,16 @@ impl<K: Clone + Hash + PartialEq, V> LockFreeMap<K, V> {
             }
             false
         })
+    }
+}
+
+impl<K: Clone + Hash + PartialEq, V> Drop for LockFreeMap<K, V> {
+    fn drop(&mut self) {
+        let ptr = self.root.load(Ordering::Relaxed);
+        if !ptr.is_null() {
+            unsafe {
+                drop(Arc::from_raw(ptr));
+            }
+        }
     }
 }

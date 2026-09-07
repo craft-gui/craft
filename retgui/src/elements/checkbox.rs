@@ -1,5 +1,6 @@
 //! A toggleable checkbox.
 
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use issho::{AccessEvent, IsshoError};
@@ -20,12 +21,12 @@ use crate::elements::element_data::ElementData;
 use crate::elements::element_id::create_unique_element_id;
 use crate::elements::internal_helpers::{apply_generic_container_layout, apply_generic_container_layout_non_dom};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementInternals, Elements, scrollable};
+use crate::elements::{DynElement, Element, ElementIds, ElementInternals, ElementStates, RetGuiAccessTree, RetainedElements, scrollable};
 use crate::events::{CheckboxToggledEvent, EventKind};
 use crate::layout::GummyTree;
 use crate::style::Unit;
 use crate::text::text_context::TextContext;
-use crate::{auto, px, rgb};
+use crate::{App, auto, px, rgb};
 
 #[derive(Clone, Copy)]
 pub struct Checkbox {
@@ -58,19 +59,32 @@ impl crate::elements::HasElementData for CheckboxElement {
 }
 
 impl ElementInternals for CheckboxElement {
-    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
-            let owner_id = element.element_data.internal_id;
-            let owner = element.element_data.me;
-            let parent = element.element_data.layout.gummy_node_id();
-            let box_node = gummy_tree.clone_node(element.box_layout.layout.gummy_node_id());
-            element.box_layout.layout.gummy_node_id = Some(box_node);
-            element.box_layout.internal_id = create_unique_element_id();
-            element.box_layout.me = owner;
-            gummy_tree.add_child(parent, box_node);
-            gummy_tree.register_owner(box_node, owner_id, owner);
-            Some(parent)
-        }))
+    fn deep_clone(
+        &self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(
+            self,
+            elements,
+            gummy_tree,
+            access_tree,
+            by_internal_id,
+            |element, gummy_tree| {
+                let owner_id = element.element_data.internal_id;
+                let owner = element.element_data.me;
+                let parent = element.element_data.layout.gummy_node_id();
+                let box_node = gummy_tree.clone_node(element.box_layout.layout.gummy_node_id());
+                element.box_layout.layout.gummy_node_id = Some(box_node);
+                element.box_layout.internal_id = create_unique_element_id();
+                element.box_layout.me = owner;
+                gummy_tree.add_child(parent, box_node);
+                gummy_tree.register_owner(box_node, owner_id, owner);
+                Some(parent)
+            },
+        ))
     }
 
     fn apply_layout(
@@ -87,7 +101,8 @@ impl ElementInternals for CheckboxElement {
 
     fn draw(
         &self,
-        elements: &Elements,
+        elements: &RetainedElements,
+        states: &ElementStates,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -145,6 +160,7 @@ impl ElementInternals for CheckboxElement {
 
         self.draw_children(
             elements,
+            states,
             renderer,
             resource_manager.clone(),
             _scale_factor,
@@ -156,32 +172,85 @@ impl ElementInternals for CheckboxElement {
         self.maybe_end_overlay(renderer);
     }
 
-    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
-        scrollable::handle_scroll_logic(elements, self, event);
+    fn on_event(
+        &mut self,
+        elements: &mut RetainedElements,
+        _gummy_tree: &mut GummyTree,
+        _access_tree: &RetGuiAccessTree,
+        _by_internal_id: &mut ElementIds,
+        event_queue: &mut VecDeque<EventKind>,
+        focus: &mut Option<DynElement>,
+        focus_outline_visible: bool,
+        _pending_animation_updates: &mut Vec<(DynElement, bool)>,
+        _states: &mut ElementStates,
+        event: &mut EventKind,
+        _text_context: &mut TextContext,
+    ) {
+        scrollable::handle_scroll_logic(elements, event_queue, focus, focus_outline_visible, self, event);
         if let EventKind::Click(_) = event {
-            self.toggle(elements);
-            self.focus(elements);
+            self.toggle(event_queue);
+            self.focus(elements, event_queue, focus, focus_outline_visible);
         } else if self.is_focused()
             && let EventKind::KeyDown(key) = event
             && key.code == KeyCode::Space
             && key.state == ElementState::Pressed
         {
-            self.toggle(elements);
+            self.toggle(event_queue);
         }
     }
 
-    fn on_access_event(&mut self, elements: &mut Elements, event: AccessEvent) -> Result<(), IsshoError> {
+    fn on_access_event(
+        &mut self,
+        _elements: &mut RetainedElements,
+        event_queue: &mut VecDeque<EventKind>,
+        _states: &mut ElementStates,
+        event: AccessEvent,
+    ) -> Result<(), IsshoError> {
         if let AccessEvent::Toggle = event {
-            self.toggle(elements);
+            self.toggle(event_queue);
         }
         Ok(())
     }
 }
 
 impl Checkbox {
-    pub fn new(elements: &mut Elements, label: &str, checked: bool) -> Self {
+    pub fn new(app: &mut App, label: &str, checked: bool) -> Self {
+        Self {
+            inner: CheckboxElement::insert(
+                &mut app.elements,
+                &mut app.gummy_tree,
+                &app.access_tree,
+                &mut app.by_internal_id,
+                label,
+                checked,
+            ),
+        }
+    }
+}
+
+impl CheckboxElement {
+    fn toggle(&mut self, event_queue: &mut VecDeque<EventKind>) {
+        self.checked = !self.checked;
+        self.element_data.set_accessibility_checked(self.checked);
+        let target = self.element_data.me;
+        event_queue.push_back(EventKind::CheckboxToggled(CheckboxToggledEvent::new(
+            target,
+            self.label.clone(),
+            self.checked,
+        )));
+        self.request_window_redraw();
+    }
+
+    pub(crate) fn insert(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        label: &str,
+        checked: bool,
+    ) -> DynElement {
         let size = 16.0;
-        let inner = elements.insert_with(|me, access_tree| {
+        let inner = elements.insert_with(access_tree, by_internal_id, |me, access_tree| {
             Box::new(CheckboxElement {
                 element_data: ElementData::new(me, true, access_tree.clone()),
                 box_layout: ElementData::new_pseudo(me, false, access_tree),
@@ -202,10 +271,6 @@ impl Checkbox {
             inner_mut.element_data.set_accessibility_role(issho::Role::CheckBox);
             inner_mut.element_data.set_accessibility_name(label.to_string());
             inner_mut.element_data.set_accessibility_checked(checked);
-        }
-        {
-            let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
-            let inner_mut = elements.get_as_mut::<CheckboxElement>(inner);
             inner_mut.element_data.create_layout_node(gummy_tree, None);
             inner_mut.box_layout.create_layout_node(gummy_tree, None);
             let box_node = inner_mut.box_layout.layout.gummy_node_id();
@@ -213,20 +278,6 @@ impl Checkbox {
             gummy_tree.register_owner(box_node, inner_mut.element_data.internal_id, inner);
         }
 
-        Self { inner }
-    }
-}
-
-impl CheckboxElement {
-    fn toggle(&mut self, elements: &mut Elements) {
-        self.checked = !self.checked;
-        self.element_data.set_accessibility_checked(self.checked);
-        let target = self.element_data.me;
-        elements.queue_event(EventKind::CheckboxToggled(CheckboxToggledEvent::new(
-            target,
-            self.label.clone(),
-            self.checked,
-        )));
-        self.request_window_redraw();
+        inner
     }
 }

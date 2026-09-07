@@ -1,6 +1,6 @@
-use retgui::elements::{Container, Element, Elements, Text, Window};
+use retgui::elements::{Container, Element, Text, Window};
 use retgui::style::{AlignItems, FlexDirection, JustifyContent};
-use retgui::{Color, RetGuiOptions, pct, px, retgui_main, rgb};
+use retgui::{App, Color, RetGuiOptions, pct, px, retgui_main, rgb};
 
 use util::setup_logging;
 
@@ -8,33 +8,30 @@ struct Greeting {
     name: String,
 }
 
-pub fn custom_event(elements: &mut Elements) -> Container {
-    let message = Text::new(elements, "No event received yet");
+pub fn custom_event(app: &mut App) -> Container {
+    let message = Text::new(app, "No event received yet");
 
-    let receiver = Container::new(elements)
-        .edit(elements)
-        .add_custom_event_listener(move |event, elements| {
+    let receiver = Container::new(app)
+        .edit(app)
+        .add_custom_event_listener(move |event, app| {
             if let Some(greeting) = event.data::<Greeting>() {
-                message
-                    .edit(elements)
-                    .text(&format!("Hello, {}!", greeting.name))
-                    .finish();
+                message.edit(app).text(&format!("Hello, {}!", greeting.name)).finish();
             }
         })
         .push(message)
         .finish();
 
-    let button_label = Text::new(elements, "Send custom event")
-        .edit(elements)
+    let button_label = Text::new(app, "Send custom event")
+        .edit(app)
         .color(Color::WHITE)
         .finish();
-    let button = Container::new(elements)
-        .edit(elements)
+    let button = Container::new(app)
+        .edit(app)
         .padding(px(12), px(20), px(12), px(20))
         .background_color(rgb(59, 130, 246))
-        .add_click_listener(move |_event, elements| {
+        .add_click_listener(move |_event, app| {
             receiver.emit_custom_event(
-                elements,
+                app,
                 Greeting {
                     name: "Mary".to_string(),
                 },
@@ -43,8 +40,8 @@ pub fn custom_event(elements: &mut Elements) -> Container {
         .push(button_label)
         .finish();
 
-    Container::new(elements)
-        .edit(elements)
+    Container::new(app)
+        .edit(app)
         .flex_direction(FlexDirection::Column)
         .justify_content(JustifyContent::Center)
         .align_items(AlignItems::Center)
@@ -58,13 +55,13 @@ pub fn custom_event(elements: &mut Elements) -> Container {
 
 pub fn main() {
     setup_logging();
-    let mut elements = Elements::new();
-    let content = custom_event(&mut elements);
-    Window::new(&mut elements, "Custom Event")
-        .edit(&mut elements)
+    let mut app = App::new();
+    let content = custom_event(&mut app);
+    Window::new(&mut app, "Custom Event")
+        .edit(&mut app)
         .width(pct(100))
         .height(pct(100))
         .push(content)
         .finish();
-    retgui_main(elements, RetGuiOptions::basic("Custom Event"));
+    retgui_main(app, RetGuiOptions::basic("Custom Event"));
 }

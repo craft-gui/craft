@@ -1,8 +1,9 @@
+use std::any::Any;
 use std::rc::Rc;
 #[cfg(not(target_arch = "wasm32"))]
 use std::time::{Duration, Instant};
 
-use gummy::AvailableSpace;
+use gummy::{AvailableSpace, Size as GummySize};
 
 use retgui_primitives::brush::Brush;
 use retgui_primitives::geometry::{Rectangle, Size};
@@ -14,7 +15,9 @@ use retgui_renderer::text_renderer_data::{TextData, TextSnapshot};
 use web_time::{Duration, Instant};
 
 use crate::Color;
-use crate::elements::{Element, ElementInternals, Elements, HasElementData as _, Text, TextElement};
+use crate::accessibility::RetGuiAccessTree;
+use crate::elements::{DynElement, ElementIds, ElementInternals, HasElementData as _, RetainedElements, TextElement};
+use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
 
 const FPS_SAMPLE_INTERVAL: Duration = Duration::from_millis(250);
@@ -41,7 +44,7 @@ pub(crate) struct RenderStats {
 
 pub(crate) struct PerfStats {
     enabled: bool,
-    text: Text,
+    text: DynElement,
     frames_since_sample: u32,
     sample_start: Instant,
     frame_total: Duration,
@@ -104,12 +107,17 @@ impl RenderStats {
 }
 
 impl PerfStats {
-    pub(crate) fn new(elements: &mut Elements) -> Self {
-        let text = Text::new(elements, "");
-        text.set_selectable(elements, false);
-        text.set_font_size(elements, 16.0);
-        text.set_color(elements, Color::WHITE);
-
+    pub(crate) fn new(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> Self {
+        let text = TextElement::insert(elements, gummy_tree, access_tree, by_internal_id, "");
+        let text_element = elements.get_as_mut::<TextElement>(text);
+        text_element.set_selectable(false);
+        text_element.set_font_size(gummy_tree, 16.0);
+        text_element.set_text_brush(gummy_tree, Brush::Color(Color::WHITE));
         let mut stats = Self {
             enabled: false,
             text,
@@ -120,7 +128,7 @@ impl PerfStats {
             render: RenderStats::default(),
             scale_factor: 1.0,
         };
-        stats.reset(elements);
+        stats.reset(elements, gummy_tree);
         stats
     }
 
@@ -128,9 +136,14 @@ impl PerfStats {
         self.enabled
     }
 
-    pub(crate) fn toggle(&mut self, elements: &mut Elements, renderer: &mut dyn Renderer) {
+    pub(crate) fn toggle(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        renderer: &mut dyn Renderer,
+    ) {
         self.enabled = !self.enabled;
-        self.reset(elements);
+        self.reset(elements, gummy_tree);
         renderer.set_vsync(!self.enabled);
     }
 
@@ -142,7 +155,8 @@ impl PerfStats {
 
     pub(crate) fn draw(
         &mut self,
-        elements: &mut Elements,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
         renderer: &mut dyn Renderer,
         text_context: &mut TextContext,
         scale_factor: f64,
@@ -151,8 +165,8 @@ impl PerfStats {
             return;
         }
 
-        self.update_debug_text(elements);
-        let (text_size, snapshot) = self.layout_text(elements, text_context, scale_factor);
+        self.update_debug_text(elements, gummy_tree);
+        let (text_size, snapshot) = self.layout_text(elements, gummy_tree, text_context, scale_factor);
 
         renderer.start_overlay();
         let panel = Rectangle::new(
@@ -181,17 +195,19 @@ impl PerfStats {
         renderer.end_overlay();
     }
 
-    fn reset(&mut self, elements: &mut Elements) {
+    fn reset(&mut self, elements: &mut RetainedElements, gummy_tree: &mut GummyTree) {
         self.frames_since_sample = 0;
         self.sample_start = Instant::now();
         self.frame_total = Duration::from_secs(0);
         self.layout = LayoutStats::default();
         self.render = RenderStats::default();
         let debug_text = self.debug_text(0.0);
-        self.text.set_text(elements, &debug_text);
+        elements
+            .get_as_mut::<TextElement>(self.text)
+            .set_text(gummy_tree, &debug_text);
     }
 
-    fn update_debug_text(&mut self, elements: &mut Elements) {
+    fn update_debug_text(&mut self, elements: &mut RetainedElements, gummy_tree: &mut GummyTree) {
         self.frames_since_sample += 1;
         let elapsed = self.sample_start.elapsed();
         if elapsed < FPS_SAMPLE_INTERVAL {
@@ -202,7 +218,9 @@ impl PerfStats {
         self.frames_since_sample = 0;
         self.sample_start = Instant::now();
         let debug_text = self.debug_text(fps);
-        self.text.set_text(elements, &debug_text);
+        elements
+            .get_as_mut::<TextElement>(self.text)
+            .set_text(gummy_tree, &debug_text);
     }
 
     fn debug_text(&self, fps: f64) -> String {
@@ -241,26 +259,25 @@ impl PerfStats {
 
     fn layout_text(
         &mut self,
-        elements: &mut Elements,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
         text_context: &mut TextContext,
         scale_factor: f64,
     ) -> (Size<f32>, Rc<dyn TextData>) {
-        let text = self.text.inner;
+        let text = self.text;
         let scale_changed = (self.scale_factor - scale_factor).abs() > f64::EPSILON;
         self.scale_factor = scale_factor;
         elements.dispatch_mut(text, |element, elements| {
-            let text_inner = (element as &mut dyn std::any::Any)
-                .downcast_mut::<TextElement>()
-                .unwrap();
+            let text_inner = (element as &mut dyn Any).downcast_mut::<TextElement>().unwrap();
             if scale_changed {
-                text_inner.set_scale_factor(elements, scale_factor);
+                text_inner.set_scale_factor(elements, gummy_tree, scale_factor);
             }
             let size = text_inner.measure(
-                gummy::Size {
+                GummySize {
                     width: None,
                     height: None,
                 },
-                gummy::Size {
+                GummySize {
                     width: AvailableSpace::MaxContent,
                     height: AvailableSpace::MaxContent,
                 },

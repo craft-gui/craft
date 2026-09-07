@@ -2,9 +2,8 @@ use std::collections::VecDeque;
 
 use issho::{AccessEvent, ScrollAmount, ScrollEvent};
 
-use retgui_primitives::geometry::{Point, Vec2};
 use retgui_primitives::geometry::borders::CssRoundedRect;
-use retgui_primitives::geometry::{Rectangle, Size};
+use retgui_primitives::geometry::{Point, Rectangle, Size, Vec2};
 
 use retgui_renderer::renderer::Renderer;
 
@@ -12,7 +11,7 @@ use winit::event::ElementState;
 use winit::keyboard::KeyCode;
 
 use crate::elements::element_data::ElementData;
-use crate::elements::{DynElement, ElementInternals, Elements};
+use crate::elements::{DynElement, ElementInternals, RetainedElements};
 use crate::events::{Event, EventKind, PointerButton, PointerId, PointerType, ScrollDelta, ScrollEvent as RetGuiScrollEvent};
 use crate::layout::layout::{CssComputedBorder, Layout, draw_borders_generic};
 use crate::style::{Overflow, Style};
@@ -101,17 +100,17 @@ impl ScrollState {
     }
 }
 
-pub(crate) fn scroll_to_bottom(elements: &mut Elements, data: &mut ElementData) -> bool {
+pub(crate) fn scroll_to_bottom(event_queue: &mut VecDeque<EventKind>, data: &mut ElementData) -> bool {
     let bottom_y = data.layout.max_scroll_y;
-    scroll_to(elements, data, bottom_y)
+    scroll_to(event_queue, data, bottom_y)
 }
 
-pub(crate) fn scroll_to_top(elements: &mut Elements, data: &mut ElementData) -> bool {
-    scroll_to(elements, data, 0.0)
+pub(crate) fn scroll_to_top(event_queue: &mut VecDeque<EventKind>, data: &mut ElementData) -> bool {
+    scroll_to(event_queue, data, 0.0)
 }
 
 /// Scroll to y. A valid y is in the interval [0, max_scroll_y].
-pub(crate) fn scroll_to(elements: &mut Elements, data: &mut ElementData, y: f32) -> bool {
+pub(crate) fn scroll_to(event_queue: &mut VecDeque<EventKind>, data: &mut ElementData, y: f32) -> bool {
     if !data.is_scrollable() {
         return false;
     }
@@ -120,18 +119,19 @@ pub(crate) fn scroll_to(elements: &mut Elements, data: &mut ElementData, y: f32)
     data.apply_accessibility_scroll_data();
 
     let target = data.me;
-    elements.queue_event(EventKind::Scroll(RetGuiScrollEvent::new(target)));
+    event_queue.push_back(EventKind::Scroll(RetGuiScrollEvent::new(target)));
     changed
 }
 
 /// Scroll an amount y from the current scroll position.
-pub(crate) fn scroll_by(elements: &mut Elements, data: &mut ElementData, y: f32) -> bool {
-    scroll_to(elements, data, data.scroll().scroll_y() + y)
+pub(crate) fn scroll_by(event_queue: &mut VecDeque<EventKind>, data: &mut ElementData, y: f32) -> bool {
+    scroll_to(event_queue, data, data.scroll().scroll_y() + y)
 }
 
 /// Scrolls to a child with the `id` and uses level-order traversal.
 pub(crate) fn scroll_to_child_by_id_with_options(
-    elements: &mut Elements,
+    elements: &RetainedElements,
+    event_queue: &mut VecDeque<EventKind>,
     data: &mut ElementData,
     id: &str,
     options: ScrollOptions,
@@ -187,7 +187,7 @@ pub(crate) fn scroll_to_child_by_id_with_options(
 
     if let Some(child_y) = child_y {
         let offset = options.offset.unwrap_or(Point::new(0.0, 0.0));
-        scroll_to(elements, data, child_y + offset.y as f32)
+        scroll_to(event_queue, data, child_y + offset.y as f32)
     } else {
         false
     }
@@ -303,12 +303,30 @@ pub struct HandleScrollLogicResult {
     pub pointer_id: Option<PointerId>,
 }
 
-pub(crate) fn handle_scroll_logic(elements: &mut Elements, element: &mut dyn ElementInternals, event: &mut EventKind) {
-    handle_scroll_logic_internal(elements, element, event, true);
+pub(crate) fn handle_scroll_logic(
+    elements: &mut RetainedElements,
+    event_queue: &mut VecDeque<EventKind>,
+    focus: &mut Option<DynElement>,
+    focus_outline_visible: bool,
+    element: &mut dyn ElementInternals,
+    event: &mut EventKind,
+) {
+    handle_scroll_logic_internal(
+        elements,
+        event_queue,
+        focus,
+        focus_outline_visible,
+        element,
+        event,
+        true,
+    );
 }
 
 fn handle_scroll_logic_internal(
-    elements: &mut Elements,
+    elements: &mut RetainedElements,
+    event_queue: &mut VecDeque<EventKind>,
+    focus: &mut Option<DynElement>,
+    focus_outline_visible: bool,
     element: &mut dyn ElementInternals,
     event: &mut EventKind,
     focus_on_pointer_down: bool,
@@ -332,7 +350,7 @@ fn handle_scroll_logic_internal(
         element.request_window_redraw();
 
         if matches!(event, EventKind::KeyDown(_) | EventKind::KeyUp(_)) {
-            elements.queue_event(EventKind::Scroll(RetGuiScrollEvent::new(element.to_dyn_element())));
+            event_queue.push_back(EventKind::Scroll(RetGuiScrollEvent::new(element.to_dyn_element())));
         }
     }
 
@@ -345,7 +363,7 @@ fn handle_scroll_logic_internal(
     }
 
     if focus_on_pointer_down {
-        element.focus(elements);
+        element.focus(elements, event_queue, focus, focus_outline_visible);
         event.stop_propagation();
     }
 }
@@ -512,24 +530,29 @@ pub(crate) fn handle_scroll_logic_advance(
 }
 
 pub(crate) fn handle_accessibility_scroll_event(
-    elements: &mut Elements,
+    elements: &mut RetainedElements,
+    event_queue: &mut VecDeque<EventKind>,
     element: &mut dyn ElementInternals,
     event: &AccessEvent,
 ) {
     match event {
         AccessEvent::Scroll(scroll_event) => {
-            if scroll_from_accessibility(elements, element.element_data_mut(), *scroll_event) {
+            if scroll_from_accessibility(event_queue, element.element_data_mut(), *scroll_event) {
                 element.request_window_redraw();
             }
         }
         AccessEvent::ScrollIntoView => {
-            scroll_into_view(elements, element);
+            scroll_into_view(elements, event_queue, element);
         }
         _ => {}
     }
 }
 
-fn scroll_from_accessibility(elements: &mut Elements, data: &mut ElementData, event: ScrollEvent) -> bool {
+fn scroll_from_accessibility(
+    event_queue: &mut VecDeque<EventKind>,
+    data: &mut ElementData,
+    event: ScrollEvent,
+) -> bool {
     if !data.is_scrollable() {
         return false;
     }
@@ -552,10 +575,14 @@ fn scroll_from_accessibility(elements: &mut Elements, data: &mut ElementData, ev
         }
     };
 
-    scroll_to(elements, data, target)
+    scroll_to(event_queue, data, target)
 }
 
-fn scroll_into_view(elements: &mut Elements, element: &mut dyn ElementInternals) -> bool {
+fn scroll_into_view(
+    elements: &mut RetainedElements,
+    event_queue: &mut VecDeque<EventKind>,
+    element: &mut dyn ElementInternals,
+) -> bool {
     let target = element.element_data().layout.world_box().border_rectangle();
     let mut ancestor = element.element_data().parent;
 
@@ -585,8 +612,8 @@ fn scroll_into_view(elements: &mut Elements, element: &mut dyn ElementInternals)
             if target_scroll == current {
                 return false;
             }
-            let changed = elements.dispatch_mut(ancestor_handle, |ancestor, elements| {
-                scroll_to(elements, ancestor.element_data_mut(), target_scroll)
+            let changed = elements.dispatch_mut(ancestor_handle, |ancestor, _elements| {
+                scroll_to(event_queue, ancestor.element_data_mut(), target_scroll)
             });
             if changed {
                 elements.get(ancestor_handle).request_window_redraw();

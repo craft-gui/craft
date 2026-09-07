@@ -1,6 +1,7 @@
 //! Stores one or more elements.
 
 use std::any::Any;
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use issho::{SelectionData, SelectionGroup};
@@ -11,10 +12,11 @@ use retgui_resource_manager::ResourceManager;
 
 use winit::keyboard::KeyCode;
 
+use crate::App;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementInternals, Elements, RadioElement, scrollable};
+use crate::elements::{DynElement, Element, ElementIds, ElementInternals, ElementStates, RadioElement, RetGuiAccessTree, RetainedElements, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
@@ -49,8 +51,21 @@ impl crate::elements::HasElementData for RadioGroupElement {
 }
 
 impl ElementInternals for RadioGroupElement {
-    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
+    fn deep_clone(
+        &self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(
+            self,
+            elements,
+            gummy_tree,
+            access_tree,
+            by_internal_id,
+            |_, _| None,
+        ))
     }
 
     fn apply_layout(
@@ -65,17 +80,39 @@ impl ElementInternals for RadioGroupElement {
 
     fn draw(
         &self,
-        elements: &Elements,
+        elements: &RetainedElements,
+        states: &ElementStates,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
         text_context: &mut TextContext,
     ) {
-        draw_generic_container(self, elements, renderer, resource_manager, text_context, scale_factor);
+        draw_generic_container(
+            self,
+            elements,
+            states,
+            renderer,
+            resource_manager,
+            text_context,
+            scale_factor,
+        );
     }
 
-    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
-        scrollable::handle_scroll_logic(elements, self, event);
+    fn on_event(
+        &mut self,
+        elements: &mut RetainedElements,
+        _gummy_tree: &mut GummyTree,
+        _access_tree: &RetGuiAccessTree,
+        _by_internal_id: &mut ElementIds,
+        event_queue: &mut VecDeque<EventKind>,
+        focus: &mut Option<DynElement>,
+        focus_outline_visible: bool,
+        _pending_animation_updates: &mut Vec<(DynElement, bool)>,
+        states: &mut ElementStates,
+        event: &mut EventKind,
+        _text_context: &mut TextContext,
+    ) {
+        scrollable::handle_scroll_logic(elements, event_queue, focus, focus_outline_visible, self, event);
 
         if let EventKind::KeyDown(keyboard_event) = event {
             let direction = match keyboard_event.code {
@@ -84,7 +121,9 @@ impl ElementInternals for RadioGroupElement {
                 _ => None,
             };
 
-            if direction.is_some_and(|direction| self.move_selection(elements, direction)) {
+            if direction.is_some_and(|direction| {
+                self.move_selection(elements, event_queue, focus, focus_outline_visible, states, direction)
+            }) {
                 keyboard_event.stop_propagation();
                 keyboard_event.prevent_default();
             }
@@ -93,7 +132,15 @@ impl ElementInternals for RadioGroupElement {
 }
 
 impl RadioGroupElement {
-    fn move_selection(&mut self, elements: &mut Elements, direction: isize) -> bool {
+    fn move_selection(
+        &mut self,
+        elements: &mut RetainedElements,
+        event_queue: &mut VecDeque<EventKind>,
+        focus: &mut Option<DynElement>,
+        focus_outline_visible: bool,
+        states: &mut ElementStates,
+        direction: isize,
+    ) -> bool {
         let radios = self
             .element_data
             .children
@@ -114,30 +161,34 @@ impl RadioGroupElement {
             let next_handle = radios[next_index];
             elements.dispatch_mut(next_handle, |next, elements| {
                 let next = (next as &mut dyn Any).downcast_mut::<RadioElement>().unwrap();
-                next.focus(elements);
-                next.set_value_from_group(elements);
+                next.focus(elements, event_queue, focus, focus_outline_visible);
+                next.set_value_from_group(elements.store_id(), event_queue, states);
             });
         }
         for radio in radios {
             let state = elements.get_as::<RadioElement>(radio).active_value;
-            let selected = elements.state(state).clone();
+            let selected = state.read_from(states, elements.store_id()).clone();
             elements
                 .get_as_mut::<RadioElement>(radio)
                 .set_accessibility_selection(&selected);
         }
         true
     }
-}
 
-impl RadioGroup {
-    pub fn new(elements: &mut Elements, label: &str) -> Self {
-        let inner = elements.insert_with(|me, access_tree| {
+    pub(crate) fn insert(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        label: &str,
+    ) -> DynElement {
+        let inner = elements.insert_with(access_tree, by_internal_id, |me, access_tree| {
             Box::new(RadioGroupElement {
                 element_data: ElementData::new(me, true, access_tree),
             })
         });
-        elements.create_layout_node(inner, None);
         let inner_mut = elements.get_as_mut::<RadioGroupElement>(inner);
+        inner_mut.element_data.create_layout_node(gummy_tree, None);
         {
             inner_mut.element_data.set_accessibility_role(issho::Role::Group);
             inner_mut.element_data.set_accessibility_name(label.to_string());
@@ -148,6 +199,20 @@ impl RadioGroup {
                     multiple_selectable: false,
                 })));
         }
-        Self { inner }
+        inner
+    }
+}
+
+impl RadioGroup {
+    pub fn new(app: &mut App, label: &str) -> Self {
+        Self {
+            inner: RadioGroupElement::insert(
+                &mut app.elements,
+                &mut app.gummy_tree,
+                &app.access_tree,
+                &mut app.by_internal_id,
+                label,
+            ),
+        }
     }
 }

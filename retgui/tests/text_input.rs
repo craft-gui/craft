@@ -11,14 +11,14 @@ mod test_utils;
 fn type_hello() {
     run(
         "text_input_hello_test",
-        |elements| {
-            let text_input = TextInput::new(elements, "")
-                .edit(elements)
+        |app| {
+            let text_input = TextInput::new(app, "")
+                .edit(app)
                 .font_size(32.0)
                 .width(px(300))
                 .finish();
-            let window = Window::new_with_renderer(elements, "Text input", RendererType::VelloCPU)
-                .edit(elements)
+            let window = Window::new_with_renderer(app, "Text input", RendererType::VelloCPU)
+                .edit(app)
                 .justify_content(JustifyContent::Center)
                 .align_items(AlignItems::Center)
                 .width(pct(100))
@@ -32,7 +32,7 @@ fn type_hello() {
             test.click(&text_input);
             test.type_text(&window, "Hello");
 
-            assert_eq!(text_input.text(test.elements()), "Hello");
+            assert_eq!(text_input.text(test.app()), "Hello");
             test_utils::check_snapshot(test_utils::screenshot_rgb(test, &window), "text_input_hello.png");
         },
     );
@@ -42,14 +42,14 @@ fn type_hello() {
 fn set_cursor_after_ll() {
     run(
         "text_input_set_cursor_after_ll_test",
-        |elements| {
-            let text_input = TextInput::new(elements, "Hello")
-                .edit(elements)
+        |app| {
+            let text_input = TextInput::new(app, "Hello")
+                .edit(app)
                 .font_size(32.0)
                 .width(px(300))
                 .finish();
-            let window = Window::new_with_renderer(elements, "Text input cursor", RendererType::VelloCPU)
-                .edit(elements)
+            let window = Window::new_with_renderer(app, "Text input cursor", RendererType::VelloCPU)
+                .edit(app)
                 .justify_content(JustifyContent::Center)
                 .align_items(AlignItems::Center)
                 .width(pct(100))
@@ -60,9 +60,7 @@ fn set_cursor_after_ll() {
         },
         |test, (text_input, window)| {
             test.open(&window, Size::new(800.0, 600.0));
-            let content_box = text_input
-                .computed_box_transformed(test.elements_mut())
-                .content_rectangle();
+            let content_box = text_input.computed_box_transformed(test.app_mut()).content_rectangle();
             test.pointer_move(
                 &window,
                 Point::new(
@@ -85,14 +83,14 @@ fn set_cursor_after_ll() {
 fn select_ll() {
     run(
         "text_input_select_ll_test",
-        |elements| {
-            let text_input = TextInput::new(elements, "Hello")
-                .edit(elements)
+        |app| {
+            let text_input = TextInput::new(app, "Hello")
+                .edit(app)
                 .font_size(32.0)
                 .width(px(300))
                 .finish();
-            let window = Window::new_with_renderer(elements, "Text input selection", RendererType::VelloCPU)
-                .edit(elements)
+            let window = Window::new_with_renderer(app, "Text input selection", RendererType::VelloCPU)
+                .edit(app)
                 .justify_content(JustifyContent::Center)
                 .align_items(AlignItems::Center)
                 .width(pct(100))
@@ -103,9 +101,7 @@ fn select_ll() {
         },
         |test, (text_input, window)| {
             test.open(&window, Size::new(800.0, 600.0));
-            let content_box = text_input
-                .computed_box_transformed(test.elements_mut())
-                .content_rectangle();
+            let content_box = text_input.computed_box_transformed(test.app_mut()).content_rectangle();
             let text_y = (content_box.y + content_box.height / 2.0) as f64;
             test.pointer_move(&window, Point::new((content_box.x + 43.0) as f64, text_y));
             test.pointer_down(&window);

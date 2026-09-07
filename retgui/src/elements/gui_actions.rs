@@ -2,9 +2,11 @@ use std::future::Future;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, OnceLock};
 
-use crate::elements::Elements;
+use retgui_runtime::RetGuiRuntime;
 
-type GuiAction = Box<dyn FnOnce(&mut Elements) + 'static>;
+use crate::App;
+
+type GuiAction = Box<dyn FnOnce(&mut App) + 'static>;
 type GuiWaker = Arc<dyn Fn() + Send + Sync + 'static>;
 
 pub(crate) struct GuiActionQueue {
@@ -27,15 +29,13 @@ impl GuiActionQueue {
     where
         F: Future<Output = O> + 'static,
         O: 'static,
-        C: FnOnce(O, &mut Elements) + 'static,
+        C: FnOnce(O, &mut App) + 'static,
     {
         let sender = self.sender.clone();
         let waker = self.waker.clone();
-        retgui_runtime::RetGuiRuntime::spawn_local(async move {
+        RetGuiRuntime::spawn_local(async move {
             let output = future.await;
-            if sender
-                .send(Box::new(move |elements| on_complete(output, elements)))
-                .is_ok()
+            if sender.send(Box::new(move |app| on_complete(output, app))).is_ok()
                 && let Some(waker) = waker.get()
             {
                 waker();

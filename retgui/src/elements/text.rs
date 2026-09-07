@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::rc::Rc;
 use std::sync::Arc;
 #[cfg(not(target_arch = "wasm32"))]
@@ -26,11 +27,11 @@ use web_time as time;
 
 use winit::dpi;
 
-use crate::events::PointerButton;
+use crate::App;
 use crate::elements::element_data::ElementData;
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementInternals, Elements};
-use crate::events::{Event, EventKind};
+use crate::elements::{DynElement, Element, ElementIds, ElementInternals, ElementStates, RetGuiAccessTree, RetainedElements};
+use crate::events::{Event, EventKind, PointerButton};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{GummyTextContext, LayoutContext, TextHashKey};
 use crate::style::{Style, TextAlign};
@@ -143,15 +144,28 @@ impl Default for TextState {
 }
 
 impl ElementInternals for TextElement {
-    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
-            let node = element.element_data.layout.gummy_node_id();
-            let context = LayoutContext::Text(GummyTextContext {
-                element: element.element_data.me,
-            });
-            gummy_tree.set_node_context(node, Some(context));
-            Some(node)
-        }))
+    fn deep_clone(
+        &self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(
+            self,
+            elements,
+            gummy_tree,
+            access_tree,
+            by_internal_id,
+            |element, gummy_tree| {
+                let node = element.element_data.layout.gummy_node_id();
+                let context = LayoutContext::Text(GummyTextContext {
+                    element: element.element_data.me,
+                });
+                gummy_tree.set_node_context(node, Some(context));
+                Some(node)
+            },
+        ))
     }
 
     fn apply_layout(
@@ -200,7 +214,8 @@ impl ElementInternals for TextElement {
 
     fn draw(
         &self,
-        _elements: &Elements,
+        _elements: &RetainedElements,
+        _states: &ElementStates,
         _renderer: &mut dyn Renderer,
         _resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -224,7 +239,20 @@ impl ElementInternals for TextElement {
         self.maybe_end_overlay(_renderer);
     }
 
-    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
+    fn on_event(
+        &mut self,
+        elements: &mut RetainedElements,
+        _gummy_tree: &mut GummyTree,
+        _access_tree: &RetGuiAccessTree,
+        _by_internal_id: &mut ElementIds,
+        _event_queue: &mut VecDeque<EventKind>,
+        _focus: &mut Option<DynElement>,
+        _focus_outline_visible: bool,
+        _pending_animation_updates: &mut Vec<(DynElement, bool)>,
+        _states: &mut ElementStates,
+        event: &mut EventKind,
+        _text_context: &mut TextContext,
+    ) {
         if !self.selectable {
             return;
         }
@@ -300,12 +328,12 @@ impl ElementInternals for TextElement {
         }
     }
 
-    fn set_scale_factor(&mut self, elements: &mut Elements, scale_factor: f64) {
+    fn set_scale_factor(&mut self, _elements: &mut RetainedElements, gummy_tree: &mut GummyTree, scale_factor: f64) {
         self.element_data.applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         self.state.is_layout_dirty = true;
         self.state.is_render_dirty = true;
-        self.mark_dirty(&mut elements.gummy_tree);
+        self.mark_dirty(gummy_tree);
         self.state.scale_factor = scale_factor;
     }
 
@@ -329,58 +357,44 @@ impl ElementInternals for TextElement {
 }
 
 impl Text {
-    pub fn new(elements: &mut Elements, text: &str) -> Self {
-        let inner = elements.insert_with(|me, access_tree| {
-            Box::new(TextElement {
-                element_data: ElementData::new(me, false, access_tree),
-                selectable: true,
-                state: TextState::default(),
-            })
-        });
-        let inner_mut = elements.get_as_mut::<TextElement>(inner);
-
-        inner_mut.element_data.set_accessibility_role(issho::Role::Label);
-        let selectable = inner_mut.selectable;
-        inner_mut.set_selectable(selectable);
-
-        let text_context = Some(LayoutContext::Text(GummyTextContext {
-            element: inner_mut.element_data.me,
-        }));
-        let _ = inner_mut;
-        elements.create_layout_node(inner, text_context);
-        Text { inner }.set_text(elements, text);
-
-        Text { inner }
+    pub fn new(app: &mut App, text: &str) -> Self {
+        Self {
+            inner: TextElement::insert(
+                &mut app.elements,
+                &mut app.gummy_tree,
+                &app.access_tree,
+                &mut app.by_internal_id,
+                text,
+            ),
+        }
     }
 
-    pub fn is_selectable(&self, elements: &Elements) -> bool {
-        elements
-            .try_get_as::<TextElement>(self.inner)
+    pub fn is_selectable(&self, app: &App) -> bool {
+        app.try_get_as::<TextElement>(self.inner)
             .is_some_and(|text| text.selectable)
     }
 
-    pub fn set_selectable(&self, elements: &mut Elements, selectable: bool) {
-        if let Some(text) = elements.try_get_as_mut::<TextElement>(self.inner) {
+    pub fn set_selectable(&self, app: &mut App, selectable: bool) {
+        if let Some(text) = app.try_get_as_mut::<TextElement>(self.inner) {
             text.set_selectable(selectable);
         }
     }
 
     /// Returns the current text, or an empty string if this handle is stale.
-    pub fn text(&self, elements: &Elements) -> String {
-        elements
-            .try_get_as::<TextElement>(self.inner)
+    pub fn text(&self, app: &App) -> String {
+        app.try_get_as::<TextElement>(self.inner)
             .map_or_else(String::new, |text| text.get_text().to_owned())
     }
 
-    pub fn set_text(&self, elements: &mut Elements, text: &str) {
-        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+    pub fn set_text(&self, app: &mut App, text: &str) {
+        let (gummy_tree, elements) = (&mut app.gummy_tree, &mut app.elements);
         if let Some(element) = elements.try_get_as_mut::<TextElement>(self.inner) {
             element.set_text(gummy_tree, text);
         }
     }
 
-    pub fn set_text_smol_str(&self, elements: &mut Elements, text: SmolStr) {
-        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+    pub fn set_text_smol_str(&self, app: &mut App, text: SmolStr) {
+        let (gummy_tree, elements) = (&mut app.gummy_tree, &mut app.elements);
         if let Some(element) = elements.try_get_as_mut::<TextElement>(self.inner) {
             element.set_text_smol_str(gummy_tree, text);
         }
@@ -388,6 +402,32 @@ impl Text {
 }
 
 impl TextElement {
+    pub(crate) fn insert(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        text: &str,
+    ) -> DynElement {
+        let inner = elements.insert_with(access_tree, by_internal_id, |me, access_tree| {
+            Box::new(TextElement {
+                element_data: ElementData::new(me, false, access_tree),
+                selectable: true,
+                state: TextState::default(),
+            })
+        });
+        let inner_mut = elements.get_as_mut::<TextElement>(inner);
+        inner_mut.element_data.set_accessibility_role(issho::Role::Label);
+        let selectable = inner_mut.selectable;
+        inner_mut.set_selectable(selectable);
+        let text_context = Some(LayoutContext::Text(GummyTextContext {
+            element: inner_mut.element_data.me,
+        }));
+        inner_mut.element_data.create_layout_node(gummy_tree, text_context);
+        inner_mut.set_text(gummy_tree, text);
+        inner
+    }
+
     pub fn set_selectable(&mut self, selectable: bool) -> &mut Self {
         self.selectable = selectable;
         self.element_data.set_selectable(self.selectable);
@@ -639,22 +679,21 @@ mod animation_tests {
 
     use retgui_renderer::text_renderer_data::TextRender;
 
-    use crate::elements::Elements;
-    use crate::style::{Animation, KeyFrame, Repeat, StyleVariant, TimingFunction};
-    use crate::{Brush, Color};
     use super::{Text, TextElement};
+    use crate::style::{Animation, KeyFrame, Repeat, StyleVariant, TimingFunction};
+    use crate::{App, Brush, Color};
 
     #[test]
     fn animated_brush_refreshes_snapshot_without_cloning_glyph_data() {
-        let mut elements = Elements::new();
-        let text = Text::new(&mut elements, "animated");
+        let mut app = App::new();
+        let text = Text::new(&mut app, "animated");
         let render = Rc::new(TextRender {
             lines: Vec::new(),
             cursor: None,
             override_brush: None,
         });
         {
-            let text = elements.get_as_mut::<TextElement>(text.inner);
+            let text = app.get_as_mut::<TextElement>(text.inner);
             text.state.text_render = Some(render.clone());
             text.state.refresh_text_snapshot();
             text.element_data.animations = vec![
@@ -664,11 +703,17 @@ mod animation_tests {
             ];
         }
 
-        elements.dispatch_mut(text.inner, |text, elements| {
-            text.animation_tick(elements, Duration::from_millis(500));
+        app.elements.dispatch_mut(text.inner, |text, arena| {
+            text.animation_tick(
+                arena,
+                &mut app.gummy_tree,
+                &mut app.states,
+                &mut app.pending_resources,
+                Duration::from_millis(500),
+            );
         });
 
-        let text = elements.get_as::<TextElement>(text.inner);
+        let text = app.get_as::<TextElement>(text.inner);
         let snapshot = text.state.text_snapshot.as_ref().unwrap();
         assert!(snapshot.override_brush().is_some());
         assert_ne!(snapshot.override_brush(), Some(&Brush::Color(Color::BLACK)));

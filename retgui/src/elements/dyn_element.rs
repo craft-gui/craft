@@ -1,4 +1,4 @@
-//! A type-erased handle to an element stored in [`Elements`](crate::elements::Elements).
+//! A type-erased handle to an element stored in [`App`](crate::App).
 
 use slotmap::DefaultKey;
 

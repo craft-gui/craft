@@ -1,12 +1,12 @@
 //! An element to select a single item from a collapsable vertical list of options.
 
 use std::any::Any;
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use peniko::Color;
 
-use retgui_primitives::geometry::{BezPath, Rectangle, TrblRectangle};
-use retgui_primitives::geometry::{Affine, Point, Vec2};
+use retgui_primitives::geometry::{Affine, BezPath, Point, Rectangle, TrblRectangle, Vec2};
 
 use retgui_renderer::Brush;
 use retgui_renderer::renderer::Renderer;
@@ -18,53 +18,53 @@ use winit::keyboard::KeyCode;
 use crate::elements::element_data::ElementData as ElementDataStruct;
 use crate::elements::scrollable::{apply_scroll_layout, draw_scrollbar, handle_scroll_logic_advance, set_scroll_y};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementInternals, Elements, HasElementData};
+use crate::elements::{DynElement, Element, ElementIds, ElementInternals, ElementStates, HasElementData, RetGuiAccessTree, RetainedElements};
 use crate::events::{DropdownItemSelectedEvent, DropdownToggledEvent, Event, EventKind, PointerButton, PointerId};
 use crate::layout::GummyTree;
 use crate::layout::layout::Layout;
 use crate::style::{AlignItems, BoxShadow, Display, FlexDirection, Overflow, Position, Style, Unit};
 use crate::text::text_context::TextContext;
-use crate::{auto, px, rgba};
+use crate::{App, auto, px, rgba};
 
 /// An element to select a single item from a collapsable vertical list of options.
 ///
 /// # Example
 ///
 /// ```no_run
-/// use retgui::elements::{Dropdown, Element, Elements, Text, Window};
-/// use retgui::{RetGuiOptions, px, retgui_main};
+/// use retgui::elements::{Dropdown, Element, Text, Window};
+/// use retgui::{App, RetGuiOptions, px, retgui_main};
 ///
 /// fn main() {
-///     let mut elements = Elements::new();
-///     let item_1 = Text::new(&mut elements, "Item 1")
-///         .edit(&mut elements)
+///     let mut app = App::new();
+///     let item_1 = Text::new(&mut app, "Item 1")
+///         .edit(&mut app)
 ///         .font_size(20.0)
 ///         .selectable(false)
 ///         .finish();
-///     let item_2 = Text::new(&mut elements, "Item 2")
-///         .edit(&mut elements)
+///     let item_2 = Text::new(&mut app, "Item 2")
+///         .edit(&mut app)
 ///         .font_size(20.0)
 ///         .selectable(false)
 ///         .finish();
-///     let item_3 = Text::new(&mut elements, "Item 3")
-///         .edit(&mut elements)
+///     let item_3 = Text::new(&mut app, "Item 3")
+///         .edit(&mut app)
 ///         .font_size(20.0)
 ///         .selectable(false)
 ///         .finish();
 ///
-///     let dropdown = Dropdown::new(&mut elements)
-///         .edit(&mut elements)
+///     let dropdown = Dropdown::new(&mut app)
+///         .edit(&mut app)
 ///         .width(px(100))
 ///         .push(item_1)
 ///         .push(item_2)
 ///         .push(item_3)
 ///         .selected_item(0)
 ///         .finish();
-///     Window::new(&mut elements, "Dropdown")
-///         .edit(&mut elements)
+///     Window::new(&mut app, "Dropdown")
+///         .edit(&mut app)
 ///         .push(dropdown)
 ///         .finish();
-///     retgui_main(elements, RetGuiOptions::basic("Dropdown"));
+///     retgui_main(app, RetGuiOptions::basic("Dropdown"));
 /// }
 /// ```
 #[derive(Clone, Copy)]
@@ -110,50 +110,65 @@ impl HasElementData for DropdownElement {
 }
 
 impl ElementInternals for DropdownElement {
-    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
-        let element = clone_element::<Self, _>(self, elements, |element, gummy_tree| {
-            let owner_id = element.element_data.internal_id;
-            let owner = element.element_data.me;
-            let parent = element.element_data.layout.gummy_node_id();
-            let floating_window_node = gummy_tree.clone_node(element.floating_window.layout.gummy_node_id());
-            let arrow_node = gummy_tree.clone_node(element.arrow.layout.gummy_node_id());
+    fn deep_clone(
+        &self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> DynElement {
+        let element = clone_element::<Self, _>(
+            self,
+            elements,
+            gummy_tree,
+            access_tree,
+            by_internal_id,
+            |element, gummy_tree| {
+                let owner_id = element.element_data.internal_id;
+                let owner = element.element_data.me;
+                let parent = element.element_data.layout.gummy_node_id();
+                let floating_window_node = gummy_tree.clone_node(element.floating_window.layout.gummy_node_id());
+                let arrow_node = gummy_tree.clone_node(element.arrow.layout.gummy_node_id());
 
-            element.floating_window.layout.gummy_node_id = Some(floating_window_node);
-            element.arrow.layout.gummy_node_id = Some(arrow_node);
-            element.selected_element = None;
+                element.floating_window.layout.gummy_node_id = Some(floating_window_node);
+                element.arrow.layout.gummy_node_id = Some(arrow_node);
+                element.selected_element = None;
 
-            gummy_tree.add_child(parent, floating_window_node);
-            gummy_tree.add_child(parent, arrow_node);
-            gummy_tree.register_owner(floating_window_node, owner_id, owner);
-            gummy_tree.register_owner(arrow_node, owner_id, owner);
-            Some(floating_window_node)
-        });
+                gummy_tree.add_child(parent, floating_window_node);
+                gummy_tree.add_child(parent, arrow_node);
+                gummy_tree.register_owner(floating_window_node, owner_id, owner);
+                gummy_tree.register_owner(arrow_node, owner_id, owner);
+                Some(floating_window_node)
+            },
+        );
         let selected_element_index = elements.get_as::<Self>(element).selected_element_index;
         if let Some(index) = selected_element_index {
             elements.dispatch_mut(element, |element, elements| {
                 (element as &mut dyn Any)
                     .downcast_mut::<Self>()
                     .unwrap()
-                    .set_selected_element(elements, index)
+                    .set_selected_element(elements, gummy_tree, access_tree, by_internal_id, index)
             });
         }
         DynElement::new(element)
     }
 
-    fn set_scale_factor(&mut self, elements: &mut Elements, scale_factor: f64) {
+    fn set_scale_factor(&mut self, elements: &mut RetainedElements, gummy_tree: &mut GummyTree, scale_factor: f64) {
         self.element_data.applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         self.floating_window.apply_borders(scale_factor);
         self.arrow.apply_borders(scale_factor);
         for child in self.element_data.children.clone() {
-            elements.dispatch_mut(child, |child, elements| child.set_scale_factor(elements, scale_factor));
+            elements.dispatch_mut(child, |child, elements| {
+                child.set_scale_factor(elements, gummy_tree, scale_factor)
+            });
         }
         if let Some(selected_element) = &self.selected_element {
             elements.dispatch_mut(*selected_element, |selected, elements| {
-                selected.set_scale_factor(elements, scale_factor)
+                selected.set_scale_factor(elements, gummy_tree, scale_factor)
             });
         }
-        self.mark_dirty(&mut elements.gummy_tree);
+        self.mark_dirty(gummy_tree);
     }
 
     fn apply_layout(
@@ -184,7 +199,8 @@ impl ElementInternals for DropdownElement {
 
     fn draw(
         &self,
-        elements: &Elements,
+        elements: &RetainedElements,
+        states: &ElementStates,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
@@ -202,7 +218,14 @@ impl ElementInternals for DropdownElement {
             self.add_hit_testable(renderer, true, scale_factor);
         }
 
-        self.draw_selected_element(elements, renderer, resource_manager.clone(), text_context, scale_factor);
+        self.draw_selected_element(
+            elements,
+            states,
+            renderer,
+            resource_manager.clone(),
+            text_context,
+            scale_factor,
+        );
 
         // Draw the arrow
         let arrow_rect = self
@@ -263,7 +286,14 @@ impl ElementInternals for DropdownElement {
                     .scale(scale_factor),
             );
 
-            self.draw_children(elements, renderer, resource_manager.clone(), scale_factor, text_context);
+            self.draw_children(
+                elements,
+                states,
+                renderer,
+                resource_manager.clone(),
+                scale_factor,
+                text_context,
+            );
 
             renderer.pop_layer();
 
@@ -303,16 +333,29 @@ impl ElementInternals for DropdownElement {
         renderer.push_hit_testable(self.element_data.internal_id, bounds);
     }
 
-    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
+    fn on_event(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        event_queue: &mut VecDeque<EventKind>,
+        focus: &mut Option<DynElement>,
+        focus_outline_visible: bool,
+        _pending_animation_updates: &mut Vec<(DynElement, bool)>,
+        _states: &mut ElementStates,
+        event: &mut EventKind,
+        _text_context: &mut TextContext,
+    ) {
         // Take focus if clicked.
         if let EventKind::PointerDown(pointer_button) = event {
-            self.focus(elements);
+            self.focus(elements, event_queue, focus, focus_outline_visible);
             if pointer_button.button == Some(PointerButton::Left) {
                 pointer_button.stop_propagation();
             }
         }
 
-        if self.handle_keyboard_input(elements, event) {
+        if self.handle_keyboard_input(elements, gummy_tree, access_tree, by_internal_id, event_queue, event) {
             return;
         }
 
@@ -350,12 +393,21 @@ impl ElementInternals for DropdownElement {
 
             let pointer_id = pointer_id.unwrap();
             if is_pointer_in_select_box {
-                self.toggle_menu(elements, &pointer_id);
+                self.toggle_menu(elements, event_queue, &pointer_id);
             } else if !self.is_floating_window_hidden {
                 if is_pointer_in_window {
-                    self.handle_child_click(elements, &pointer_position, is_pointer_in_scrollbar, &pointer_id);
+                    self.handle_child_click(
+                        elements,
+                        gummy_tree,
+                        access_tree,
+                        by_internal_id,
+                        event_queue,
+                        &pointer_position,
+                        is_pointer_in_scrollbar,
+                        &pointer_id,
+                    );
                 } else {
-                    self.close_menu(elements);
+                    self.close_menu(event_queue);
                 }
             }
         }
@@ -380,7 +432,8 @@ impl ElementInternals for DropdownElement {
 
     fn draw_children(
         &self,
-        elements: &Elements,
+        elements: &RetainedElements,
+        states: &ElementStates,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
@@ -412,6 +465,7 @@ impl ElementInternals for DropdownElement {
 
             elements.get_for_draw(child).draw_transformed(
                 elements,
+                states,
                 renderer,
                 resource_manager.clone(),
                 scale_factor,
@@ -494,8 +548,400 @@ impl Shape {
 }
 
 impl Dropdown {
-    pub fn new(elements: &mut Elements) -> Self {
-        let inner = elements.insert_with(|me, access_tree| {
+    pub fn new(app: &mut App) -> Self {
+        Self {
+            inner: DropdownElement::insert(
+                &mut app.elements,
+                &mut app.gummy_tree,
+                &app.access_tree,
+                &mut app.by_internal_id,
+            ),
+        }
+    }
+
+    pub fn set_selected_item(&self, app: &mut App, index: usize) {
+        app.elements.try_dispatch_mut(self.inner, |inner, arena| {
+            let inner = (inner as &mut dyn Any).downcast_mut::<DropdownElement>().unwrap();
+            inner.set_selected_element(
+                arena,
+                &mut app.gummy_tree,
+                &app.access_tree,
+                &mut app.by_internal_id,
+                index,
+            );
+        });
+    }
+
+    pub fn selected_item(&self, app: &App) -> Option<usize> {
+        app.try_get_as::<DropdownElement>(self.inner)
+            .and_then(|dropdown| dropdown.selected_element_index)
+    }
+}
+
+impl DropdownElement {
+    fn handle_keyboard_input(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        event_queue: &mut VecDeque<EventKind>,
+        event: &mut EventKind,
+    ) -> bool {
+        if !self.is_focused() {
+            return false;
+        }
+
+        let EventKind::KeyDown(keyboard_event) = event else {
+            return false;
+        };
+
+        let item_count = self.element_data.children.len();
+        let handled = match keyboard_event.code {
+            KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space if !keyboard_event.repeat => {
+                if self.is_floating_window_hidden {
+                    self.open_menu(event_queue);
+                } else {
+                    if let Some(index) = self.currently_hovered_element.filter(|index| *index < item_count) {
+                        self.set_selected_element(elements, gummy_tree, access_tree, by_internal_id, index);
+                        self.queue_dropdown_item_selected(event_queue, index);
+                    }
+                    self.close_menu(event_queue);
+                }
+                true
+            }
+            KeyCode::Escape if !self.is_floating_window_hidden => {
+                self.close_menu(event_queue);
+                true
+            }
+            KeyCode::ArrowDown if item_count > 0 => {
+                self.move_keyboard_selection(
+                    elements,
+                    gummy_tree,
+                    access_tree,
+                    by_internal_id,
+                    event_queue,
+                    1,
+                    item_count,
+                );
+                true
+            }
+            KeyCode::ArrowUp if item_count > 0 => {
+                self.move_keyboard_selection(
+                    elements,
+                    gummy_tree,
+                    access_tree,
+                    by_internal_id,
+                    event_queue,
+                    -1,
+                    item_count,
+                );
+                true
+            }
+            KeyCode::Home if item_count > 0 => {
+                self.set_keyboard_selection(elements, gummy_tree, access_tree, by_internal_id, event_queue, 0);
+                true
+            }
+            KeyCode::End if item_count > 0 => {
+                self.set_keyboard_selection(
+                    elements,
+                    gummy_tree,
+                    access_tree,
+                    by_internal_id,
+                    event_queue,
+                    item_count - 1,
+                );
+                true
+            }
+            _ => false,
+        };
+
+        if handled {
+            keyboard_event.stop_propagation();
+            keyboard_event.prevent_default();
+        }
+        handled
+    }
+
+    fn move_keyboard_selection(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        event_queue: &mut VecDeque<EventKind>,
+        direction: isize,
+        item_count: usize,
+    ) {
+        let current = if self.is_floating_window_hidden {
+            self.selected_element_index
+        } else {
+            self.currently_hovered_element.or(self.selected_element_index)
+        };
+        let next = match current {
+            Some(index) => index.saturating_add_signed(direction).min(item_count - 1),
+            None if direction < 0 => item_count - 1,
+            None => 0,
+        };
+        self.set_keyboard_selection(elements, gummy_tree, access_tree, by_internal_id, event_queue, next);
+    }
+
+    fn set_keyboard_selection(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        event_queue: &mut VecDeque<EventKind>,
+        index: usize,
+    ) {
+        if self.is_floating_window_hidden {
+            if self.selected_element_index != Some(index) {
+                self.set_selected_element(elements, gummy_tree, access_tree, by_internal_id, index);
+                self.queue_dropdown_item_selected(event_queue, index);
+            }
+        } else {
+            let highlight_changed = self.currently_hovered_element != Some(index);
+            self.currently_hovered_element = Some(index);
+            let scroll_changed = self.scroll_item_into_view(elements, index);
+            if highlight_changed || scroll_changed {
+                self.request_window_redraw();
+            }
+        }
+    }
+
+    fn scroll_item_into_view(&mut self, elements: &RetainedElements, index: usize) -> bool {
+        let Some(item) = self.element_data.children.get(index) else {
+            return false;
+        };
+        let item_box = elements
+            .get(*item)
+            .element_data()
+            .layout
+            .local_box_in_parent()
+            .border_rectangle();
+
+        let layout = &mut self.floating_window.layout;
+        let viewport = layout.local_box().padding_rectangle();
+        let current_scroll_y = layout.scroll_state.scroll_y();
+        let visible_top = viewport.top() + current_scroll_y;
+        let visible_bottom = viewport.bottom() + current_scroll_y;
+        let target_scroll_y = if item_box.top() < visible_top {
+            item_box.top() - viewport.top()
+        } else if item_box.bottom() > visible_bottom {
+            item_box.bottom() - viewport.bottom()
+        } else {
+            return false;
+        };
+
+        set_scroll_y(layout, target_scroll_y)
+    }
+
+    fn draw_selected_element(
+        &self,
+        elements: &RetainedElements,
+        states: &ElementStates,
+        renderer: &mut dyn Renderer,
+        resource_manager: Arc<ResourceManager>,
+        text_context: &mut TextContext,
+        scale_factor: f64,
+    ) {
+        if let Some(selected_element) = &self.selected_element {
+            // This clone is a presentation-only preview. Its subtree must not
+            // intercept pointer events intended for the dropdown itself.
+            let target_count = renderer.render_list().targets.len();
+            elements.get_for_draw(*selected_element).draw_transformed(
+                elements,
+                states,
+                renderer,
+                resource_manager.clone(),
+                scale_factor,
+                text_context,
+            );
+            renderer.render_list_mut().targets.truncate(target_count);
+        }
+    }
+
+    pub(crate) fn set_selected_element(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        child_index: usize,
+    ) {
+        // Remove the old selected element from the layout tree.
+        if let Some(old_selected_element) = &self.selected_element {
+            let old_node = elements
+                .get(*old_selected_element)
+                .element_data()
+                .layout
+                .gummy_node_id();
+            gummy_tree.unparent_node(old_node);
+        }
+
+        let child = self
+            .element_data
+            .children
+            .get(child_index)
+            .expect("There is no child at this index.");
+        let child = *child;
+        self.selected_element = Some(elements.dispatch_mut(child, |child, elements| {
+            child.deep_clone(elements, gummy_tree, access_tree, by_internal_id)
+        }));
+        let selected = self.selected_element.unwrap();
+        let scale = self.element_data.applied_scale_factor;
+        elements.dispatch_mut(selected, |selected, elements| {
+            selected.set_scale_factor(elements, gummy_tree, scale)
+        });
+        self.selected_element_index = Some(child_index);
+        let selected_element_id = elements
+            .get(self.selected_element.unwrap())
+            .element_data()
+            .layout
+            .gummy_node_id();
+
+        // Add the selected element to the parent's layout tree at index 1.
+        let parent_id = self.element_data.layout.gummy_node_id.unwrap();
+        gummy_tree.add_child_at_index(parent_id, selected_element_id, 1);
+        self.request_window_redraw();
+    }
+
+    fn update_most_recently_hovered_child(
+        &mut self,
+        elements: &RetainedElements,
+        message: &EventKind,
+        list_box: Rectangle,
+        list_scroll_box: Rectangle,
+    ) -> bool {
+        if self.is_floating_window_hidden {
+            return false;
+        }
+        let previous = self.currently_hovered_element;
+        if let EventKind::PointerMoved(pb) = message {
+            let pointer_position = pb.current.logical_point();
+            let is_pointer_in_list = list_box.contains(&pointer_position);
+            let is_pointer_in_scrollbar = list_scroll_box.contains(&pointer_position);
+
+            if is_pointer_in_list && !is_pointer_in_scrollbar {
+                let hovered_child = self
+                    .element_data
+                    .children
+                    .iter()
+                    .enumerate()
+                    .find_map(|(index, child)| {
+                        let contains = elements
+                            .get(*child)
+                            .element_data()
+                            .layout
+                            .world_box()
+                            .border_rectangle()
+                            .contains(&pointer_position);
+
+                        if contains {
+                            return Some(index);
+                        }
+
+                        None
+                    });
+
+                self.currently_hovered_element = hovered_child;
+            } else {
+                self.currently_hovered_element = None;
+            }
+        }
+        previous != self.currently_hovered_element
+    }
+
+    fn toggle_menu(
+        &mut self,
+        elements: &mut RetainedElements,
+        event_queue: &mut VecDeque<EventKind>,
+        pointer_id: &PointerId,
+    ) {
+        if self.is_floating_window_hidden {
+            self.open_menu(event_queue);
+        } else {
+            self.close_menu(event_queue);
+            self.release_pointer_capture(elements, *pointer_id);
+        }
+    }
+
+    fn open_menu(&mut self, event_queue: &mut VecDeque<EventKind>) {
+        self.is_floating_window_hidden = false;
+        self.currently_hovered_element = self
+            .selected_element_index
+            .or_else(|| (!self.element_data.children.is_empty()).then_some(0));
+        self.queue_dropdown_toggled(event_queue, true);
+        self.request_window_redraw();
+    }
+
+    fn close_menu(&mut self, event_queue: &mut VecDeque<EventKind>) {
+        self.is_floating_window_hidden = true;
+        self.queue_dropdown_toggled(event_queue, false);
+        self.request_window_redraw();
+    }
+
+    fn handle_child_click(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        event_queue: &mut VecDeque<EventKind>,
+        pointer_position: &Point,
+        is_pointer_in_scrollbar: bool,
+        pointer_id: &PointerId,
+    ) {
+        if !is_pointer_in_scrollbar {
+            let mut should_hide_window = false;
+            for (child_index, child) in self.element_data.children.iter().cloned().enumerate() {
+                let contains = elements
+                    .get(child)
+                    .element_data()
+                    .layout
+                    .world_box()
+                    .border_rectangle()
+                    .contains(pointer_position);
+
+                if contains {
+                    should_hide_window = true;
+                    self.set_selected_element(elements, gummy_tree, access_tree, by_internal_id, child_index);
+                    self.release_pointer_capture(elements, *pointer_id);
+
+                    self.queue_dropdown_item_selected(event_queue, child_index);
+
+                    break;
+                }
+            }
+
+            if should_hide_window {
+                self.is_floating_window_hidden = true;
+                self.queue_dropdown_toggled(event_queue, false);
+                self.request_window_redraw();
+            }
+        }
+    }
+
+    fn queue_dropdown_toggled(&self, event_queue: &mut VecDeque<EventKind>, is_open: bool) {
+        let target = self.element_data.me;
+        event_queue.push_back(EventKind::DropdownToggled(DropdownToggledEvent::new(target, is_open)));
+    }
+
+    fn queue_dropdown_item_selected(&self, event_queue: &mut VecDeque<EventKind>, index: usize) {
+        let target = self.element_data.me;
+        event_queue.push_back(EventKind::DropdownItemSelected(DropdownItemSelectedEvent::new(
+            target, index,
+        )));
+    }
+
+    pub(crate) fn insert(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> DynElement {
+        let inner = elements.insert_with(access_tree, by_internal_id, |me, access_tree| {
             Box::new(DropdownElement {
                 element_data: ElementDataStruct::new(me, true, access_tree),
                 floating_window: Shape::new(true),
@@ -572,10 +1018,7 @@ impl Dropdown {
             .arrow
             .style
             .set_margin(TrblRectangle::new(px(0.0), px(8.0), px(0.0), auto()));
-        let _ = element;
         {
-            let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
-            let element = elements.get_as_mut::<DropdownElement>(inner);
             element.element_data.create_layout_node(gummy_tree, None);
             element.floating_window.create_gummy_node(gummy_tree);
             element.arrow.create_gummy_node(gummy_tree);
@@ -590,311 +1033,6 @@ impl Dropdown {
             gummy_tree.register_owner(arrow_child_id, owner_id, inner);
         }
 
-        Self { inner }
-    }
-
-    pub fn set_selected_item(&self, elements: &mut Elements, index: usize) {
-        elements.try_dispatch_mut(self.inner, |inner, elements| {
-            let inner = (inner as &mut dyn Any).downcast_mut::<DropdownElement>().unwrap();
-            inner.set_selected_element(elements, index);
-        });
-    }
-
-    pub fn selected_item(&self, elements: &Elements) -> Option<usize> {
-        elements
-            .try_get_as::<DropdownElement>(self.inner)
-            .and_then(|dropdown| dropdown.selected_element_index)
-    }
-}
-
-impl DropdownElement {
-    fn handle_keyboard_input(&mut self, elements: &mut Elements, event: &mut EventKind) -> bool {
-        if !self.is_focused() {
-            return false;
-        }
-
-        let EventKind::KeyDown(keyboard_event) = event else {
-            return false;
-        };
-
-        let item_count = self.element_data.children.len();
-        let handled = match keyboard_event.code {
-            KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space if !keyboard_event.repeat => {
-                if self.is_floating_window_hidden {
-                    self.open_menu(elements);
-                } else {
-                    if let Some(index) = self.currently_hovered_element.filter(|index| *index < item_count) {
-                        self.set_selected_element(elements, index);
-                        self.queue_dropdown_item_selected(elements, index);
-                    }
-                    self.close_menu(elements);
-                }
-                true
-            }
-            KeyCode::Escape if !self.is_floating_window_hidden => {
-                self.close_menu(elements);
-                true
-            }
-            KeyCode::ArrowDown if item_count > 0 => {
-                self.move_keyboard_selection(elements, 1, item_count);
-                true
-            }
-            KeyCode::ArrowUp if item_count > 0 => {
-                self.move_keyboard_selection(elements, -1, item_count);
-                true
-            }
-            KeyCode::Home if item_count > 0 => {
-                self.set_keyboard_selection(elements, 0);
-                true
-            }
-            KeyCode::End if item_count > 0 => {
-                self.set_keyboard_selection(elements, item_count - 1);
-                true
-            }
-            _ => false,
-        };
-
-        if handled {
-            keyboard_event.stop_propagation();
-            keyboard_event.prevent_default();
-        }
-        handled
-    }
-
-    fn move_keyboard_selection(&mut self, elements: &mut Elements, direction: isize, item_count: usize) {
-        let current = if self.is_floating_window_hidden {
-            self.selected_element_index
-        } else {
-            self.currently_hovered_element.or(self.selected_element_index)
-        };
-        let next = match current {
-            Some(index) => index.saturating_add_signed(direction).min(item_count - 1),
-            None if direction < 0 => item_count - 1,
-            None => 0,
-        };
-        self.set_keyboard_selection(elements, next);
-    }
-
-    fn set_keyboard_selection(&mut self, elements: &mut Elements, index: usize) {
-        if self.is_floating_window_hidden {
-            if self.selected_element_index != Some(index) {
-                self.set_selected_element(elements, index);
-                self.queue_dropdown_item_selected(elements, index);
-            }
-        } else {
-            let highlight_changed = self.currently_hovered_element != Some(index);
-            self.currently_hovered_element = Some(index);
-            let scroll_changed = self.scroll_item_into_view(elements, index);
-            if highlight_changed || scroll_changed {
-                self.request_window_redraw();
-            }
-        }
-    }
-
-    fn scroll_item_into_view(&mut self, elements: &Elements, index: usize) -> bool {
-        let Some(item) = self.element_data.children.get(index) else {
-            return false;
-        };
-        let item_box = elements
-            .get(*item)
-            .element_data()
-            .layout
-            .local_box_in_parent()
-            .border_rectangle();
-
-        let layout = &mut self.floating_window.layout;
-        let viewport = layout.local_box().padding_rectangle();
-        let current_scroll_y = layout.scroll_state.scroll_y();
-        let visible_top = viewport.top() + current_scroll_y;
-        let visible_bottom = viewport.bottom() + current_scroll_y;
-        let target_scroll_y = if item_box.top() < visible_top {
-            item_box.top() - viewport.top()
-        } else if item_box.bottom() > visible_bottom {
-            item_box.bottom() - viewport.bottom()
-        } else {
-            return false;
-        };
-
-        set_scroll_y(layout, target_scroll_y)
-    }
-
-    fn draw_selected_element(
-        &self,
-        elements: &Elements,
-        renderer: &mut dyn Renderer,
-        resource_manager: Arc<ResourceManager>,
-        text_context: &mut TextContext,
-        scale_factor: f64,
-    ) {
-        if let Some(selected_element) = &self.selected_element {
-            // This clone is a presentation-only preview. Its subtree must not
-            // intercept pointer events intended for the dropdown itself.
-            let target_count = renderer.render_list().targets.len();
-            elements.get_for_draw(*selected_element).draw_transformed(
-                elements,
-                renderer,
-                resource_manager.clone(),
-                scale_factor,
-                text_context,
-            );
-            renderer.render_list_mut().targets.truncate(target_count);
-        }
-    }
-
-    fn set_selected_element(&mut self, elements: &mut Elements, child_index: usize) {
-        // Remove the old selected element from the layout tree.
-        if let Some(old_selected_element) = &self.selected_element {
-            let old_node = elements
-                .get(*old_selected_element)
-                .element_data()
-                .layout
-                .gummy_node_id();
-            elements.gummy_tree.unparent_node(old_node);
-        }
-
-        let child = self
-            .element_data
-            .children
-            .get(child_index)
-            .expect("There is no child at this index.");
-        let child = *child;
-        self.selected_element = Some(elements.dispatch_mut(child, |child, elements| child.deep_clone(elements)));
-        let selected = self.selected_element.unwrap();
-        let scale = self.element_data.applied_scale_factor;
-        elements.dispatch_mut(selected, |selected, elements| {
-            selected.set_scale_factor(elements, scale)
-        });
-        self.selected_element_index = Some(child_index);
-        let selected_element_id = elements
-            .get(self.selected_element.unwrap())
-            .element_data()
-            .layout
-            .gummy_node_id();
-
-        // Add the selected element to the parent's layout tree at index 1.
-        let parent_id = self.element_data.layout.gummy_node_id.unwrap();
-        elements
-            .gummy_tree
-            .add_child_at_index(parent_id, selected_element_id, 1);
-        self.request_window_redraw();
-    }
-
-    fn update_most_recently_hovered_child(
-        &mut self,
-        elements: &Elements,
-        message: &EventKind,
-        list_box: Rectangle,
-        list_scroll_box: Rectangle,
-    ) -> bool {
-        if self.is_floating_window_hidden {
-            return false;
-        }
-        let previous = self.currently_hovered_element;
-        if let EventKind::PointerMoved(pb) = message {
-            let pointer_position = pb.current.logical_point();
-            let is_pointer_in_list = list_box.contains(&pointer_position);
-            let is_pointer_in_scrollbar = list_scroll_box.contains(&pointer_position);
-
-            if is_pointer_in_list && !is_pointer_in_scrollbar {
-                let hovered_child = self
-                    .element_data
-                    .children
-                    .iter()
-                    .enumerate()
-                    .find_map(|(index, child)| {
-                        let contains = elements
-                            .get(*child)
-                            .element_data()
-                            .layout
-                            .world_box()
-                            .border_rectangle()
-                            .contains(&pointer_position);
-
-                        if contains {
-                            return Some(index);
-                        }
-
-                        None
-                    });
-
-                self.currently_hovered_element = hovered_child;
-            } else {
-                self.currently_hovered_element = None;
-            }
-        }
-        previous != self.currently_hovered_element
-    }
-
-    fn toggle_menu(&mut self, elements: &mut Elements, pointer_id: &PointerId) {
-        if self.is_floating_window_hidden {
-            self.open_menu(elements);
-        } else {
-            self.close_menu(elements);
-            self.release_pointer_capture(elements, *pointer_id);
-        }
-    }
-
-    fn open_menu(&mut self, elements: &mut Elements) {
-        self.is_floating_window_hidden = false;
-        self.currently_hovered_element = self
-            .selected_element_index
-            .or_else(|| (!self.element_data.children.is_empty()).then_some(0));
-        self.queue_dropdown_toggled(elements, true);
-        self.request_window_redraw();
-    }
-
-    fn close_menu(&mut self, elements: &mut Elements) {
-        self.is_floating_window_hidden = true;
-        self.queue_dropdown_toggled(elements, false);
-        self.request_window_redraw();
-    }
-
-    fn handle_child_click(
-        &mut self,
-        elements: &mut Elements,
-        pointer_position: &Point,
-        is_pointer_in_scrollbar: bool,
-        pointer_id: &PointerId,
-    ) {
-        if !is_pointer_in_scrollbar {
-            let mut should_hide_window = false;
-            for (child_index, child) in self.element_data.children.iter().cloned().enumerate() {
-                let contains = elements
-                    .get(child)
-                    .element_data()
-                    .layout
-                    .world_box()
-                    .border_rectangle()
-                    .contains(pointer_position);
-
-                if contains {
-                    should_hide_window = true;
-                    self.set_selected_element(elements, child_index);
-                    self.release_pointer_capture(elements, *pointer_id);
-
-                    self.queue_dropdown_item_selected(elements, child_index);
-
-                    break;
-                }
-            }
-
-            if should_hide_window {
-                self.is_floating_window_hidden = true;
-                self.queue_dropdown_toggled(elements, false);
-                self.request_window_redraw();
-            }
-        }
-    }
-
-    fn queue_dropdown_toggled(&self, elements: &mut Elements, is_open: bool) {
-        let target = self.element_data.me;
-        elements.queue_event(EventKind::DropdownToggled(DropdownToggledEvent::new(target, is_open)));
-    }
-
-    fn queue_dropdown_item_selected(&self, elements: &mut Elements, index: usize) {
-        let target = self.element_data.me;
-        elements.queue_event(EventKind::DropdownItemSelected(DropdownItemSelectedEvent::new(
-            target, index,
-        )));
+        inner
     }
 }

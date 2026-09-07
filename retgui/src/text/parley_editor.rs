@@ -16,9 +16,8 @@ use retgui_primitives::brush::Brush;
 
 use retgui_undo::UndoManager;
 
-use crate::text::text_commands::{Backspace, Delete, TextInsertion, TextReplace};
 use crate::text::RangedStyles;
-use crate::text::text_commands::TextCommand;
+use crate::text::text_commands::{Backspace, Delete, TextCommand, TextInsertion, TextReplace};
 
 extern crate alloc;
 
@@ -143,116 +142,6 @@ impl Default for PlainEditor {
             alignment: Default::default(),
             generation: Default::default(),
             undo_manager: UndoManager::new(),
-        }
-    }
-}
-
-impl PlainEditor {
-    /// Create a new editor, with default font size `font_size`.
-    pub fn new(font_size: f32, gummy_id: Option<gummy::NodeId>) -> Self {
-        Self {
-            gummy_id,
-            default_style: StyleSet::new(font_size),
-            buffer: Default::default(),
-            layout: Default::default(),
-            selection: Default::default(),
-            compose: None,
-            show_cursor: true,
-            width: None,
-            scale: 1.0,
-            quantize: true,
-            layout_dirty: true,
-            alignment: Alignment::Start,
-            // We don't use the `default` value to start with, as our consumers
-            // will choose to use that as their initial value, but will probably need
-            // to redraw if they haven't already.
-            generation: Generation(1),
-            ranged_styles: RangedStyles::new(vec![]),
-            undo_manager: UndoManager::new(),
-        }
-    }
-
-    pub fn undo(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<Brush>) -> bool {
-        let command = self.undo_manager.undo_command();
-        if command.is_none() {
-            return false;
-        }
-        let command = command.unwrap();
-        match command {
-            TextCommand::TextInsertion(text_insertion) => {
-                let start = Cursor::from_byte_index(&self.layout, text_insertion.range.start, text_insertion.affinity);
-                let end = Cursor::from_byte_index(
-                    &self.layout,
-                    text_insertion.range.start + text_insertion.str.len(),
-                    Affinity::Downstream,
-                );
-                self.set_selection(Selection::new(start, end));
-                self.replace_selection(font_cx, layout_cx, "", false);
-                true
-            }
-            TextCommand::Backspace(backspace) => {
-                let text = backspace.str.clone();
-                let start = Cursor::from_byte_index(&self.layout, backspace.range.start, backspace.affinity);
-                self.set_selection(Selection::new(start, start));
-                self.replace_selection(font_cx, layout_cx, &text, false);
-                false
-            }
-            TextCommand::Delete(delete) => {
-                let text = delete.str.clone();
-                let start = Cursor::from_byte_index(&self.layout, delete.range.start, delete.affinity);
-                self.set_selection(Selection::new(start, start));
-                self.replace_selection(font_cx, layout_cx, &text, false);
-                self.set_selection(Selection::new(start, start));
-                false
-            }
-            TextCommand::TextReplace(text_replace) => {
-                let selection = text_replace.selection;
-                let old_str = text_replace.old_str.clone();
-                let range = text_replace.selection.text_range();
-                let new_start = Cursor::from_byte_index(&self.layout, range.start, Affinity::Downstream);
-                let new_end = Cursor::from_byte_index(
-                    &self.layout,
-                    range.start + text_replace.new_str.len(),
-                    Affinity::Downstream,
-                );
-                self.set_selection(Selection::new(new_start, new_end));
-                self.replace_selection(font_cx, layout_cx, &old_str, false);
-                self.set_selection(selection);
-                false
-            }
-        }
-    }
-
-    pub fn redo(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<Brush>) -> bool {
-        let command = self.undo_manager.redo_command();
-        if command.is_none() {
-            return false;
-        }
-        let command = command.unwrap().clone();
-        match command {
-            TextCommand::TextInsertion(text_insertion) => {
-                let start = Cursor::from_byte_index(&self.layout, text_insertion.range.start, text_insertion.affinity);
-                self.set_selection(Selection::new(start, start));
-                self.replace_selection(font_cx, layout_cx, &text_insertion.str, false);
-                true
-            }
-            TextCommand::Backspace(backspace) => {
-                let start = Cursor::from_byte_index(&self.layout, backspace.range.start, backspace.affinity);
-                self.set_selection(Selection::new(start, start));
-                self.driver(font_cx, layout_cx).backdelete(false);
-                true
-            }
-            TextCommand::Delete(delete) => {
-                let start = Cursor::from_byte_index(&self.layout, delete.range.start, delete.affinity);
-                self.set_selection(Selection::new(start, start));
-                self.driver(font_cx, layout_cx).backdelete(false);
-                true
-            }
-            TextCommand::TextReplace(text_replace) => {
-                self.set_selection(text_replace.selection);
-                self.replace_selection(font_cx, layout_cx, &text_replace.new_str, false);
-                true
-            }
         }
     }
 }
@@ -853,6 +742,114 @@ impl PlainEditorDriver<'_> {
 }
 
 impl PlainEditor {
+    /// Create a new editor, with default font size `font_size`.
+    pub fn new(font_size: f32, gummy_id: Option<gummy::NodeId>) -> Self {
+        Self {
+            gummy_id,
+            default_style: StyleSet::new(font_size),
+            buffer: Default::default(),
+            layout: Default::default(),
+            selection: Default::default(),
+            compose: None,
+            show_cursor: true,
+            width: None,
+            scale: 1.0,
+            quantize: true,
+            layout_dirty: true,
+            alignment: Alignment::Start,
+            // We don't use the `default` value to start with, as our consumers
+            // will choose to use that as their initial value, but will probably need
+            // to redraw if they haven't already.
+            generation: Generation(1),
+            ranged_styles: RangedStyles::new(vec![]),
+            undo_manager: UndoManager::new(),
+        }
+    }
+
+    pub fn undo(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<Brush>) -> bool {
+        let command = self.undo_manager.undo_command();
+        if command.is_none() {
+            return false;
+        }
+        let command = command.unwrap();
+        match command {
+            TextCommand::TextInsertion(text_insertion) => {
+                let start = Cursor::from_byte_index(&self.layout, text_insertion.range.start, text_insertion.affinity);
+                let end = Cursor::from_byte_index(
+                    &self.layout,
+                    text_insertion.range.start + text_insertion.str.len(),
+                    Affinity::Downstream,
+                );
+                self.set_selection(Selection::new(start, end));
+                self.replace_selection(font_cx, layout_cx, "", false);
+                true
+            }
+            TextCommand::Backspace(backspace) => {
+                let text = backspace.str.clone();
+                let start = Cursor::from_byte_index(&self.layout, backspace.range.start, backspace.affinity);
+                self.set_selection(Selection::new(start, start));
+                self.replace_selection(font_cx, layout_cx, &text, false);
+                false
+            }
+            TextCommand::Delete(delete) => {
+                let text = delete.str.clone();
+                let start = Cursor::from_byte_index(&self.layout, delete.range.start, delete.affinity);
+                self.set_selection(Selection::new(start, start));
+                self.replace_selection(font_cx, layout_cx, &text, false);
+                self.set_selection(Selection::new(start, start));
+                false
+            }
+            TextCommand::TextReplace(text_replace) => {
+                let selection = text_replace.selection;
+                let old_str = text_replace.old_str.clone();
+                let range = text_replace.selection.text_range();
+                let new_start = Cursor::from_byte_index(&self.layout, range.start, Affinity::Downstream);
+                let new_end = Cursor::from_byte_index(
+                    &self.layout,
+                    range.start + text_replace.new_str.len(),
+                    Affinity::Downstream,
+                );
+                self.set_selection(Selection::new(new_start, new_end));
+                self.replace_selection(font_cx, layout_cx, &old_str, false);
+                self.set_selection(selection);
+                false
+            }
+        }
+    }
+
+    pub fn redo(&mut self, font_cx: &mut FontContext, layout_cx: &mut LayoutContext<Brush>) -> bool {
+        let command = self.undo_manager.redo_command();
+        if command.is_none() {
+            return false;
+        }
+        let command = command.unwrap().clone();
+        match command {
+            TextCommand::TextInsertion(text_insertion) => {
+                let start = Cursor::from_byte_index(&self.layout, text_insertion.range.start, text_insertion.affinity);
+                self.set_selection(Selection::new(start, start));
+                self.replace_selection(font_cx, layout_cx, &text_insertion.str, false);
+                true
+            }
+            TextCommand::Backspace(backspace) => {
+                let start = Cursor::from_byte_index(&self.layout, backspace.range.start, backspace.affinity);
+                self.set_selection(Selection::new(start, start));
+                self.driver(font_cx, layout_cx).backdelete(false);
+                true
+            }
+            TextCommand::Delete(delete) => {
+                let start = Cursor::from_byte_index(&self.layout, delete.range.start, delete.affinity);
+                self.set_selection(Selection::new(start, start));
+                self.driver(font_cx, layout_cx).backdelete(false);
+                true
+            }
+            TextCommand::TextReplace(text_replace) => {
+                self.set_selection(text_replace.selection);
+                self.replace_selection(font_cx, layout_cx, &text_replace.new_str, false);
+                true
+            }
+        }
+    }
+
     /// Run a series of [`PlainEditorDriver`] methods.
     ///
     /// This type is only used to simplify methods which require both

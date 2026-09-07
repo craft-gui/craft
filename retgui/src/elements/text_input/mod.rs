@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -6,20 +7,21 @@ use parley::BoundingBox;
 use retgui_primitives::Color;
 use retgui_primitives::geometry::{Rectangle, TrblRectangle};
 
-use retgui_renderer::text_renderer_data::{TextData, TextScroll};
 use retgui_renderer::renderer::Renderer;
+use retgui_renderer::text_renderer_data::{TextData, TextScroll};
 
 use retgui_resource_manager::ResourceManager;
 
-use winit::keyboard::{Key, NamedKey};
 use winit::dpi::{LogicalPosition, LogicalSize};
 use winit::event::{Ime, MouseButton as PointerButton};
+use winit::keyboard::{Key, NamedKey};
 use winit::window::{ImeCapabilities, ImeEnableRequest, ImeHint, ImePurpose, ImeRequest, ImeRequestData};
 
+use crate::App;
 use crate::elements::element_data::ElementData;
 use crate::elements::text_input::text_input_state::TextInputState;
 use crate::elements::traits::clone_element;
-use crate::elements::{AnimationSchedule, DynElement, Element, ElementInternals, Elements, WindowElement, scrollable};
+use crate::elements::{AnimationSchedule, DynElement, Element, ElementIds, ElementInternals, ElementStates, RetGuiAccessTree, RetainedElements, WindowElement, scrollable};
 use crate::events::{Event, EventKind};
 use crate::layout::GummyTree;
 use crate::layout::layout_context::{GummyTextInputContext, LayoutContext, TextHashKey};
@@ -56,35 +58,39 @@ pub enum TextInputMessage {
 
 impl TextInput {
     /// Creates a single line editable text input.
-    pub fn new(elements: &mut Elements, text: &str) -> Self {
+    pub fn new(app: &mut App, text: &str) -> Self {
         Self {
-            inner: TextInputElement::create(elements, text),
+            inner: TextInputElement::create(
+                &mut app.elements,
+                &mut app.gummy_tree,
+                &app.access_tree,
+                &mut app.by_internal_id,
+                text,
+            ),
         }
     }
 
     /// Disables the text input.
-    pub fn set_disabled(&self, elements: &mut Elements, disabled: bool) {
-        if let Some(input) = elements.try_get_as_mut::<TextInputElement>(self.inner) {
+    pub fn set_disabled(&self, app: &mut App, disabled: bool) {
+        if let Some(input) = app.try_get_as_mut::<TextInputElement>(self.inner) {
             input.disabled(disabled);
         }
     }
 
     /// Returns whether the element is disabled.
-    pub fn is_disabled(&self, elements: &Elements) -> bool {
-        elements
-            .try_get_as::<TextInputElement>(self.inner)
+    pub fn is_disabled(&self, app: &App) -> bool {
+        app.try_get_as::<TextInputElement>(self.inner)
             .is_some_and(|input| input.disabled)
     }
 
     /// Returns whether the text input is multiline.
-    pub fn is_multiline(&self, elements: &Elements) -> bool {
-        elements
-            .try_get_as::<TextInputElement>(self.inner)
+    pub fn is_multiline(&self, app: &App) -> bool {
+        app.try_get_as::<TextInputElement>(self.inner)
             .is_some_and(|input| input.state.multiline)
     }
 
-    pub fn set_multiline(&self, elements: &mut Elements, multiline: bool) {
-        if let Some(input) = elements.try_get_as_mut::<TextInputElement>(self.inner) {
+    pub fn set_multiline(&self, app: &mut App, multiline: bool) {
+        if let Some(input) = app.try_get_as_mut::<TextInputElement>(self.inner) {
             input.multiline(multiline);
         }
     }
@@ -92,9 +98,8 @@ impl TextInput {
     /// Returns the text in the text input.
     ///
     /// This does not include the ime preedit text.
-    pub fn text(&self, elements: &Elements) -> String {
-        elements
-            .try_get_as::<TextInputElement>(self.inner)
+    pub fn text(&self, app: &App) -> String {
+        app.try_get_as::<TextInputElement>(self.inner)
             .map_or_else(String::new, |input| input.state.editor().text().into_iter().collect())
     }
 
@@ -102,25 +107,24 @@ impl TextInput {
     ///
     /// Updates the text content immediately. Mark layout and render caches as dirty. Layout and
     /// render caches will be computed in the next layout/render pass.
-    pub fn set_text(&self, elements: &mut Elements, text: &str) {
-        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+    pub fn set_text(&self, app: &mut App, text: &str) {
+        let (gummy_tree, elements) = (&mut app.gummy_tree, &mut app.elements);
         if let Some(input) = elements.try_get_as_mut::<TextInputElement>(self.inner) {
             input.set_text(gummy_tree, text);
         }
     }
 
     /// Styles the text along ranges.
-    pub fn set_ranged_styles(&self, elements: &mut Elements, ranged_styles: RangedStyles) {
-        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
+    pub fn set_ranged_styles(&self, app: &mut App, ranged_styles: RangedStyles) {
+        let (gummy_tree, elements) = (&mut app.gummy_tree, &mut app.elements);
         if let Some(input) = elements.try_get_as_mut::<TextInputElement>(self.inner) {
             input.set_ranged_styles(gummy_tree, ranged_styles);
         }
     }
 
     /// Returns the ranged styles.
-    pub fn ranged_styles(&self, elements: &Elements) -> Option<RangedStyles> {
-        elements
-            .try_get_as::<TextInputElement>(self.inner)
+    pub fn ranged_styles(&self, app: &App) -> Option<RangedStyles> {
+        app.try_get_as::<TextInputElement>(self.inner)
             .and_then(|input| input.ranged_styles.clone())
     }
 }
@@ -142,17 +146,30 @@ impl crate::elements::HasElementData for TextInputElement {
 }
 
 impl ElementInternals for TextInputElement {
-    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, elements, |element, gummy_tree| {
-            let gummy_id = element.element_data.layout.gummy_node_id();
-            element.state.gummy_id = Some(gummy_id);
-            element.state.editor.gummy_id = Some(gummy_id);
-            let context = LayoutContext::TextInput(GummyTextInputContext {
-                element: element.element_data.me,
-            });
-            gummy_tree.set_node_context(gummy_id, Some(context));
-            Some(gummy_id)
-        }))
+    fn deep_clone(
+        &self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(
+            self,
+            elements,
+            gummy_tree,
+            access_tree,
+            by_internal_id,
+            |element, gummy_tree| {
+                let gummy_id = element.element_data.layout.gummy_node_id();
+                element.state.gummy_id = Some(gummy_id);
+                element.state.editor.gummy_id = Some(gummy_id);
+                let context = LayoutContext::TextInput(GummyTextInputContext {
+                    element: element.element_data.me,
+                });
+                gummy_tree.set_node_context(gummy_id, Some(context));
+                Some(gummy_id)
+            },
+        ))
     }
 
     fn apply_layout(
@@ -207,7 +224,8 @@ impl ElementInternals for TextInputElement {
 
     fn draw(
         &self,
-        _elements: &Elements,
+        _elements: &RetainedElements,
+        _states: &ElementStates,
         _renderer: &mut dyn Renderer,
         _resource_manager: Arc<ResourceManager>,
         _scale_factor: f64,
@@ -261,7 +279,20 @@ impl ElementInternals for TextInputElement {
         self.maybe_end_overlay(_renderer);
     }
 
-    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, text_context: &mut TextContext) {
+    fn on_event(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        _access_tree: &RetGuiAccessTree,
+        _by_internal_id: &mut ElementIds,
+        event_queue: &mut VecDeque<EventKind>,
+        focus: &mut Option<DynElement>,
+        focus_outline_visible: bool,
+        pending_animation_updates: &mut Vec<(DynElement, bool)>,
+        _states: &mut ElementStates,
+        event: &mut EventKind,
+        text_context: &mut TextContext,
+    ) {
         self.state.is_active = true;
         let focused = self.is_focused();
         let ime_owns_keyboard_event = focused
@@ -283,7 +314,7 @@ impl ElementInternals for TextInputElement {
                     )
             );
         if !editor_owns_scroll_key {
-            scrollable::handle_scroll_logic(elements, self, event);
+            scrollable::handle_scroll_logic(elements, event_queue, focus, focus_outline_visible, self, event);
         }
 
         if event.is_default_prevented() {
@@ -305,7 +336,7 @@ impl ElementInternals for TextInputElement {
                         return;
                     }
                     self.state.paste(text_context);
-                    self.mark_dirty(&mut elements.gummy_tree);
+                    self.mark_dirty(gummy_tree);
                     //generate_text_changed_event(&mut self.state.editor);
                 }
                 TextInputMessage::Cut => {
@@ -313,20 +344,20 @@ impl ElementInternals for TextInputElement {
                         return;
                     }
                     self.state.cut(text_context);
-                    self.mark_dirty(&mut elements.gummy_tree);
+                    self.mark_dirty(gummy_tree);
                 }
             }
         }
 
         match event {
             EventKind::Focus(_) => {
-                self.start_cursor_blink(elements);
+                self.start_cursor_blink(pending_animation_updates);
                 if !self.disabled {
                     self.set_ime_enabled(elements, true);
                 }
             }
             EventKind::Unfocus(_) => {
-                self.stop_cursor_blink(elements);
+                self.stop_cursor_blink(pending_animation_updates);
                 self.state.disable_ime(text_context);
                 self.set_ime_enabled(elements, false);
             }
@@ -342,11 +373,11 @@ impl ElementInternals for TextInputElement {
                     return;
                 }
                 self.state
-                    .key_press(elements, text_context, keyboard_event, &mut self.element_data);
+                    .key_press(event_queue, text_context, keyboard_event, &mut self.element_data);
                 keyboard_event.stop_propagation();
             }
             EventKind::PointerDown(pointer_button) if pointer_button.button == Some(PointerButton::Left) => {
-                self.focus(elements);
+                self.focus(elements, event_queue, focus, focus_outline_visible);
                 self.set_pointer_capture(elements, pointer_button.pointer.pointer_id.unwrap());
                 self.state.pointer_down(text_context, pointer_button.position, scroll_y);
             }
@@ -364,7 +395,7 @@ impl ElementInternals for TextInputElement {
                 }
                 Ime::Commit(text) => {
                     self.state.insert_or_replace_selection(text_context, text);
-                    self.state.generate_text_changed_event(elements, &self.element_data);
+                    self.state.generate_text_changed_event(event_queue, &self.element_data);
                 }
                 Ime::Preedit(text, cursor) => self.state.ime_pre_edit(text_context, text, cursor),
                 Ime::DeleteSurrounding {
@@ -375,7 +406,7 @@ impl ElementInternals for TextInputElement {
                         .state
                         .ime_delete_surrounding(text_context, *before_bytes, *after_bytes)
                     {
-                        self.state.generate_text_changed_event(elements, &self.element_data);
+                        self.state.generate_text_changed_event(event_queue, &self.element_data);
                     }
                 }
                 Ime::Enabled => self.state.ime_state.is_ime_active = true,
@@ -385,10 +416,10 @@ impl ElementInternals for TextInputElement {
         }
 
         if self.state.is_layout_dirty {
-            self.mark_dirty(&mut elements.gummy_tree);
+            self.mark_dirty(gummy_tree);
         } else if self.state.editor().generation() != editor_generation {
             if let Some(node) = self.element_data.layout.gummy_node_id {
-                elements.gummy_tree.request_apply_layout(node);
+                gummy_tree.request_apply_layout(node);
             }
             self.request_window_redraw();
         }
@@ -420,19 +451,29 @@ impl ElementInternals for TextInputElement {
         style
     }
 
-    fn set_scale_factor(&mut self, elements: &mut Elements, scale_factor: f64) {
+    fn set_scale_factor(&mut self, _elements: &mut RetainedElements, gummy_tree: &mut GummyTree, scale_factor: f64) {
         self.element_data.applied_scale_factor = scale_factor;
         self.apply_borders(scale_factor);
         self.state.set_scale_factor(scale_factor);
-        self.mark_dirty(&mut elements.gummy_tree);
+        self.mark_dirty(gummy_tree);
     }
 
     fn on_text_style_changed(&mut self) {
         self.state.set_style(&self.element_data.style);
     }
 
-    fn animation_tick(&mut self, elements: &mut Elements, delta: Duration) -> AnimationSchedule {
-        let mut schedule = self.tick_style_animations(&mut elements.gummy_tree, delta);
+    fn animation_tick(
+        &mut self,
+        _elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        _states: &mut ElementStates,
+        _pending_resources: &mut VecDeque<(
+            retgui_resource_manager::ResourceId,
+            retgui_resource_manager::resource_type::ResourceType,
+        )>,
+        delta: Duration,
+    ) -> AnimationSchedule {
+        let mut schedule = self.tick_style_animations(gummy_tree, delta);
         if self.is_focused() && self.state.editor().raw_selection().is_collapsed() {
             if !self.state.is_blinking() {
                 self.state.reset_blink();
@@ -449,7 +490,7 @@ impl ElementInternals for TextInputElement {
 }
 
 impl TextInputElement {
-    fn set_ime_enabled(&mut self, elements: &Elements, enabled: bool) {
+    fn set_ime_enabled(&mut self, elements: &RetainedElements, enabled: bool) {
         self.state.ime_state.is_ime_active = enabled;
 
         let Some(window) = self
@@ -477,7 +518,7 @@ impl TextInputElement {
         let _ = window.request_ime_update(request);
     }
 
-    fn update_ime(&mut self, elements: &Elements) {
+    fn update_ime(&mut self, elements: &RetainedElements) {
         let Some(window) = self
             .element_data
             .window
@@ -511,25 +552,39 @@ impl TextInputElement {
     }
 
     /// Starts the cursor blink animation.
-    fn start_cursor_blink(&mut self, elements: &mut Elements) {
+    fn start_cursor_blink(&mut self, pending_animation_updates: &mut Vec<(DynElement, bool)>) {
         self.state.reset_blink();
-        elements.schedule_animation_update(self.element_data.me);
+        crate::elements::internal_helpers::queue_animation_update(
+            pending_animation_updates,
+            self.element_data.me,
+            false,
+        );
         self.request_window_redraw();
     }
 
     /// Stops the cursor blink animation.
-    fn stop_cursor_blink(&mut self, elements: &mut Elements) {
+    fn stop_cursor_blink(&mut self, pending_animation_updates: &mut Vec<(DynElement, bool)>) {
         self.state.disable_blink();
-        elements.schedule_animation_update(self.element_data.me);
+        crate::elements::internal_helpers::queue_animation_update(
+            pending_animation_updates,
+            self.element_data.me,
+            false,
+        );
         self.request_window_redraw();
     }
 
-    pub fn create(elements: &mut Elements, text: &str) -> DynElement {
+    pub fn create(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        text: &str,
+    ) -> DynElement {
         let default_style = TextInputElement::get_default_style();
 
         let text_input_state = TextInputState::default();
 
-        let inner = elements.insert_with(|me, access_tree| {
+        let inner = elements.insert_with(access_tree, by_internal_id, |me, access_tree| {
             Box::new(TextInputElement {
                 element_data: ElementData::new(me, true, access_tree),
                 ranged_styles: Some(RangedStyles::new(vec![])),
@@ -548,11 +603,8 @@ impl TextInputElement {
         let context = Some(LayoutContext::TextInput(GummyTextInputContext {
             element: inner_mut.element_data.me,
         }));
-        let _ = inner_mut;
-        elements.create_layout_node(inner, context);
-        TextInput { inner }.set_text(elements, text);
-
-        let inner_mut = elements.get_as_mut::<TextInputElement>(inner);
+        inner_mut.element_data.create_layout_node(gummy_tree, context);
+        inner_mut.set_text(gummy_tree, text);
         let gummy_id = inner_mut.element_data.layout.gummy_node_id;
         inner_mut.state.gummy_id = gummy_id;
         inner_mut.state.editor.gummy_id = gummy_id;

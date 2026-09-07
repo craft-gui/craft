@@ -16,7 +16,6 @@ pub use retgui_runtime::{self, RetGuiRuntime};
 pub use winit;
 
 pub use crate::app::{App, WindowEventResult};
-pub use crate::elements::Elements;
 pub use crate::options::RetGuiOptions;
 pub use crate::utils::retgui_error::RetGuiError;
 pub use crate::utils::style_helpers::{auto, pct, px, rgb, rgba};
@@ -57,22 +56,22 @@ static ANDROID_APP: OnceLock<AndroidApp> = OnceLock::new();
 /// # Example
 ///
 /// ```no_run
-/// use retgui::{Elements, RetGuiOptions, retgui_main};
 /// use retgui::elements::Window;
+/// use retgui::{App, RetGuiOptions, retgui_main};
 ///
 /// fn main() {
-///     let mut elements = Elements::new();
-///     Window::new(&mut elements, "RetGui");
-///     retgui_main(elements, RetGuiOptions::default());
+///     let mut app = App::new();
+///     Window::new(&mut app, "RetGui");
+///     retgui_main(app, RetGuiOptions::default());
 /// }
 /// ```
-pub fn retgui_main(elements: Elements, options: RetGuiOptions) {
-    retgui_main_with_driver::<WinitDriver>(elements, options);
+pub fn retgui_main(app: App, options: RetGuiOptions) {
+    retgui_main_with_driver::<WinitDriver>(app, options);
 }
 
 /// Starts the RetGui application using a custom [`Driver`].
 ///
-/// RetGui initializes the [`App`], constructs `D` through [`Driver::new`], and
+/// RetGui constructs `D` through [`Driver::new`] and
 /// transfers ownership of the app to the driver. This is the advanced
 /// counterpart to [`retgui_main`]; most applications should use the default
 /// winit driver.
@@ -81,7 +80,7 @@ pub fn retgui_main(elements: Elements, options: RetGuiOptions) {
 ///
 /// ```no_run
 /// use retgui::drivers::Driver;
-/// use retgui::{App, Elements, RetGuiOptions, retgui_main_with_driver};
+/// use retgui::{App, RetGuiOptions, retgui_main_with_driver};
 ///
 /// struct PlatformDriver {
 ///     app: App,
@@ -102,14 +101,14 @@ pub fn retgui_main(elements: Elements, options: RetGuiOptions) {
 ///     }
 /// }
 ///
-/// retgui_main_with_driver::<PlatformDriver>(Elements::new(), RetGuiOptions::default());
+/// retgui_main_with_driver::<PlatformDriver>(App::new(), RetGuiOptions::default());
 /// ```
-pub fn retgui_main_with_driver<D>(elements: Elements, options: RetGuiOptions)
+pub fn retgui_main_with_driver<D>(app: App, options: RetGuiOptions)
 where
     D: Driver,
 {
     info!("RetGui started: {}", options.app_name);
-    D::new(App::new(elements)).run();
+    D::new(app).run();
 }
 
 /// Sets the [`AndroidApp`] for retgui to use.

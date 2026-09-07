@@ -1,5 +1,6 @@
 //! A basic code editor.
 
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use retgui_primitives::brush::Brush;
@@ -8,11 +9,12 @@ use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::ResourceManager;
 
+use crate::App;
 use crate::elements::codeeditor::highlighter::compute_code_editor_style;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementInternals, Elements, TextInput};
+use crate::elements::{DynElement, Element, ElementIds, ElementInternals, ElementStates, RetGuiAccessTree, RetainedElements, TextInput, TextInputElement};
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
@@ -53,8 +55,21 @@ impl crate::elements::HasElementData for CodeEditorElement {
 }
 
 impl ElementInternals for CodeEditorElement {
-    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
+    fn deep_clone(
+        &self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(
+            self,
+            elements,
+            gummy_tree,
+            access_tree,
+            by_internal_id,
+            |_, _| None,
+        ))
     }
 
     fn apply_layout(
@@ -69,26 +84,74 @@ impl ElementInternals for CodeEditorElement {
 
     fn draw(
         &self,
-        elements: &Elements,
+        elements: &RetainedElements,
+        states: &ElementStates,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
         text_context: &mut TextContext,
     ) {
-        draw_generic_container(self, elements, renderer, resource_manager, text_context, scale_factor);
+        draw_generic_container(
+            self,
+            elements,
+            states,
+            renderer,
+            resource_manager,
+            text_context,
+            scale_factor,
+        );
     }
 
-    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
+    fn on_event(
+        &mut self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        _access_tree: &RetGuiAccessTree,
+        _by_internal_id: &mut ElementIds,
+        _event_queue: &mut VecDeque<EventKind>,
+        _focus: &mut Option<DynElement>,
+        _focus_outline_visible: bool,
+        _pending_animation_updates: &mut Vec<(DynElement, bool)>,
+        _states: &mut ElementStates,
+        event: &mut EventKind,
+        _text_context: &mut TextContext,
+    ) {
         if let EventKind::TextInputChanged(_) = event {
-            self.highlight(elements);
+            self.highlight(elements, gummy_tree);
         }
     }
 }
 
 impl CodeEditor {
-    pub fn new(elements: &mut Elements, code: &str, extension: &str, theme: &str) -> Self {
-        let text_input = TextInput::new(elements, code);
-        let inner = elements.insert_with(|me, access_tree| {
+    pub fn new(app: &mut App, code: &str, extension: &str, theme: &str) -> Self {
+        Self {
+            inner: CodeEditorElement::insert(
+                &mut app.elements,
+                &mut app.gummy_tree,
+                &app.access_tree,
+                &mut app.by_internal_id,
+                code,
+                extension,
+                theme,
+            ),
+        }
+    }
+}
+
+impl CodeEditorElement {
+    pub(crate) fn insert(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        code: &str,
+        extension: &str,
+        theme: &str,
+    ) -> DynElement {
+        let text_input = TextInput {
+            inner: TextInputElement::create(elements, gummy_tree, access_tree, by_internal_id, code),
+        };
+        let inner = elements.insert_with(access_tree, by_internal_id, |me, access_tree| {
             Box::new(CodeEditorElement {
                 element_data: ElementData::new(me, true, access_tree),
                 extension: extension.to_string(),
@@ -96,24 +159,30 @@ impl CodeEditor {
                 text_input,
             })
         });
-        elements.create_layout_node(inner, None);
-        crate::elements::internal_helpers::push_child_to_element(elements, inner, text_input.inner);
+        elements
+            .get_mut(inner)
+            .element_data_mut()
+            .create_layout_node(gummy_tree, None);
+        crate::elements::internal_helpers::push_child_to_element(elements, gummy_tree, inner, text_input.inner);
         elements.dispatch_mut(inner, |element, elements| {
             (element as &mut dyn std::any::Any)
                 .downcast_mut::<CodeEditorElement>()
                 .expect("code editor handle changed type")
-                .highlight(elements);
+                .highlight(elements, gummy_tree);
         });
-        Self { inner }
+        inner
     }
-}
 
-impl CodeEditorElement {
-    fn highlight(&mut self, elements: &mut Elements) {
-        let text = self.text_input.text(elements);
+    fn highlight(&mut self, elements: &mut RetainedElements, gummy_tree: &mut GummyTree) {
+        let text: String = elements
+            .get_as::<TextInputElement>(self.text_input.inner)
+            .state
+            .editor()
+            .text()
+            .into_iter()
+            .collect();
         let code_editor = compute_code_editor_style(&text, None, None, &self.extension, &self.theme);
-        let (gummy_tree, elements) = elements.disjoint_borrow_layout_and_elements();
-        let text = elements.get_as_mut::<crate::elements::TextInputElement>(self.text_input.inner);
+        let text = elements.get_as_mut::<TextInputElement>(self.text_input.inner);
         text.set_ranged_styles(gummy_tree, code_editor.ranged_styles);
         text.set_background_brush(Brush::Color(code_editor.background_color));
         text.set_text_brush(gummy_tree, Brush::Color(code_editor.foreground_color));

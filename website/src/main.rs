@@ -1,5 +1,4 @@
-use retgui::elements::Elements;
-use retgui::{RetGuiOptions, retgui_main};
+use retgui::{App, RetGuiOptions, retgui_main};
 
 use crate::router::Router;
 
@@ -81,11 +80,11 @@ impl Default for WebsiteGlobalState {
 
 fn main() {
     util::setup_logging();
-    let mut elements = Elements::new();
+    let mut app = App::new();
     let mut global_state = WebsiteGlobalState::default();
     global_state.load_route();
-    let global_state = elements.insert_state(global_state);
-    let router = Router::new(&mut elements, global_state);
-    router.navigate(&mut elements);
-    retgui_main(elements, RetGuiOptions::default());
+    let global_state = app.insert_state(global_state);
+    let router = Router::new(&mut app, global_state);
+    router.navigate(&mut app);
+    retgui_main(app, RetGuiOptions::default());
 }

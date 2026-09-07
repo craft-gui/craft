@@ -21,6 +21,8 @@ use vello_cpu::{Pixmap, RenderContext, Resources};
 
 use winit::window::Window;
 
+use self::image::{draw_image, upload_image};
+use self::text::draw_text;
 use crate::RenderCommand;
 use crate::helpers::{brush_to_paint, rgba_to_encoded_u32};
 use crate::render_command::{BoxShadowCmd, DrawCircleCmd, DrawCircleOutlineCmd, DrawRectCmd, DrawRectOutlineCmd, FillBezPathCmd, PushLayerCmd, StrokeBezPathCmd};
@@ -29,8 +31,6 @@ use crate::renderer::Renderer;
 use crate::resource_mapper::{RendererResourceId, ResourceMapper};
 use crate::screenshot::Screenshot;
 use crate::sort_commands::SortedCommands;
-use image::{draw_image, upload_image};
-use text::draw_text;
 
 pub mod image;
 pub mod text;
@@ -249,6 +249,27 @@ impl VelloCpuRenderer {
             }
         });
     }
+
+    fn copy_pixmap_to_softbuffer(
+        &mut self,
+        width: usize,
+        height: usize,
+    ) -> Buffer<'_, Arc<dyn Window>, Arc<dyn Window>> {
+        let mut buffer = self.surface.as_mut().unwrap().buffer_mut().unwrap();
+
+        let pixmap = &self.pixmap.data_as_u8_slice();
+
+        for offset in 0..(width * height) {
+            let red = pixmap[4 * offset];
+            let green = pixmap[4 * offset + 1];
+            let blue = pixmap[4 * offset + 2];
+            let alpha = pixmap[4 * offset + 3];
+
+            buffer[offset] = rgba_to_encoded_u32(red as u32, green as u32, blue as u32, alpha as u32);
+        }
+
+        buffer
+    }
 }
 
 impl Renderer for VelloCpuRenderer {
@@ -377,28 +398,5 @@ impl Renderer for VelloCpuRenderer {
             height: self.pixmap.height(),
             pixels: self.pixmap.data_as_u8_slice().to_vec(),
         }
-    }
-}
-
-impl VelloCpuRenderer {
-    fn copy_pixmap_to_softbuffer(
-        &mut self,
-        width: usize,
-        height: usize,
-    ) -> Buffer<'_, Arc<dyn Window>, Arc<dyn Window>> {
-        let mut buffer = self.surface.as_mut().unwrap().buffer_mut().unwrap();
-
-        let pixmap = &self.pixmap.data_as_u8_slice();
-
-        for offset in 0..(width * height) {
-            let red = pixmap[4 * offset];
-            let green = pixmap[4 * offset + 1];
-            let blue = pixmap[4 * offset + 2];
-            let alpha = pixmap[4 * offset + 3];
-
-            buffer[offset] = rgba_to_encoded_u32(red as u32, green as u32, blue as u32, alpha as u32);
-        }
-
-        buffer
     }
 }

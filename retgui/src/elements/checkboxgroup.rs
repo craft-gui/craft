@@ -1,15 +1,17 @@
 //! Stores one or more elements.
 
+use std::collections::VecDeque;
 use std::sync::Arc;
 
 use retgui_renderer::renderer::Renderer;
 
 use retgui_resource_manager::ResourceManager;
 
+use crate::App;
 use crate::elements::element_data::ElementData;
 use crate::elements::internal_helpers::{apply_generic_container_layout, draw_generic_container};
 use crate::elements::traits::clone_element;
-use crate::elements::{DynElement, Element, ElementInternals, Elements, scrollable};
+use crate::elements::{DynElement, Element, ElementIds, ElementInternals, ElementStates, RetGuiAccessTree, RetainedElements, scrollable};
 use crate::events::EventKind;
 use crate::layout::GummyTree;
 use crate::text::text_context::TextContext;
@@ -44,8 +46,21 @@ impl crate::elements::HasElementData for CheckboxGroupElement {
 }
 
 impl ElementInternals for CheckboxGroupElement {
-    fn deep_clone(&self, elements: &mut Elements) -> DynElement {
-        DynElement::new(clone_element::<Self, _>(self, elements, |_, _| None))
+    fn deep_clone(
+        &self,
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+    ) -> DynElement {
+        DynElement::new(clone_element::<Self, _>(
+            self,
+            elements,
+            gummy_tree,
+            access_tree,
+            by_internal_id,
+            |_, _| None,
+        ))
     }
 
     fn apply_layout(
@@ -60,33 +75,75 @@ impl ElementInternals for CheckboxGroupElement {
 
     fn draw(
         &self,
-        elements: &Elements,
+        elements: &RetainedElements,
+        states: &ElementStates,
         renderer: &mut dyn Renderer,
         resource_manager: Arc<ResourceManager>,
         scale_factor: f64,
         text_context: &mut TextContext,
     ) {
-        draw_generic_container(self, elements, renderer, resource_manager, text_context, scale_factor);
+        draw_generic_container(
+            self,
+            elements,
+            states,
+            renderer,
+            resource_manager,
+            text_context,
+            scale_factor,
+        );
     }
 
-    fn on_event(&mut self, elements: &mut Elements, event: &mut EventKind, _text_context: &mut TextContext) {
-        scrollable::handle_scroll_logic(elements, self, event);
+    fn on_event(
+        &mut self,
+        elements: &mut RetainedElements,
+        _gummy_tree: &mut GummyTree,
+        _access_tree: &RetGuiAccessTree,
+        _by_internal_id: &mut ElementIds,
+        event_queue: &mut VecDeque<EventKind>,
+        focus: &mut Option<DynElement>,
+        focus_outline_visible: bool,
+        _pending_animation_updates: &mut Vec<(DynElement, bool)>,
+        _states: &mut ElementStates,
+        event: &mut EventKind,
+        _text_context: &mut TextContext,
+    ) {
+        scrollable::handle_scroll_logic(elements, event_queue, focus, focus_outline_visible, self, event);
     }
 }
 
 impl CheckboxGroup {
-    pub fn new(elements: &mut Elements, label: &str) -> Self {
-        let inner = elements.insert_with(|me, access_tree| {
+    pub fn new(app: &mut App, label: &str) -> Self {
+        Self {
+            inner: CheckboxGroupElement::insert(
+                &mut app.elements,
+                &mut app.gummy_tree,
+                &app.access_tree,
+                &mut app.by_internal_id,
+                label,
+            ),
+        }
+    }
+}
+
+impl CheckboxGroupElement {
+    pub(crate) fn insert(
+        elements: &mut RetainedElements,
+        gummy_tree: &mut GummyTree,
+        access_tree: &RetGuiAccessTree,
+        by_internal_id: &mut ElementIds,
+        label: &str,
+    ) -> DynElement {
+        let inner = elements.insert_with(access_tree, by_internal_id, |me, access_tree| {
             Box::new(CheckboxGroupElement {
                 element_data: ElementData::new(me, true, access_tree),
             })
         });
-        elements.create_layout_node(inner, None);
         let inner_mut = elements.get_as_mut::<CheckboxGroupElement>(inner);
+        inner_mut.element_data.create_layout_node(gummy_tree, None);
         {
             inner_mut.element_data.set_accessibility_role(issho::Role::Group);
             inner_mut.element_data.set_accessibility_name(label.to_string());
         }
-        Self { inner }
+        inner
     }
 }

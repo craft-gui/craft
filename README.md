@@ -20,41 +20,41 @@ features = ["system_fonts", "vello_hybrid_renderer"]
 ## Example
 
 ```rust
-use retgui::elements::{Container, Element, Elements, State, Text, Window};
+use retgui::elements::{Container, Element, State, Text, Window};
 use retgui::events::Event;
 use retgui::style::{AlignItems, FlexDirection, JustifyContent};
-use retgui::{Color, RetGuiOptions, pct, px, rgb};
+use retgui::{App, Color, RetGuiOptions, pct, px, rgb};
 
 fn create_button(
-    elements: &mut Elements,
+    app: &mut App,
     label: &str,
     base_color: Color,
     delta: i64,
     count: State<i64>,
     count_text: Text,
 ) -> Container {
-    let label = Text::new(elements, label)
-        .edit(elements)
+    let label = Text::new(app, label)
+        .edit(app)
         .font_size(24.0)
         .color(Color::WHITE)
         .selectable(false)
         .finish();
 
-    Container::new(elements)
-        .edit(elements)
+    Container::new(app)
+        .edit(app)
         .border_width(px(1), px(2), px(3), px(4))
         .border_color_all(rgb(0, 0, 0))
         .border_radius_all((10.0, 10.0))
         .padding(px(15), px(30), px(15), px(30))
         .justify_content(JustifyContent::Center)
         .background_color(base_color)
-        .on_click(move |event, elements| {
-            let count = count.update(elements, |count| {
+        .on_click(move |event, app| {
+            let count = count.update(app, |count| {
                 *count += delta;
                 *count
             });
             count_text
-                .edit(elements)
+                .edit(app)
                 .text(&format!("Count: {count}"))
                 .finish();
             event.stop_propagation();
@@ -64,24 +64,24 @@ fn create_button(
 }
 
 fn main() {
-    let mut elements = Elements::new();
-    let count = elements.insert_state(0_i64);
-    let count_text = Text::new(&mut elements, "Count: 0");
+    let mut app = App::new();
+    let count = app.insert_state(0_i64);
+    let count_text = Text::new(&mut app, "Count: 0");
     let subtract = create_button(
-        &mut elements, "-", rgb(244, 67, 54), -1, count, count_text,
+        &mut app, "-", rgb(244, 67, 54), -1, count, count_text,
     );
     let add = create_button(
-        &mut elements, "+", rgb(76, 175, 80), 1, count, count_text,
+        &mut app, "+", rgb(76, 175, 80), 1, count, count_text,
     );
-    let buttons = Container::new(&mut elements)
-        .edit(&mut elements)
+    let buttons = Container::new(&mut app)
+        .edit(&mut app)
         .gap(px(20), px(20))
         .push(subtract)
         .push(add)
         .finish();
 
-    Window::new(&mut elements, "Counter")
-        .edit(&mut elements)
+    Window::new(&mut app, "Counter")
+        .edit(&mut app)
         .flex_direction(FlexDirection::Column)
         .justify_content(JustifyContent::Center)
         .align_items(AlignItems::Center)
@@ -92,7 +92,7 @@ fn main() {
         .push(buttons)
         .finish();
 
-    retgui::retgui_main(elements, RetGuiOptions::basic("Counter"));
+    retgui::retgui_main(app, RetGuiOptions::basic("Counter"));
 }
 ```
 
@@ -130,8 +130,8 @@ fn main() {
 ### 1. Are Android, iOS, and the Web Supported? 
 RetGui can run on those platforms, but they are not officially supported. We would like to support those platforms, but it requires a lot of platform integration. Please use SwiftUI, Jetpack Compose, Flutter, and etc.
 
-### 2. Why do mutations need `Elements`?
-Elements owns all RetGUI data and an element is just a handle to some data in elements. 
+### 2. Why do mutations need `App`?
+App owns all RetGUI data and an element is just a handle to some data in app.
 
 ## License
 Distributed under the Unlicense License. See the [LICENSE](./LICENSE) for more information.
