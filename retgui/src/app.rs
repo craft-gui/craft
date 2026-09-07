@@ -287,11 +287,18 @@ impl App {
 
     pub fn on_about_to_wait(&mut self, event_loop: Option<&dyn ActiveEventLoop>) -> Option<Duration> {
         #[cfg(not(target_arch = "wasm32"))]
-        self.runtime.maybe_block_on(async {
+        self.block_on(async {
             yield_now().await;
         });
-        self.runtime.handle().update_local_set();
-        self.run_gui_actions();
+        let runtime_handle = self.runtime.handle();
+        runtime_handle.update_local_set();
+        {
+            #[cfg(not(target_arch = "wasm32"))]
+            let mut runtime_handle = runtime_handle;
+            #[cfg(not(target_arch = "wasm32"))]
+            let _runtime_context = runtime_handle.tokio_runtime_mut().enter();
+            self.run_gui_actions();
+        }
         #[cfg(target_arch = "wasm32")]
         self.process_created_renderers();
         self.process_resources();
@@ -608,13 +615,18 @@ impl App {
 
     /// Runs a local future and applies its result with exclusive access to this
     /// application on the GUI thread.
-    pub fn spawn_local<F, O, C>(&self, future: F, on_complete: C)
+    pub fn spawn_local<F, O, C>(&mut self, future: F, on_complete: C)
     where
         F: Future<Output = O> + 'static,
         O: 'static,
         C: FnOnce(O, &mut App) + 'static,
     {
         self.gui_actions.spawn_local(future, on_complete);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn block_on<F: Future>(&mut self, future: F) -> F::Output {
+        self.runtime.tokio_runtime_mut().block_on(future)
     }
 
     pub(crate) fn run_gui_actions(&mut self) {
